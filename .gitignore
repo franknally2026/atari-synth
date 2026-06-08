@@ -1,0 +1,14 @@
+# logs may embed local filesystem paths — never commit them
+*.log
+shots/*.log
+
+# local claude settings
+.claude/
+
+# editor swap files
+*.swp
+*.swo
+
+# python bytecode
+__pycache__/
+*.pyc
