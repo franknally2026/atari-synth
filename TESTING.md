@@ -319,7 +319,7 @@ guarantee — after a chaos burst (notes+arp+drum+seq+mode flips+effects),
 switching everything off returns **true PCM silence**.
 
 **`quantitative.py` — exact measurements and property sweeps:** full-range
-16-bit tuning sweep, every sampled note <25 cents from its designed pitch;
+16-bit tuning sweep, every sampled note <5 cents from its designed pitch;
 octave-doubling across the whole keyboard (<20 cents); RMS strictly monotonic
 over **all 16** volume levels with level 0 silent; the envelope steps exactly
 every `(rate+1)` frames for ATTACK and RELEASE at several rates; sustain ==

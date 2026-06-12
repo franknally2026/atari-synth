@@ -77,17 +77,20 @@ def audio_state_clock_labels(s, rep):
     s.set("clock15", 0); s.poke(0x0689, 0); s.frame(2)
 
 
-def audio_state_faithful_8bit(s, rep):
+def audio_state_faithful(s, rep):
     """Across the chromatic table, reported freq_hz matches the divider->Hz
-    prediction to <1 cent in NORMAL and 15 kHz modes. This is a fast, audio-
-    free engine-fidelity check that previously required PCM capture + FFT."""
-    rep.section("bridge: 8-bit engine faithfulness via AUDIO_STATE (#71)")
+    prediction to <1 cent in all three clock modes. This is a fast, audio-
+    free engine-fidelity check that previously required PCM capture + FFT.
+    The 16-BIT cases also pin the joined-pair fast-clock formula
+    (period = n + 7) — the naive n + 1 form fails them by up to 30 cents."""
+    rep.section("bridge: engine faithfulness via AUDIO_STATE (#71)")
     with s.frozen("trigger_voices"):
-        # sample a few across each 8-bit mode (sweeping all 65 takes a couple
+        # sample a few across each mode (sweeping all 65 takes a couple
         # of seconds; the assertion is exact, so a sparse sweep suffices)
         for mode_name, mode in [("NORMAL", notes.MODE_NORMAL),
-                                ("15K",    notes.MODE_15K)]:
-            for idx in (0, 12, 24, 36, 48, 60):
+                                ("15K",    notes.MODE_15K),
+                                ("16BIT",  notes.MODE_16BIT)]:
+            for idx in (0, 12, 24, 36, 48, 60, 64):
                 _hold(s, idx, mode)
                 assert_engine_faithful_via_state(
                     rep, s, f"{mode_name} idx{idx:>2}",
@@ -153,6 +156,6 @@ SCENARIOS = [
     audio_state_idle_silent,
     audio_state_clock_labels,
     audio_state_freq_matches_division,
-    audio_state_faithful_8bit,
+    audio_state_faithful,
     joy_burst_then_key_regression,
 ]

@@ -24,16 +24,28 @@ ASM = os.path.abspath(os.path.join(HERE, "..", "..", "synth.asm"))
 #   64 kHz base   = master / 28  = 63337.4 Hz
 #   15 kHz base   = master / 114 = 15556.6 Hz
 #   1.79 MHz      = master              (used by 16-bit joined pairs)
-# POKEY square-wave output completes one cycle every two counter reloads, so
-#   f = clock / (2 * (DIVIDER + 1))
-# (The high-frequency 1.79 MHz path has a small fixed offset on real silicon;
-#  for the joined 16-bit divider the +1 form matches the synth's table to <1
-#  cent, so we use it and treat residual error as measurement tolerance.)
+# POKEY square-wave output completes one cycle every two counter reloads.
+#
+# 8-bit channels (NORMAL / 15 kHz mode):
+#   period_cycles = (AUDF + 1) * {28 | 114}      -- multiples of master ticks
+#   f = clock / (2 * (AUDF + 1))
+#
+# Joined 16-bit pair, fast 1.79 MHz clock (the synth's 16-BIT mode):
+#   period_cycles = (n + 1) + 6 = n + 7           -- per Altirra POKEY model
+#   f = master / (2 * (n + 7))
+#
+# The +6 offset is the 16-bit chain setup overhead; without it the formula is
+# systematically off (we measured -8c mean / -30c worst at idx64 against the
+# emulator's reported freq_hz). Verified by reading the POKEY period-cycles
+# computation in ilmenit/AltirraSDL's bridge_commands_debug.cpp.
 # ---------------------------------------------------------------------------
 PAL_MASTER = 1_773_447.0
 CLK_64K = PAL_MASTER / 28.0     # 63337.4
 CLK_15K = PAL_MASTER / 114.0    # 15556.6
 CLK_179 = PAL_MASTER            # 1773447
+
+# Joined 16-bit pair, fast clock: period = (n+1) + JOIN16_FAST_OFFSET cycles.
+JOIN16_FAST_OFFSET = 6
 
 # Clock-mode index (synth's clock15 var): 0 NORMAL, 1 15KHZ, 2 16BIT
 MODE_NORMAL, MODE_15K, MODE_16BIT = 0, 1, 2
@@ -45,9 +57,11 @@ def pokey_freq_8bit(audf, clock=CLK_64K):
 
 
 def pokey_freq_16bit(lo, hi, clock=CLK_179):
-    """Output Hz for a joined 16-bit pair (divider = lo + 256*hi)."""
+    """Output Hz for a joined 16-bit pair on the fast 1.79 MHz clock
+    (the synth's 16-BIT mode). Uses Altirra's joined-pair timing
+    ``period = n + 7``."""
     n = (hi << 8) | lo
-    return clock / (2.0 * (n + 1))
+    return clock / (2.0 * (n + 1 + JOIN16_FAST_OFFSET))
 
 
 def audf_freq(audf, mode=MODE_NORMAL):

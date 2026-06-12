@@ -1,4 +1,5 @@
-mads 2.1.7
+mads 2.1.8
+synth.asm -o:synth.xex -l:synth.lst 
 Source: synth.asm
      1 				; ============================================================================
      2 				;  ATARI POKEY SYNTH  -  GR.8 bitmap UI
@@ -2651,179 +2652,181 @@ Source: synth.asm
   2649 3313 23 00 23 03 24 00 +         .byte "C C#D D#E F F#G G#A A#B "
   2650
   2651 				; 16-bit chromatic dividers, PAL 1.79 MHz clock, C2..E7 (index 0 = C2)
-  2652 332B			chrom16_lo
-  2653 332B F4 FB 2D 87 07 AB +         .byte $F4,$FB,$2D,$87,$07,$AB,$71,$57,$5B,$7C,$B8,$0D
-  2654 3337 7A FD 96 43 03 D5 +         .byte $7A,$FD,$96,$43,$03,$D5,$B8,$AB,$AD,$BE,$DB,$06
-  2655 3343 3C 7E CB 21 81 EA +         .byte $3C,$7E,$CB,$21,$81,$EA,$5C,$D5,$56,$DE,$6D,$02
-  2656 334F 9E 3F E5 90 40 F5 +         .byte $9E,$3F,$E5,$90,$40,$F5,$AD,$6A,$2B,$EF,$B6,$81
-  2657 335B 4E 1F F2 C8 A0 7A +         .byte $4E,$1F,$F2,$C8,$A0,$7A,$56,$35,$15,$F7,$DB,$C0
-  2658 3367 A7 8F 78 63 4F	        .byte $A7,$8F,$78,$63,$4F
-  2659 336C			chrom16_hi
-  2660 336C 34 31 2F 2C 2A 27 +         .byte $34,$31,$2F,$2C,$2A,$27,$25,$23,$21,$1F,$1D,$1C
-  2661 3378 1A 18 17 16 15 13 +         .byte $1A,$18,$17,$16,$15,$13,$12,$11,$10,$0F,$0E,$0E
-  2662 3384 0D 0C 0B 0B 0A 09 +         .byte $0D,$0C,$0B,$0B,$0A,$09,$09,$08,$08,$07,$07,$07
-  2663 3390 06 06 05 05 05 04 +         .byte $06,$06,$05,$05,$05,$04,$04,$04,$04,$03,$03,$03
-  2664 339C 03 03 02 02 02 02 +         .byte $03,$03,$02,$02,$02,$02,$02,$02,$02,$01,$01,$01
-  2665 33A8 01 01 01 01 01	        .byte $01,$01,$01,$01,$01
-  2666
-  2667 33AD			key_scan
-  2668 33AD 2F 1E 2E 1A 2A 28 +         .byte $2F,$1E,$2E,$1A,$2A,$28,$1D,$2D,$1B,$2B,$33,$0B,$0D,$30,$08,$32,$0A
-  2669
-  2670 				; apply_adjust parameter table (cur_param 0..7)
-  2671 				; NB: param_lo/hi MUST have one entry per param (0..NPARAM-1). They previously
-  2672 				; omitted TEMPO (index 12) -> apply_adjust read past the table when adjusting
-  2673 				; TEMPO via the joystick (wrote stray RAM). Now includes TEMPO + ARPMODE.
-  2674 33BE			param_lo
-  2675 33BE 01 02 03 2C 2D 6E	        .byte <wave_idx,<volume,<octave,<atk_rate,<dec_rate,<detune
-  2676 33C4 2E 2F 04 63 64 84	        .byte <sus_level,<rel_rate,<clock15,<lfo_rate,<lfo_depth,<arp_rate
-  2677 33CA 8C B5 B6 BD C0 C5 +         .byte <tempo,<arp_mode,<porta_rate,<drum_dec,<hpf_cut,<preset_slot,<drum_beat
-  2678 33D1			param_hi
-  2679 33D1 06 06 06 06 06 06	        .byte >wave_idx,>volume,>octave,>atk_rate,>dec_rate,>detune
-  2680 33D7 06 06 06 06 06 06	        .byte >sus_level,>rel_rate,>clock15,>lfo_rate,>lfo_depth,>arp_rate
-  2681 33DD 06 06 06 06 06 06 +         .byte >tempo,>arp_mode,>porta_rate,>drum_dec,>hpf_cut,>preset_slot,>drum_beat
-  2682 33E4			param_max
-  2683 33E4 03 0F 04 0F 0F 0F +         .byte 3,15,4,15,15,15, 15,15,2,15,15,15, 15,3,15,15, 15,3,15
-  2684 33F7			param_maxp1
-  2685 33F7 04 10 05 10 10 10 +         .byte 4,16,5,16,16,16, 16,16,3,16,16,16, 16,4,16,16, 16,4,16
-  2686
-  2687 				; ----- parameter descriptor tables (NPARAM entries) -------------------------
-  2688 				;        0 WAVE  1 VOL  2 OCT  3 ATK  4 DEC | 5 SUS  6 REL  7 CLK  8 LFOR 9 LFOD
-  2689 				;        left column (0-4)                  | right column (5-9)
-  2690 				; INDEX ORDER == VISUAL ORDER so UP/DOWN steps through the panel as drawn:
-  2691 				;   left column top->bottom (0-5), then right column top->bottom (6-10).
-  2692 				;        0 WAVE 1 VOL 2 OCT 3 ATK 4 DEC 5 DET | 6 SUS 7 REL 8 CLK 9 LFOR 10 LFOD
-  2693 				;  left column 0-5             | right column 6-11 (incl ARP=11)
-  2694 				; Page 0 = indices 0-11 (osc/env/fx).  Page 2 = indices 12+ (layout positions
-  2695 				; reuse the page-0 grid, so all tables index by absolute param).
-  2696 				;        page 2: 12 TEMPO (r0 left) 13 ARPMODE (r0 right) 14 PORTA (r1 left) 15 DRUM (r1 right)
-  2697 340A			p_kind
-  2698 340A 02 00 01 00 00 00	        .byte K_WAVE,K_KNOB,K_OCT,K_KNOB,K_KNOB,K_KNOB
-  2699 3410 00 00 03 00 00 00	        .byte K_KNOB,K_KNOB,K_CLK,K_KNOB,K_KNOB,K_KNOB
-  2700 3416 00 00 00 00		        .byte K_KNOB,K_KNOB,K_KNOB,K_KNOB                 ; 12 TEMPO,13 ARPMODE,14 PORTA,15 DRUM
-  2701 341A 00 00 00		        .byte K_KNOB,K_KNOB,K_KNOB                        ; 16 HPF, 17 PRESET, 18 DRUMBEAT
-  2702 341D			p_scan
-  2703 341D 10 24 38 4C 60 6E +         .byte 16,36,56,76,96,110, 16,36,56,76,96,110
-  2704 3429 10 10 24 24 10 10 +         .byte 16,16,36,36, 16,16,36
-  2705 3430			p_lblcol
-  2706 3430 01 01 01 01 01 01 +         .byte 1,1,1,1,1,1, 21,21,21,21,21,21
-  2707 343C 01 15 01 15 01 15 +         .byte 1,21,1,21, 1,21,1
-  2708 3443			p_knobcx
-  2709 3443 56 56 56 56 56 56 +         .byte 86,86,86,86,86,86, 246,246,246,246,246,246
-  2710 344F 56 F6 56 F6 56 F6 +         .byte 86,246,86,246, 86,246,86
-  2711 3456			p_numcol
-  2712 3456 0D 0D 0D 0D 0D 0D +         .byte 13,13,13,13,13,13, 33,33,33,33,33,33
-  2713 3462 0D 21 0D 21 0D 21 +         .byte 13,33,13,33, 13,33,13
-  2714 3469			p_vaddr_lo
-  2715 3469 01 02 03 2C 2D 6E	        .byte <wave_idx,<volume,<octave,<atk_rate,<dec_rate,<detune
-  2716 346F 2E 2F 04 63 64 84	        .byte <sus_level,<rel_rate,<clock15,<lfo_rate,<lfo_depth,<arp_rate
-  2717 3475 8C B5 B6 BD C0 C5 +         .byte <tempo,<arp_mode,<porta_rate,<drum_dec,<hpf_cut,<preset_slot,<drum_beat
-  2718 347C			p_vaddr_hi
-  2719 347C 06 06 06 06 06 06	        .byte >wave_idx,>volume,>octave,>atk_rate,>dec_rate,>detune
-  2720 3482 06 06 06 06 06 06	        .byte >sus_level,>rel_rate,>clock15,>lfo_rate,>lfo_depth,>arp_rate
-  2721 3488 06 06 06 06 06 06 +         .byte >tempo,>arp_mode,>porta_rate,>drum_dec,>hpf_cut,>preset_slot,>drum_beat
-  2722 348F			p_lblptr_lo
-  2723 348F DC E5 EC F3 FA 37	        .byte <txt_wave,<txt_vol,<txt_oct,<txt_atk,<txt_dec,<txt_det
-  2724 3495 00 08 10 24 2D 3E	        .byte <txt_sus,<txt_rel,<txt_clk,<txt_lfor,<txt_lfod,<txt_arp
-  2725 349B 42 48 51 57 5C 66 +         .byte <txt_tempo,<txt_arpm,<txt_porta,<txt_drum,<txt_hpf,<txt_preset,<txt_dbeat
-  2726 34A2			p_lblptr_hi
-  2727 34A2 3C 3C 3C 3C 3C 3D	        .byte >txt_wave,>txt_vol,>txt_oct,>txt_atk,>txt_dec,>txt_det
-  2728 34A8 3D 3D 3D 3D 3D 3D	        .byte >txt_sus,>txt_rel,>txt_clk,>txt_lfor,>txt_lfod,>txt_arp
-  2729 34AE 3D 3D 3D 3D 3D 3D +         .byte >txt_tempo,>txt_arpm,>txt_porta,>txt_drum,>txt_hpf,>txt_preset,>txt_dbeat
-  2730
-  2731 				; knob geometry
-  2732 34B5			bitmask_tab
-  2733 34B5 80 40 20 10 08 04 +         .byte $80,$40,$20,$10,$08,$04,$02,$01
-  2734 34BD			hw_tab                          ; half-width per |dy| 0..6
-  2735 34BD 06 06 06 05 04 03 +         .byte 6,6,6,5,4,3,0
-  2736 				; pointer rim offsets (16 directions, clockwise from up), signed
-  2737 34C4			kn_ex
-  2738 34C4 00 02 04 05 05 05 +         .byte 0,2,4,5,5,5,4,2,0,$FE,$FC,$FB,$FB,$FB,$FC,$FE
-  2739 34D4			kn_ey
-  2740 34D4 FB FB FC FE 00 02 +         .byte $FB,$FB,$FC,$FE,0,2,4,5,5,5,4,2,0,$FE,$FC,$FB
-  2741 34E4			kn_mx
-  2742 34E4 00 01 02 03 03 03 +         .byte 0,1,2,3,3,3,2,1,0,$FF,$FE,$FD,$FD,$FD,$FE,$FF
-  2743 34F4			kn_my
-  2744 34F4 FD FD FE FF 00 01 +         .byte $FD,$FD,$FE,$FF,0,1,2,3,3,3,2,1,0,$FF,$FE,$FD
-  2745 3504			oct_knob16                      ; octave 0..4 -> knob position
-  2746 3504 00 04 08 0C 0F	        .byte 0,4,8,12,15
-  2747
-  2748 				; keyboard layout
-  2749 3509			blackx_lo
-  2750 3509 20 3E 7A 98 B6 F2 +         .byte 32,62,122,152,182,242,16
-  2751 3510			blackx_hi
-  2752 3510 00 00 00 00 00 00 +         .byte 0,0,0,0,0,0,1
-  2753 3517			white_lblcol
-  2754 3517 02 06 0A 0D 11 15 +         .byte 2,6,10,13,17,21,25,28,32,36
-  2755 3521			white_lblch                     ; Q W E R T Y U I O P (screen codes)
-  2756 3521 31 37 25 32 34 39 +         .byte $31,$37,$25,$32,$34,$39,$35,$29,$2F,$30
-  2757 352B			black_lblcol                    ; byte col centering each number on its 16px black key
-  2758 352B 04 08 10 13 17 1F +         .byte 4,8,16,19,23,31,34
-  2759 3532			black_lblch                     ; 2 3 5 6 7 9 0 (screen codes)
-  2760 3532 12 13 15 16 17 19 +         .byte $12,$13,$15,$16,$17,$19,$10
-  2761 				; active-key indicator centre x per semitone 0..16
-  2762 3539			key_xind_lo
-  2763 3539 18 28 36 46 54 72 +         .byte 24,40,54,70,84,114,130,144,160,174,190,204,234,250,8,24,38
-  2764 354A			key_xind_hi
-  2765 354A 00 00 00 00 00 00 +         .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1
-  2766
-  2767 				; waveform icons (16x8, 2 bytes/row) for the WAVEFORM selector
-  2768 355B			icon_sq                         ; square / pulse
-  2769 355B F8 3F 08 20 08 20 +         .byte $F8,$3F,$08,$20,$08,$20,$08,$20,$08,$20,$08,$20,$08,$20,$0F,$E0
-  2770 356B			icon_tri                        ; triangle (PURE)
-  2771 356B 01 80 02 40 04 20 +         .byte $01,$80,$02,$40,$04,$20,$08,$10,$10,$08,$20,$04,$40,$02,$80,$01
-  2772 357B			icon_saw                        ; sawtooth (BUZZ)
-  2773 357B 01 01 03 03 05 05 +         .byte $01,$01,$03,$03,$05,$05,$09,$09,$11,$11,$21,$21,$41,$41,$81,$81
-  2774 358B			icon_noise                      ; scattered dots (NOISE)
-  2775 358B 20 40 00 04 04 00 +         .byte $20,$40,$00,$04,$04,$00,$80,$10,$01,$01,$10,$00,$00,$82,$42,$08
-  2776 359B			icon_col
-  2777 359B 0A 0C 0E 10		        .byte 10,12,14,16       ; dest byte column of each icon
-  2778 359F			icon_ptr_lo
-  2779 359F 5B 6B 7B 8B		        .byte <icon_sq,<icon_tri,<icon_saw,<icon_noise
-  2780 35A3			icon_ptr_hi
-  2781 35A3 35 35 35 35		        .byte >icon_sq,>icon_tri,>icon_saw,>icon_noise
-  2782
-  2783 				; ----- display list: GR.8 (ANTIC mode $0F), 192 lines, two LMS regions ------
-  2784 				; Fixed 1KB-aligned home, clear of linetab ($3000) and the framebuffer ($4000+),
-  2785 				; and within one 1KB block (ANTIC's DL counter is 10-bit).
-  2786 35A7			        org $3C00
-  2787 3C00			dlist
-  2788 3C00-3D87> 70 70 70	        .byte $70,$70,$70       ; 24 blank lines
-  2789 3C03 4F			        .byte $4F               ; LMS + mode F
-  2790 3C04 00 40		        .word FB1
-  2791 3C06 0F 0F 0F 0F 0F 0F +         :101 .byte $0F          ; 101 more lines (102 total from FB1)
-  2792 3C6B 4F			        .byte $4F
-  2793 3C6C 00 50		        .word FB2
-  2794 3C6E 0F 0F 0F 0F 0F 0F +         :89 .byte $0F           ; 89 more lines (90 total from FB2)
-  2795 3CC7 41			        .byte $41               ; JVB
-  2796 3CC8 00 3C		        .word dlist
-  2797
-  2798 				; ----- text labels (screen codes, $FF-terminated) ---------------------------
-  2799 3CCA 21 34 21 32 29 00 + txt_title  .byte "ATARI POKEY SYNTH",$FF
-  2800 3CDC 37 21 36 25 26 2F + txt_wave   .byte "WAVEFORM",$FF
-  2801 3CE5 36 2F 2C 35 2D 25 + txt_vol    .byte "VOLUME",$FF
-  2802 3CEC 2F 23 34 21 36 25 + txt_oct    .byte "OCTAVE",$FF
-  2803 3CF3 21 34 34 21 23 2B + txt_atk    .byte "ATTACK",$FF
-  2804 3CFA 24 25 23 21 39 FF	txt_dec    .byte "DECAY",$FF
-  2805 3D00 33 35 33 34 21 29 + txt_sus    .byte "SUSTAIN",$FF
-  2806 3D08 32 25 2C 25 21 33 + txt_rel    .byte "RELEASE",$FF
-  2807 3D10 23 2C 2F 23 2B FF	txt_clk    .byte "CLOCK",$FF
-  2808 3D16 2E 2F 34 25 FF	txt_note   .byte "NOTE",$FF
-  2809 3D1B 2E 2F 32 2D FF	txt_norm   .byte "NORM",$FF
-  2810 3D20 11 15 2B FF		txt_15k    .byte "15K",$FF
-  2811 3D24 2C 26 2F 00 32 21 + txt_lfor   .byte "LFO RATE",$FF
-  2812 3D2D 2C 26 2F 00 24 25 + txt_lfod   .byte "LFO DEPTH",$FF
-  2813 3D37 24 25 34 35 2E 25 + txt_det    .byte "DETUNE",$FF
-  2814 3D3E 21 32 30 FF		txt_arp    .byte "ARP",$FF
-  2815 3D42 34 25 2D 30 2F FF	txt_tempo  .byte "TEMPO",$FF
-  2816 3D48 21 32 30 00 2D 2F + txt_arpm   .byte "ARP MODE",$FF
-  2817 3D51 30 2F 32 34 21 FF	txt_porta  .byte "PORTA",$FF
-  2818 3D57 24 32 35 2D FF	txt_drum   .byte "DRUM",$FF
-  2819 3D5C 28 30 00 26 29 2C + txt_hpf    .byte "HP FILTER",$FF
-  2820 3D66 30 32 25 33 25 34 + txt_preset .byte "PRESET",$FF
-  2821 3D6D 24 32 35 2D 22 25 + txt_dbeat  .byte "DRUMBEAT",$FF
-  2822 3D76 30 2C 21 39 FF	txt_play   .byte "PLAY",$FF
-  2823 3D7B 33 34 2F 30 FF	txt_stop   .byte "STOP",$FF
-  2824 3D80 32 25 23 FF		txt_rec    .byte "REC",$FF
-  2825 3D84 00 00 00 FF		txt_blk3   .byte "   ",$FF
-  2826
-  2827 02E0-02E1> 00 20		        run main
+  2652 				; POKEY's joined-pair fast-clock period is (n+1)+6 = n+7 master cycles
+  2653 				; (6-cycle chain-setup overhead), so n = round(master / (2*f) - 7).
+  2654 332B			chrom16_lo
+  2655 332B EE F5 27 81 01 A5 +         .byte $EE,$F5,$27,$81,$01,$A5,$6B,$51,$55,$76,$B2,$07
+  2656 3337 74 F7 90 3D FD CF +         .byte $74,$F7,$90,$3D,$FD,$CF,$B2,$A5,$A7,$B8,$D5,$00
+  2657 3343 36 78 C5 1B 7B E4 +         .byte $36,$78,$C5,$1B,$7B,$E4,$56,$CF,$50,$D8,$67,$FC
+  2658 334F 98 39 DF 8A 3A EF +         .byte $98,$39,$DF,$8A,$3A,$EF,$A7,$64,$25,$E9,$B0,$7B
+  2659 335B 48 19 EC C2 9A 74 +         .byte $48,$19,$EC,$C2,$9A,$74,$50,$2F,$0F,$F1,$D5,$BA
+  2660 3367 A1 89 72 5D 49	        .byte $A1,$89,$72,$5D,$49
+  2661 336C			chrom16_hi
+  2662 336C 34 31 2F 2C 2A 27 +         .byte $34,$31,$2F,$2C,$2A,$27,$25,$23,$21,$1F,$1D,$1C
+  2663 3378 1A 18 17 16 14 13 +         .byte $1A,$18,$17,$16,$14,$13,$12,$11,$10,$0F,$0E,$0E
+  2664 3384 0D 0C 0B 0B 0A 09 +         .byte $0D,$0C,$0B,$0B,$0A,$09,$09,$08,$08,$07,$07,$06
+  2665 3390 06 06 05 05 05 04 +         .byte $06,$06,$05,$05,$05,$04,$04,$04,$04,$03,$03,$03
+  2666 339C 03 03 02 02 02 02 +         .byte $03,$03,$02,$02,$02,$02,$02,$02,$02,$01,$01,$01
+  2667 33A8 01 01 01 01 01	        .byte $01,$01,$01,$01,$01
+  2668
+  2669 33AD			key_scan
+  2670 33AD 2F 1E 2E 1A 2A 28 +         .byte $2F,$1E,$2E,$1A,$2A,$28,$1D,$2D,$1B,$2B,$33,$0B,$0D,$30,$08,$32,$0A
+  2671
+  2672 				; apply_adjust parameter table (cur_param 0..7)
+  2673 				; NB: param_lo/hi MUST have one entry per param (0..NPARAM-1). They previously
+  2674 				; omitted TEMPO (index 12) -> apply_adjust read past the table when adjusting
+  2675 				; TEMPO via the joystick (wrote stray RAM). Now includes TEMPO + ARPMODE.
+  2676 33BE			param_lo
+  2677 33BE 01 02 03 2C 2D 6E	        .byte <wave_idx,<volume,<octave,<atk_rate,<dec_rate,<detune
+  2678 33C4 2E 2F 04 63 64 84	        .byte <sus_level,<rel_rate,<clock15,<lfo_rate,<lfo_depth,<arp_rate
+  2679 33CA 8C B5 B6 BD C0 C5 +         .byte <tempo,<arp_mode,<porta_rate,<drum_dec,<hpf_cut,<preset_slot,<drum_beat
+  2680 33D1			param_hi
+  2681 33D1 06 06 06 06 06 06	        .byte >wave_idx,>volume,>octave,>atk_rate,>dec_rate,>detune
+  2682 33D7 06 06 06 06 06 06	        .byte >sus_level,>rel_rate,>clock15,>lfo_rate,>lfo_depth,>arp_rate
+  2683 33DD 06 06 06 06 06 06 +         .byte >tempo,>arp_mode,>porta_rate,>drum_dec,>hpf_cut,>preset_slot,>drum_beat
+  2684 33E4			param_max
+  2685 33E4 03 0F 04 0F 0F 0F +         .byte 3,15,4,15,15,15, 15,15,2,15,15,15, 15,3,15,15, 15,3,15
+  2686 33F7			param_maxp1
+  2687 33F7 04 10 05 10 10 10 +         .byte 4,16,5,16,16,16, 16,16,3,16,16,16, 16,4,16,16, 16,4,16
+  2688
+  2689 				; ----- parameter descriptor tables (NPARAM entries) -------------------------
+  2690 				;        0 WAVE  1 VOL  2 OCT  3 ATK  4 DEC | 5 SUS  6 REL  7 CLK  8 LFOR 9 LFOD
+  2691 				;        left column (0-4)                  | right column (5-9)
+  2692 				; INDEX ORDER == VISUAL ORDER so UP/DOWN steps through the panel as drawn:
+  2693 				;   left column top->bottom (0-5), then right column top->bottom (6-10).
+  2694 				;        0 WAVE 1 VOL 2 OCT 3 ATK 4 DEC 5 DET | 6 SUS 7 REL 8 CLK 9 LFOR 10 LFOD
+  2695 				;  left column 0-5             | right column 6-11 (incl ARP=11)
+  2696 				; Page 0 = indices 0-11 (osc/env/fx).  Page 2 = indices 12+ (layout positions
+  2697 				; reuse the page-0 grid, so all tables index by absolute param).
+  2698 				;        page 2: 12 TEMPO (r0 left) 13 ARPMODE (r0 right) 14 PORTA (r1 left) 15 DRUM (r1 right)
+  2699 340A			p_kind
+  2700 340A 02 00 01 00 00 00	        .byte K_WAVE,K_KNOB,K_OCT,K_KNOB,K_KNOB,K_KNOB
+  2701 3410 00 00 03 00 00 00	        .byte K_KNOB,K_KNOB,K_CLK,K_KNOB,K_KNOB,K_KNOB
+  2702 3416 00 00 00 00		        .byte K_KNOB,K_KNOB,K_KNOB,K_KNOB                 ; 12 TEMPO,13 ARPMODE,14 PORTA,15 DRUM
+  2703 341A 00 00 00		        .byte K_KNOB,K_KNOB,K_KNOB                        ; 16 HPF, 17 PRESET, 18 DRUMBEAT
+  2704 341D			p_scan
+  2705 341D 10 24 38 4C 60 6E +         .byte 16,36,56,76,96,110, 16,36,56,76,96,110
+  2706 3429 10 10 24 24 10 10 +         .byte 16,16,36,36, 16,16,36
+  2707 3430			p_lblcol
+  2708 3430 01 01 01 01 01 01 +         .byte 1,1,1,1,1,1, 21,21,21,21,21,21
+  2709 343C 01 15 01 15 01 15 +         .byte 1,21,1,21, 1,21,1
+  2710 3443			p_knobcx
+  2711 3443 56 56 56 56 56 56 +         .byte 86,86,86,86,86,86, 246,246,246,246,246,246
+  2712 344F 56 F6 56 F6 56 F6 +         .byte 86,246,86,246, 86,246,86
+  2713 3456			p_numcol
+  2714 3456 0D 0D 0D 0D 0D 0D +         .byte 13,13,13,13,13,13, 33,33,33,33,33,33
+  2715 3462 0D 21 0D 21 0D 21 +         .byte 13,33,13,33, 13,33,13
+  2716 3469			p_vaddr_lo
+  2717 3469 01 02 03 2C 2D 6E	        .byte <wave_idx,<volume,<octave,<atk_rate,<dec_rate,<detune
+  2718 346F 2E 2F 04 63 64 84	        .byte <sus_level,<rel_rate,<clock15,<lfo_rate,<lfo_depth,<arp_rate
+  2719 3475 8C B5 B6 BD C0 C5 +         .byte <tempo,<arp_mode,<porta_rate,<drum_dec,<hpf_cut,<preset_slot,<drum_beat
+  2720 347C			p_vaddr_hi
+  2721 347C 06 06 06 06 06 06	        .byte >wave_idx,>volume,>octave,>atk_rate,>dec_rate,>detune
+  2722 3482 06 06 06 06 06 06	        .byte >sus_level,>rel_rate,>clock15,>lfo_rate,>lfo_depth,>arp_rate
+  2723 3488 06 06 06 06 06 06 +         .byte >tempo,>arp_mode,>porta_rate,>drum_dec,>hpf_cut,>preset_slot,>drum_beat
+  2724 348F			p_lblptr_lo
+  2725 348F DC E5 EC F3 FA 37	        .byte <txt_wave,<txt_vol,<txt_oct,<txt_atk,<txt_dec,<txt_det
+  2726 3495 00 08 10 24 2D 3E	        .byte <txt_sus,<txt_rel,<txt_clk,<txt_lfor,<txt_lfod,<txt_arp
+  2727 349B 42 48 51 57 5C 66 +         .byte <txt_tempo,<txt_arpm,<txt_porta,<txt_drum,<txt_hpf,<txt_preset,<txt_dbeat
+  2728 34A2			p_lblptr_hi
+  2729 34A2 3C 3C 3C 3C 3C 3D	        .byte >txt_wave,>txt_vol,>txt_oct,>txt_atk,>txt_dec,>txt_det
+  2730 34A8 3D 3D 3D 3D 3D 3D	        .byte >txt_sus,>txt_rel,>txt_clk,>txt_lfor,>txt_lfod,>txt_arp
+  2731 34AE 3D 3D 3D 3D 3D 3D +         .byte >txt_tempo,>txt_arpm,>txt_porta,>txt_drum,>txt_hpf,>txt_preset,>txt_dbeat
+  2732
+  2733 				; knob geometry
+  2734 34B5			bitmask_tab
+  2735 34B5 80 40 20 10 08 04 +         .byte $80,$40,$20,$10,$08,$04,$02,$01
+  2736 34BD			hw_tab                          ; half-width per |dy| 0..6
+  2737 34BD 06 06 06 05 04 03 +         .byte 6,6,6,5,4,3,0
+  2738 				; pointer rim offsets (16 directions, clockwise from up), signed
+  2739 34C4			kn_ex
+  2740 34C4 00 02 04 05 05 05 +         .byte 0,2,4,5,5,5,4,2,0,$FE,$FC,$FB,$FB,$FB,$FC,$FE
+  2741 34D4			kn_ey
+  2742 34D4 FB FB FC FE 00 02 +         .byte $FB,$FB,$FC,$FE,0,2,4,5,5,5,4,2,0,$FE,$FC,$FB
+  2743 34E4			kn_mx
+  2744 34E4 00 01 02 03 03 03 +         .byte 0,1,2,3,3,3,2,1,0,$FF,$FE,$FD,$FD,$FD,$FE,$FF
+  2745 34F4			kn_my
+  2746 34F4 FD FD FE FF 00 01 +         .byte $FD,$FD,$FE,$FF,0,1,2,3,3,3,2,1,0,$FF,$FE,$FD
+  2747 3504			oct_knob16                      ; octave 0..4 -> knob position
+  2748 3504 00 04 08 0C 0F	        .byte 0,4,8,12,15
+  2749
+  2750 				; keyboard layout
+  2751 3509			blackx_lo
+  2752 3509 20 3E 7A 98 B6 F2 +         .byte 32,62,122,152,182,242,16
+  2753 3510			blackx_hi
+  2754 3510 00 00 00 00 00 00 +         .byte 0,0,0,0,0,0,1
+  2755 3517			white_lblcol
+  2756 3517 02 06 0A 0D 11 15 +         .byte 2,6,10,13,17,21,25,28,32,36
+  2757 3521			white_lblch                     ; Q W E R T Y U I O P (screen codes)
+  2758 3521 31 37 25 32 34 39 +         .byte $31,$37,$25,$32,$34,$39,$35,$29,$2F,$30
+  2759 352B			black_lblcol                    ; byte col centering each number on its 16px black key
+  2760 352B 04 08 10 13 17 1F +         .byte 4,8,16,19,23,31,34
+  2761 3532			black_lblch                     ; 2 3 5 6 7 9 0 (screen codes)
+  2762 3532 12 13 15 16 17 19 +         .byte $12,$13,$15,$16,$17,$19,$10
+  2763 				; active-key indicator centre x per semitone 0..16
+  2764 3539			key_xind_lo
+  2765 3539 18 28 36 46 54 72 +         .byte 24,40,54,70,84,114,130,144,160,174,190,204,234,250,8,24,38
+  2766 354A			key_xind_hi
+  2767 354A 00 00 00 00 00 00 +         .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1
+  2768
+  2769 				; waveform icons (16x8, 2 bytes/row) for the WAVEFORM selector
+  2770 355B			icon_sq                         ; square / pulse
+  2771 355B F8 3F 08 20 08 20 +         .byte $F8,$3F,$08,$20,$08,$20,$08,$20,$08,$20,$08,$20,$08,$20,$0F,$E0
+  2772 356B			icon_tri                        ; triangle (PURE)
+  2773 356B 01 80 02 40 04 20 +         .byte $01,$80,$02,$40,$04,$20,$08,$10,$10,$08,$20,$04,$40,$02,$80,$01
+  2774 357B			icon_saw                        ; sawtooth (BUZZ)
+  2775 357B 01 01 03 03 05 05 +         .byte $01,$01,$03,$03,$05,$05,$09,$09,$11,$11,$21,$21,$41,$41,$81,$81
+  2776 358B			icon_noise                      ; scattered dots (NOISE)
+  2777 358B 20 40 00 04 04 00 +         .byte $20,$40,$00,$04,$04,$00,$80,$10,$01,$01,$10,$00,$00,$82,$42,$08
+  2778 359B			icon_col
+  2779 359B 0A 0C 0E 10		        .byte 10,12,14,16       ; dest byte column of each icon
+  2780 359F			icon_ptr_lo
+  2781 359F 5B 6B 7B 8B		        .byte <icon_sq,<icon_tri,<icon_saw,<icon_noise
+  2782 35A3			icon_ptr_hi
+  2783 35A3 35 35 35 35		        .byte >icon_sq,>icon_tri,>icon_saw,>icon_noise
+  2784
+  2785 				; ----- display list: GR.8 (ANTIC mode $0F), 192 lines, two LMS regions ------
+  2786 				; Fixed 1KB-aligned home, clear of linetab ($3000) and the framebuffer ($4000+),
+  2787 				; and within one 1KB block (ANTIC's DL counter is 10-bit).
+  2788 35A7			        org $3C00
+  2789 3C00			dlist
+  2790 3C00-3D87> 70 70 70	        .byte $70,$70,$70       ; 24 blank lines
+  2791 3C03 4F			        .byte $4F               ; LMS + mode F
+  2792 3C04 00 40		        .word FB1
+  2793 3C06 0F 0F 0F 0F 0F 0F +         :101 .byte $0F          ; 101 more lines (102 total from FB1)
+  2794 3C6B 4F			        .byte $4F
+  2795 3C6C 00 50		        .word FB2
+  2796 3C6E 0F 0F 0F 0F 0F 0F +         :89 .byte $0F           ; 89 more lines (90 total from FB2)
+  2797 3CC7 41			        .byte $41               ; JVB
+  2798 3CC8 00 3C		        .word dlist
+  2799
+  2800 				; ----- text labels (screen codes, $FF-terminated) ---------------------------
+  2801 3CCA 21 34 21 32 29 00 + txt_title  .byte "ATARI POKEY SYNTH",$FF
+  2802 3CDC 37 21 36 25 26 2F + txt_wave   .byte "WAVEFORM",$FF
+  2803 3CE5 36 2F 2C 35 2D 25 + txt_vol    .byte "VOLUME",$FF
+  2804 3CEC 2F 23 34 21 36 25 + txt_oct    .byte "OCTAVE",$FF
+  2805 3CF3 21 34 34 21 23 2B + txt_atk    .byte "ATTACK",$FF
+  2806 3CFA 24 25 23 21 39 FF	txt_dec    .byte "DECAY",$FF
+  2807 3D00 33 35 33 34 21 29 + txt_sus    .byte "SUSTAIN",$FF
+  2808 3D08 32 25 2C 25 21 33 + txt_rel    .byte "RELEASE",$FF
+  2809 3D10 23 2C 2F 23 2B FF	txt_clk    .byte "CLOCK",$FF
+  2810 3D16 2E 2F 34 25 FF	txt_note   .byte "NOTE",$FF
+  2811 3D1B 2E 2F 32 2D FF	txt_norm   .byte "NORM",$FF
+  2812 3D20 11 15 2B FF		txt_15k    .byte "15K",$FF
+  2813 3D24 2C 26 2F 00 32 21 + txt_lfor   .byte "LFO RATE",$FF
+  2814 3D2D 2C 26 2F 00 24 25 + txt_lfod   .byte "LFO DEPTH",$FF
+  2815 3D37 24 25 34 35 2E 25 + txt_det    .byte "DETUNE",$FF
+  2816 3D3E 21 32 30 FF		txt_arp    .byte "ARP",$FF
+  2817 3D42 34 25 2D 30 2F FF	txt_tempo  .byte "TEMPO",$FF
+  2818 3D48 21 32 30 00 2D 2F + txt_arpm   .byte "ARP MODE",$FF
+  2819 3D51 30 2F 32 34 21 FF	txt_porta  .byte "PORTA",$FF
+  2820 3D57 24 32 35 2D FF	txt_drum   .byte "DRUM",$FF
+  2821 3D5C 28 30 00 26 29 2C + txt_hpf    .byte "HP FILTER",$FF
+  2822 3D66 30 32 25 33 25 34 + txt_preset .byte "PRESET",$FF
+  2823 3D6D 24 32 35 2D 22 25 + txt_dbeat  .byte "DRUMBEAT",$FF
+  2824 3D76 30 2C 21 39 FF	txt_play   .byte "PLAY",$FF
+  2825 3D7B 33 34 2F 30 FF	txt_stop   .byte "STOP",$FF
+  2826 3D80 32 25 23 FF		txt_rec    .byte "REC",$FF
+  2827 3D84 00 00 00 FF		txt_blk3   .byte "   ",$FF
+  2828
+  2829 02E0-02E1> 00 20		        run main
