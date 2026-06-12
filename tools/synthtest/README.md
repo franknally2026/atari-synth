@@ -43,6 +43,7 @@ grouped PASS/FAIL summary, exits non-zero on any failure. WAVs land in
 | `dsp.py` | PCM analysis (FFT autocorrelation pitch, spectral timbre, RMS/ADSR envelope, vibrato, beat) |
 | `harness.py` | `Synth`: launch/boot/teardown, pokes/peeks, `play()`, `frozen()`, register/level `timeline()`, PCM `capture()` |
 | `scenario.py` | `Timeline`, `Reporter`, `assert_*` acoustic/timeline helpers, combo-matrix generators |
+| `scenarios/bridge.py` | AltirraBridge contract: `AUDIO_STATE` schema + idle + clock labels + `freq_hz/period_cycles` self-consistency, 8-bit engine fidelity from reported Hz (no PCM), and the `JOY`-burst-then-`KEY` regression for ilmenit/AltirraSDL#72 |
 | `scenarios/core.py` | engine + UI behaviour (timeline-based): defaults, play, polyphony, ADSR, GR.8 UI, param nav/clamp, 2-page nav, selector/toggle glyphs, VU meters |
 | `scenarios/acoustic.py` | real-sound checks: pitch, label==pitch, octave/semitone tuning, all 3 clock modes, OCTAVE knob, VOLUME, ADSR timing, LFO rate, arpeggiator, chords, timbre, vibrato, detune |
 | `scenarios/sequencer.py` | transport, multi-step playback, step-entry + real-time record, ties, loop length, PCM playback |

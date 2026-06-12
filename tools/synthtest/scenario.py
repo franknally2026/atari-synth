@@ -161,6 +161,36 @@ def assert_octave_up(rep, clip_lo, clip_hi, name, tol_cents=80):
               f"{flo:.1f}->{fhi:.1f}Hz ({err:+.0f}c vs 2x)")
 
 
+def assert_engine_faithful_via_state(rep, s, name, voice=0, idx=None,
+                                     audf=None, mode=notes.MODE_NORMAL,
+                                     tol_cents=1.0):
+    """Engine faithfulness without an audio capture: the emulator-reported
+    output frequency on the voice's channel (AUDIO_STATE.freq_hz, exposed
+    by ilmenit/AltirraSDL#71) matches the divider->Hz prediction.
+
+    Use for 8-bit modes (NORMAL / 15 kHz), where the prediction formula
+    ``clock / (2*(audf+1))`` is exact. In 16-bit mode the joined-pair
+    timing has a small offset that the +1 form doesn't capture (the
+    sweep showed up to ~30c at the top of the table), so this helper is
+    not appropriate for 16-BIT until the prediction is recalibrated.
+
+    Returns the reported Hz, or None on failure."""
+    if idx is not None:
+        expect = notes.predicted_freq(idx, mode)
+    else:
+        expect = notes.audf_freq(audf, mode)
+    reported = s.channel_freq_hz(voice)
+    if reported is None:
+        rep.check(f"{name}: engine reports a freq_hz", False,
+                  f"reported=None (channel idle?)")
+        return None
+    err = notes.cents(reported, expect)
+    ok = abs(err) <= tol_cents
+    rep.check(f"{name}: reported Hz == predicted ({expect:.2f}Hz)",
+              ok, f"reported={reported:.3f}Hz {err:+.2f}c")
+    return reported
+
+
 def assert_engine_faithful(rep, clip, name, audf=None, mode=notes.MODE_NORMAL,
                            idx=None, tol_cents=70):
     """The audio engine renders what the registers command: measured pitch

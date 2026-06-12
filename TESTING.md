@@ -171,6 +171,7 @@ tools/synthtest/
 | `get_param(i)` / `PARAM_VARS` | panel parameter by index, in visual order |
 | `label_addr(name)` | resolve any MADS label from `synth.lst`, so tests survive code moving between builds |
 | `pokey()/chan(n)/audctl()/nactive()` | POKEY **write-register state** via the bridge (never `peek($D2xx)` — see gotchas) |
+| `audio_state()` / `channel_freq_hz(v)` | decoded POKEY snapshot with the **actual audible Hz** the emulator is emitting per channel (ilmenit/AltirraSDL#71). For joined 16-bit pairs the audible Hz is reported on the high channel of the pair (ch2 / ch4); `channel_freq_hz()` resolves the join |
 | `play(key)` / `drain()` | cooked-key press with queue drain + key-down scan |
 | `frozen(label)` | patch a routine's entry with `$60` (RTS) to freeze it, restore on exit — *the* way to hold a voice, since the cooked bridge KEY can't sustain a key |
 | `held_key(semitone)` | hold a note through the **real trigger path** (freeze `read_keyboard`, set `note_idx`) so octave/arp/engine behave exactly as for a live key |
@@ -228,8 +229,17 @@ A scenario that raises is recorded as a failure, not a crash of the run.
 
 ### Scenario catalogue (what is actually tested)
 
-Registered in `scenarios/__init__.py` as `(callable, needs_audio)` — ~104
+Registered in `scenarios/__init__.py` as `(callable, needs_audio)` — ~110
 scenarios, several hundred individual checks. By module:
+
+**`bridge.py` — the AltirraBridge contract this framework depends on:**
+`AUDIO_STATE` schema (top-level flags, 4 channels, all expected per-channel
+fields); idle channels report `freq_hz=None`; per-channel `clock` label tracks
+mode (NORMAL→`64kHz`, 15K→`15kHz`); `freq_hz / period_cycles` are
+self-consistent with the PAL POKEY clocks; engine fidelity in 8-bit modes
+asserted directly from reported Hz (no PCM, sub-1¢ tolerance); the
+ilmenit/AltirraSDL#72 JOY-burst-then-KEY regression (12 and 50 consecutive
+`JOY` commands — KEY must still register).
 
 **`core.py` — engine + UI fundamentals (timeline level, no audio needed):**
 boot defaults & silence; cooked-key → channel/pitch mapping; round-robin voice
@@ -388,10 +398,14 @@ These are the load-bearing tricks; reuse them rather than reinventing:
 
 * **POKEY `$D200-$D208` are write-only** — reading them returns the paddle
   POTs. Always use the bridge's `pokey()` snapshot of write-register state.
-* **A long burst of bridge JOY commands breaks subsequent KEY injection**
-  (bridge quirk). Key-driven checks must run *before* joystick-heavy sections —
-  this ordering is why `core.py` runs key tests first and why some selections
-  are done by poking `curparam` instead of navigating.
+* **AltirraSDL build requirement** — the framework hard-requires a bridge
+  build that includes `AUDIO_STATE.freq_hz` (ilmenit/AltirraSDL#71) and the
+  JOY-then-KEY fix (#72), i.e. commit `31bf4d9a` (PR #74) or later. `Synth.boot()`
+  capability-probes both and fails fast if the binary is stale. (Historically,
+  pre-#72 a burst of 12+ consecutive `JOY` commands silently broke all
+  subsequent `KEY` injection — see `bridge.joy_burst_then_key_regression`
+  for the regression coverage; with the fix this no longer constrains test
+  ordering.)
 * **Headless AltirraSDL ignores SIGTERM** — the harness uses `kill()`.
 * **AUDIO_RECORD truncation** — see capture hygiene above.
 * **MADS listing as symbol table** — `label_addr()`/`memcheck` parse

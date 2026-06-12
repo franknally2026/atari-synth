@@ -73,19 +73,30 @@ def semitone_in_tune(s, rep):
 
 
 def sixteen_bit_real_pitch(s, rep):
-    """16-bit mode: register peeks cannot report output Hz (AUDIO_STATE limit),
-    but PCM can. The 16-bit table is tuned in-tune, so idx24 should be ~C4
-    (261.6 Hz) within a tight tolerance."""
+    """16-bit mode: cross-validate PCM-measured pitch against the emulator's
+    own AUDIO_STATE.freq_hz (ilmenit/AltirraSDL#71). Both should agree on
+    the actual audible Hz on the high channel of the joined pair.
+
+    The synth's idx24 should sound near C4 (261.6 Hz)."""
     rep.section("acoustic: 16-bit mode real output pitch")
     with s.frozen("trigger_voices"):
         clip = _hold_and_capture(s, "sixteen_c4", 24, mode=notes.MODE_16BIT, wave=1)
         assert_audible_sustained(rep, clip, "16bit idx24")
+        # Emulator-reported audible Hz (audible side is ch2 for the 1+2 join).
+        reported = s.audio_state()["channels"][1]["freq_hz"]
         expect = notes.predicted_freq(24, notes.MODE_16BIT)
         assert_pitch_hz(rep, clip, "16bit idx24", expect, tol_cents=40)
         f = dsp.median_pitch(clip)
         if f:
             rep.check("  (reported) 16-bit idx24 measured pitch", True,
-                      f"{f:.1f}Hz = {notes.nearest_et(f)[0]}")
+                      f"PCM={f:.2f}Hz reported={reported:.2f}Hz "
+                      f"= {notes.nearest_et(f)[0]}")
+        # PCM and emulator-reported audible Hz must agree closely — this is
+        # the cross-validation #71 enables for the joined-pair case.
+        if f and reported:
+            err = notes.cents(f, reported)
+            rep.check("PCM vs AUDIO_STATE.freq_hz agree (<5c)",
+                      abs(err) <= 5, f"PCM={f:.2f} reported={reported:.2f} {err:+.2f}c")
 
 
 def label_matches_pitch(s, rep):
