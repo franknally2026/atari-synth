@@ -60,8 +60,7 @@ def voice_allocation(s, rep):
 def drum_key_reachable(s, rep):
     """REACHABILITY: pressing the '1' key (a real cooked keypress) actually
     fires a drum hit on channel 4 — i.e. the drum is reachable through real
-    user input, not just by poking $FD. Runs before the joystick-heavy tests
-    so cooked-KEY injection is still alive."""
+    user input, not just by poking $FD."""
     rep.section("drum trigger reachable: the '1' key fires a drum")
     DRUM = 0x06BD
     s.set("clock15", 0); s.poke(0x0689, 0); s.poke(DRUM, 8)   # enable the drum
@@ -156,8 +155,7 @@ def gr8_ui(s, rep):
 
 def param_nav_and_clamp(s, rep):
     """UP/DOWN navigation steps through params in visual order, and LEFT/RIGHT
-    adjust clamps each at 0..max. (Uses the joystick — runs after the KEY tests
-    so the bridge's JOY-breaks-KEY quirk can't affect them.)"""
+    adjust clamps each at 0..max."""
     rep.section("params: navigation order + adjust clamp")
     # DOWN x5 from WAVEFORM must reach DETUNE (param 5): index order == visual
     # order, so no param is unreachable in sequence.

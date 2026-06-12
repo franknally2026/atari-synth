@@ -4,13 +4,18 @@ Each entry: (callable, needs_audio). needs_audio scenarios are skipped (and
 reported as skipped, not failed) when the emulator build lacks the
 AUDIO_RECORD bridge command, so the framework degrades gracefully.
 """
-from . import (core, acoustic, combos, sequencer, arpmodes, portamento, drum,
-               hpfilter, presets, stress, quantitative, timing, workflow)
+from . import (bridge, core, acoustic, combos, sequencer, arpmodes, portamento,
+               drum, hpfilter, presets, stress, quantitative, timing, workflow)
 
 # (scenario, needs_audio). Sequencer behavioural checks don't need audio; only
 # its PCM playback check does.
+# core.defaults_and_silence asserts on boot state and must run first; bridge
+# scenarios mutate state (joystick navigation, voice pokes), so they sit
+# after core. Stale-AltirraSDL detection happens in Synth.boot()'s
+# capability probe before any scenario runs.
 REGISTRY = (
     [(fn, False) for fn in core.SCENARIOS]
+    + [(fn, False) for fn in bridge.SCENARIOS]
     + [(fn, True) for fn in acoustic.SCENARIOS]
     + [(acoustic.clock_switch_voice_wrap, True)]
     + [(sequencer.transport, False),

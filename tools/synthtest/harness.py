@@ -119,6 +119,26 @@ class Synth:
     def boot(self, settle=300):
         self.a.boot(XEX)
         self.a.frame(settle)
+        self._probe_capabilities()
+
+    def _probe_capabilities(self):
+        """Fail fast if the AltirraSDL build predates the bridge fixes we now
+        depend on (ilmenit/AltirraSDL#71 freq_hz, #72 JOY-then-KEY).
+
+        Run once at boot so a stale binary surfaces here, not as confusing
+        scenario failures later."""
+        try:
+            st = self.a.audio_state()
+        except AttributeError as e:
+            raise HarnessError(
+                "Bridge SDK lacks audio_state() — update the AltirraBridge SDK "
+                "to a build that includes #71"
+            ) from e
+        if "channels" not in st or not st["channels"] or "freq_hz" not in st["channels"][0]:
+            raise HarnessError(
+                "AltirraSDL build lacks AUDIO_STATE.freq_hz — rebuild from "
+                "ilmenit/AltirraSDL commit 31bf4d9a (PR #74) or later"
+            )
 
     def close(self):
         if self._recording:
@@ -202,6 +222,40 @@ class Synth:
     def nactive(self):
         p = self.a.pokey()
         return sum(1 for n in (1, 2, 3, 4) if self._h(p[f"AUDC{n}"]))
+
+    def audio_state(self):
+        """Decoded POKEY per-channel state with the audible output frequency
+        the emulator is actually emitting (ilmenit/AltirraSDL#71). Returns:
+
+          {
+            "audctl": int,
+            "nine_bit_poly", "join_1_2", "join_3_4",
+            "highpass_1_3", "highpass_2_4", "base_15khz": bool,
+            "channels": [
+              {"audf", "audc", "volume", "distortion", "clock",
+               "period_cycles", "freq_hz"}, ... x4
+            ]
+          }
+
+        ``freq_hz`` is ``None`` on idle / muted channels and on the
+        low-side of a joined 16-bit pair (the audible Hz is reported on
+        the high channel of the pair: ch2 for 1+2, ch4 for 3+4)."""
+        return self.a.audio_state()
+
+    def channel_freq_hz(self, voice):
+        """Reported audible Hz for the voice running on POKEY channel
+        ``voice+1`` (1..4). Joins are handled: a 16-bit pair reports on
+        the high channel, so a voice rendered into the pair returns the
+        audible side."""
+        st = self.audio_state()
+        ch = st["channels"]
+        n = voice + 1   # 1..4
+        # joined 16-bit pair: audible Hz on high channel
+        if st.get("join_1_2") and n == 1:
+            return ch[1]["freq_hz"]
+        if st.get("join_3_4") and n == 3:
+            return ch[3]["freq_hz"]
+        return ch[n - 1]["freq_hz"]
 
     # -- synth-specific helpers --------------------------------------------
     def reset_voices(self, volume=10):
