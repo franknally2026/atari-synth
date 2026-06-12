@@ -26,10 +26,10 @@ def tuning_sweep_16bit(s, rep):
     """Every note across the 65-note table renders within a few cents of its
     designed pitch in 16-bit mode (the in-tune mode). The literal 'what we
     tuned is what sounds', swept over the whole range — not one note."""
-    rep.section("quant: full-range 16-bit tuning sweep (<25 cents everywhere)")
+    rep.section("quant: full-range 16-bit tuning sweep (<5 cents everywhere)")
     worst = (0, 0.0)
     with s.frozen("trigger_voices"):
-        for idx in range(0, 61, 6):                    # C2..C7-ish, 11 points
+        for idx in (*range(0, 61, 6), 62, 64):         # C2..E7, 13 points
             _hold(s, idx, mode=notes.MODE_16BIT)
             clip = s.capture(f"tune16_{idx}", 22)
             f = dsp.median_pitch(clip)
@@ -37,8 +37,8 @@ def tuning_sweep_16bit(s, rep):
             c = notes.cents(f, exp) if f > 0 else 999
             if abs(c) > abs(worst[1]):
                 worst = (idx, c)
-    rep.check("every 16-bit note in tune to <25 cents",
-              abs(worst[1]) <= 25, f"worst idx{worst[0]}={worst[1]:+.0f}c")
+    rep.check("every 16-bit note in tune to <5 cents",
+              abs(worst[1]) <= 5, f"worst idx{worst[0]}={worst[1]:+.1f}c")
 
 
 def octave_sweep(s, rep):

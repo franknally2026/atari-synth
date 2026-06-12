@@ -2649,17 +2649,19 @@ note_names
         .byte "C C#D D#E F F#G G#A A#B "
 
 ; 16-bit chromatic dividers, PAL 1.79 MHz clock, C2..E7 (index 0 = C2)
+; POKEY's joined-pair fast-clock period is (n+1)+6 = n+7 master cycles
+; (6-cycle chain-setup overhead), so n = round(master / (2*f) - 7).
 chrom16_lo
-        .byte $F4,$FB,$2D,$87,$07,$AB,$71,$57,$5B,$7C,$B8,$0D
-        .byte $7A,$FD,$96,$43,$03,$D5,$B8,$AB,$AD,$BE,$DB,$06
-        .byte $3C,$7E,$CB,$21,$81,$EA,$5C,$D5,$56,$DE,$6D,$02
-        .byte $9E,$3F,$E5,$90,$40,$F5,$AD,$6A,$2B,$EF,$B6,$81
-        .byte $4E,$1F,$F2,$C8,$A0,$7A,$56,$35,$15,$F7,$DB,$C0
-        .byte $A7,$8F,$78,$63,$4F
+        .byte $EE,$F5,$27,$81,$01,$A5,$6B,$51,$55,$76,$B2,$07
+        .byte $74,$F7,$90,$3D,$FD,$CF,$B2,$A5,$A7,$B8,$D5,$00
+        .byte $36,$78,$C5,$1B,$7B,$E4,$56,$CF,$50,$D8,$67,$FC
+        .byte $98,$39,$DF,$8A,$3A,$EF,$A7,$64,$25,$E9,$B0,$7B
+        .byte $48,$19,$EC,$C2,$9A,$74,$50,$2F,$0F,$F1,$D5,$BA
+        .byte $A1,$89,$72,$5D,$49
 chrom16_hi
         .byte $34,$31,$2F,$2C,$2A,$27,$25,$23,$21,$1F,$1D,$1C
-        .byte $1A,$18,$17,$16,$15,$13,$12,$11,$10,$0F,$0E,$0E
-        .byte $0D,$0C,$0B,$0B,$0A,$09,$09,$08,$08,$07,$07,$07
+        .byte $1A,$18,$17,$16,$14,$13,$12,$11,$10,$0F,$0E,$0E
+        .byte $0D,$0C,$0B,$0B,$0A,$09,$09,$08,$08,$07,$07,$06
         .byte $06,$06,$05,$05,$05,$04,$04,$04,$04,$03,$03,$03
         .byte $03,$03,$02,$02,$02,$02,$02,$02,$02,$01,$01,$01
         .byte $01,$01,$01,$01,$01

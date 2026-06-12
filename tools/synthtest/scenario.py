@@ -168,11 +168,10 @@ def assert_engine_faithful_via_state(rep, s, name, voice=0, idx=None,
     output frequency on the voice's channel (AUDIO_STATE.freq_hz, exposed
     by ilmenit/AltirraSDL#71) matches the divider->Hz prediction.
 
-    Use for 8-bit modes (NORMAL / 15 kHz), where the prediction formula
-    ``clock / (2*(audf+1))`` is exact. In 16-bit mode the joined-pair
-    timing has a small offset that the +1 form doesn't capture (the
-    sweep showed up to ~30c at the top of the table), so this helper is
-    not appropriate for 16-BIT until the prediction is recalibrated.
+    Exact in all three clock modes: 8-bit predictions use
+    ``clock / (2*(audf+1))``, and the 16-bit joined-pair fast-clock
+    prediction includes the +6 chain-setup offset (``period = n + 7``,
+    see notes.JOIN16_FAST_OFFSET) matching Altirra's POKEY model.
 
     Returns the reported Hz, or None on failure."""
     if idx is not None:
