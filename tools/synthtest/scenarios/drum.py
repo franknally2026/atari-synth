@@ -32,7 +32,7 @@ def drum_param(s, rep):
     lo = s.get_param(15)
     rep.check("DRUM clamps 15 / 0", hi == 15 and lo == 0, f"hi={hi} lo={lo}")
     # 'DRUM' label on page 2 row1 right (col 21, scan 36): 'D' = screen code $24
-    rep.check("DRUM label renders on page 2", s.cell(21, 36) == s.glyph(0x24), "no D")
+    rep.check("DRUM label renders on page 2", s.cell(21, 36) == s.glyph(0x24, inv=True), "no D")
     s.poke(DRUM, 0); s.set("curparam", 0); s.frame(6)
 
 
@@ -46,8 +46,9 @@ def drum_seq_trigger(s, rep):
     s.set("seq_len", 16); s.set("tempo", 2); s.set("seq_rec", 0)
     s.set("seq_pos", 0); s.set("seq_timer", 1); s.set("seq_play", 1)
     peak = 0
-    for _ in range(6):
-        s.frame(1); peak = max(peak, s.chan(4)[1] & 0x0F)
+    for _ in range(16):     # generous window: the hit's fire-frame shifts with the
+        s.frame(1)          # tempo phase carried in from prior scenarios (the slow
+        peak = max(peak, s.chan(4)[1] & 0x0F)   # DRUM=10 decay keeps it ringing)
     s.set("seq_play", 0)
     rep.check("$FD step drives channel 4 to a loud noise hit", peak >= 12,
               f"peak AUDC4 level={peak}, AUDF4={s.chan(4)[0]}")
@@ -222,7 +223,7 @@ def drumbeat_param(s, rep):
     rep.check("DRUMBEAT defaults to 0", s.get_param(18) == 0, s.get_param(18))
     s.set("curparam", 18); s.frame(8)
     rep.check("nav to DRUMBEAT -> page 2", s.get("page") == 2, s.get("page"))
-    rep.check("DRUMBEAT label renders (page 2 row1)", s.cell(1, 36) == s.glyph(0x24), "no D")
+    rep.check("DRUMBEAT label renders (page 2 row1)", s.cell(1, 36) == s.glyph(0x24, inv=True), "no D")
     s.joy(0, "right"); s.frame(100); s.joy(0, "centre"); s.frame(2)
     hi = s.get_param(18)
     s.joy(0, "left"); s.frame(130); s.joy(0, "centre"); s.frame(2)

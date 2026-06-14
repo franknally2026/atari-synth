@@ -47,7 +47,7 @@ def arpmode_param(s, rep):
     lo = s.get_param(13)
     rep.check("ARPMODE clamps 3 / 0", hi == 3 and lo == 0, f"hi={hi} lo={lo}")
     # the 'ARP MODE' label is drawn on page 2 (right column, scan 16): 'A'
-    rep.check("ARP MODE label renders on page 2", s.cell(21, 16) == s.glyph(0x21), "no A")
+    rep.check("ARP MODE label renders on page 2", s.cell(21, 16) == s.glyph(0x21, inv=True), "no A")
     s.set("curparam", 0); s.frame(6)
 
 

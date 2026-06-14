@@ -32,7 +32,7 @@ def preset_param(s, rep):
     rep.check("PRESET defaults to 0", s.get_param(17) == 0, s.get_param(17))
     s.set("curparam", 17); s.frame(8)
     rep.check("nav to PRESET -> page 2", s.get("page") == 2, s.get("page"))
-    rep.check("PRESET label renders on page 2 (right col)", s.cell(21, 16) == s.glyph(0x30), "no P")
+    rep.check("PRESET label renders on page 2 (right col)", s.cell(21, 16) == s.glyph(0x30, inv=True), "no P")
     s.set("curparam", 0); s.frame(8)
 
 

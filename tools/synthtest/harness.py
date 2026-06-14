@@ -401,9 +401,12 @@ class Synth:
         base = FB1 + y * 40 if y < 102 else FB2 + (y - 102) * 40
         return base + (x >> 3)
 
-    def glyph(self, code):
-        """The ROM font's 8-byte glyph for a screen code."""
-        return list(self.a.peek(0xE000 + code * 8, 8))
+    def glyph(self, code, inv=False):
+        """The ROM font's 8-byte glyph for a screen code. inv=True returns the
+        inverse-video form (each byte EOR $FF) — used for the focused param's
+        label, which is drawn in inverse video (the selection highlight)."""
+        g = list(self.a.peek(0xE000 + code * 8, 8))
+        return [b ^ 0xFF for b in g] if inv else g
 
     def cell(self, col, scan):
         """The 8 vertical bytes of a glyph cell at char column `col`, scanline `scan`."""

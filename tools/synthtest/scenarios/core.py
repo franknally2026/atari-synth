@@ -180,10 +180,10 @@ def two_page_nav(s, rep):
     rep.section("UI: two-page panel navigation")
     s.set("curparam", 12); s.frame(20)             # -> page 2 (TEMPO)
     rep.check("nav to param 12 -> page 2", s.get("page") == 1, s.get("page"))
-    rep.check("page 2 shows TEMPO label", s.cell(1, 16) == s.glyph(0x34), "no T")
+    rep.check("page 2 shows TEMPO label", s.cell(1, 16) == s.glyph(0x34, inv=True), "no T")
     s.set("curparam", 0); s.frame(20)              # -> page 0 (WAVEFORM)
     rep.check("back to param 0 -> page 0", s.get("page") == 0, s.get("page"))
-    rep.check("page 0 redraws WAVEFORM label", s.cell(1, 16) == s.glyph(0x37), "no W")
+    rep.check("page 0 redraws WAVEFORM label", s.cell(1, 16) == s.glyph(0x37, inv=True), "no W")
     s.screenshot("23_page2.png")
 
 

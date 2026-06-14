@@ -5,7 +5,8 @@ reported as skipped, not failed) when the emulator build lacks the
 AUDIO_RECORD bridge command, so the framework degrades gracefully.
 """
 from . import (bridge, core, acoustic, combos, sequencer, arpmodes, portamento,
-               drum, hpfilter, presets, stress, quantitative, timing, workflow)
+               drum, hpfilter, presets, stress, quantitative, timing, workflow,
+               input)
 
 # (scenario, needs_audio). Sequencer behavioural checks don't need audio; only
 # its PCM playback check does.
@@ -93,4 +94,7 @@ REGISTRY = (
        (combos.sixteenbit_plus_effects, True),
        (combos.effects_on_chord, True),
        (combos.combo_timeline_no_collapse, False)]
+    # input scenarios run LAST: they poke cur_param/volume and overwrite preset
+    # slot 0, so keeping them at the end avoids polluting earlier scenarios.
+    + [(fn, False) for fn in input.SCENARIOS]
 )

@@ -33,6 +33,11 @@ AUDC1   = $D201         ; channel-1 control (distortion | volume)
 AUDCTL  = $D208         ; POKEY global audio control
 
 ROMFONT = $E000         ; OS ROM character set (8 bytes/glyph, screen-code index)
+; DEMO: DLI colour-band hardware registers
+WSYNC   = $D40A         ; wait for horizontal sync (write)
+COLPF2  = $D018         ; playfield-2 colour (hi-res: hue of fg + bg)
+NMIEN   = $D40E         ; NMI enable (bit7 = DLI, bit6 = VBI)
+VDSLST  = $0200         ; DLI vector
 FB1     = $4000         ; framebuffer region 1 (scan lines 0..101)
 FB2     = $5000         ; framebuffer region 2 (scan lines 102..191)
 linetab_lo = $6000      ; 192 bytes: low byte of each scan line's address
@@ -44,7 +49,10 @@ linetab_hi = $60C0      ; 192 bytes: high byte
                         ; pointers -> draw_page_labels looped forever). Don't move it
                         ; back into program space.
 
-KBTOP   = 124           ; piano keyboard top scan line
+KBTOP   = 132           ; piano keyboard top scan line (shifted down 8 from 124 to
+                        ; open a hint-line row at HINTSCAN; uses the slack below
+                        ; the keyboard, so the keys stay full size)
+HINTSCAN = 124          ; context-sensitive hint line, just above the keyboard
 
 ; ----- zero-page pointers (free OS scratch $CB-$D1) -------------------------
 scrptr  = $CB           ; word: general dest pointer
@@ -195,6 +203,15 @@ dm_lo       = $06B1     ; meter draw scratch: lower envelope level
 dm_hi       = $06B2     ; meter draw scratch: higher envelope level
 seq_len     = $06B3     ; playback loop length = number of recorded steps (1..16)
 rec_latch   = $06B4     ; real-time record: note played since last step ($FF=none)
+hl_idx      = $06CC     ; DEMO: char index in current label to highlight
+dli_idx     = $06CD     ; DEMO: which colour band the next DLI sets (reset each frame)
+kbd_dir     = $06CE     ; arrow-key direction bits (mirrors STICK0: U/D/L/R) for update_input
+nav_prev    = $06CF     ; last nav-key KBCODE ($FF=none); edge-detect Tab/Return
+dp_zoff     = $06D0     ; draw_param: 1 = this param renders value 0 as "OFF"
+prev_hint   = $06D1     ; last drawn hint-line id ($FF = force redraw)
+pl_inv      = $06D2     ; print_label base inverse: $FF = focused param (inverse video)
+hl_shift    = $06D3     ; 1 = the shortcut char is a SHIFT key (drawn opposite video)
+saved_flash = $06D4     ; >0 = show "SAVED" over the PRESET name for this many frames
 
 NPARAM = 19             ; ...page2 16 HPF, 17 PRESET, 18 DRUMBEAT
 NSAVE  = 17             ; params 0..16 are saved in a preset (PRESET itself is not)
@@ -215,6 +232,22 @@ REPDELAY = 15
 REPFAST  = 4
 DECAYRATE = 4
 NUMKEYS  = 17
+NSHORT   = 18           ; 13 plain (page 0 + DRUMBEAT) + 5 Shift (page 1/2)
+
+; --- DEMO: shortcut-letter highlight style (0 = inverse video, 1 = underline)
+HL_STYLE = 1
+
+; --- DEMO: DLI colour palette (0 = cool blue/green, 1 = warm orange/gold)
+PALETTE = 0
+    .if PALETTE = 0
+TITLE_COL = $90         ; band A (title row): blue hue, near-black bg + bright text
+PANEL_COL = $C0         ; band B (panel): green hue
+KBD_COL   = $00         ; band C (keyboard): neutral white
+    .else
+TITLE_COL = $30         ; band A: red-orange hue
+PANEL_COL = $F0         ; band B: gold hue
+KBD_COL   = $00         ; band C: neutral white
+    .endif
 
 ; ----------------------------------------------------------------------------
         org $2000
@@ -311,6 +344,7 @@ init_voice
         sta dbeat_cnt
         lda #$FF
         sta prev_page           ; force first-frame page render
+        sta prev_hint           ; force first-frame hint-line draw
         sta seq_prevn
         sta prev_spos
         ldx #15                 ; clear sequencer pattern
@@ -353,6 +387,7 @@ preset_copy
 loop
         jsr wait_vbl            ; sync, then draw starting at the frame top
         lda #0
+        sta dli_idx             ; DEMO: restart colour-band sequence for this frame
         sta ATRACT
         ; voice count: 16-bit mode (clock 2) uses 2 voices, else 4
         ldx #4
@@ -367,6 +402,8 @@ lp_vl
         cmp prev_clkm
         beq lp_same
         sta prev_clkm
+        lda #$FF                ; clock mode changed -> force a panel redraw so the
+        sta prev_page           ; 16-bit inert-strikes refresh on the current page
         ldx #3
 lp_clr
         lda #0
@@ -382,10 +419,12 @@ lp_clr
 lp_same
         jsr read_keyboard
         jsr read_console
+        jsr read_navkeys        ; arrows -> kbd_dir; Tab = page flip; Return = save
         jsr trigger_voices
         jsr drum_key_tick       ; '1' key -> live drum hit (edge)
         jsr update_input
         jsr preset_tick         ; PRESET knob -> load; fire on PRESET -> save
+        jsr saved_flash_tick    ; tick the "SAVED" flash on the PRESET cell
         jsr lfo_tick
         jsr arp_tick
         jsr seq_tick
@@ -455,6 +494,115 @@ rc_nostart
 rc_nosel
         lda con_now
         sta con_prev
+        rts
+
+; Navigation keys (laptop play, no joystick needed). The Atari arrow keys are
+; Ctrl + the -/=/+/* keys; Ctrl sets KBCODE bit6 ($40), so they read UNMASKED as
+; $4E/$4F/$46/$47 (read_keyboard masks #$3F for the note matrix and ignores
+; these). Arrows set kbd_dir level bits -> update_input gives them the same
+; nav/adjust/auto-repeat as the joystick. Tab/Return are edge-triggered via nav_prev.
+;   Up=$4E Down=$4F Left=$46 Right=$47   Tab=$2C (page flip)   Return=$0C (save)
+read_navkeys
+        lda #0
+        sta kbd_dir
+        lda SKSTAT
+        and #$04
+        bne rn_none             ; no key down
+        lda KBCODE
+        cmp #$4E                ; UP    (Ctrl+MINUS)
+        bne rn_n1
+        lda #$01
+        sta kbd_dir
+        jmp rn_seen
+rn_n1
+        cmp #$4F                ; DOWN  (Ctrl+EQUALS)
+        bne rn_n2
+        lda #$02
+        sta kbd_dir
+        jmp rn_seen
+rn_n2
+        cmp #$46                ; LEFT  (Ctrl+PLUS)
+        bne rn_n3
+        lda #$04
+        sta kbd_dir
+        jmp rn_seen
+rn_n3
+        cmp #$47                ; RIGHT (Ctrl+ASTERISK)
+        bne rn_n4
+        lda #$08
+        sta kbd_dir
+        jmp rn_seen
+rn_n4
+        cmp #$2C                ; Tab -> cycle page (edge only, no repeat)
+        bne rn_n5
+        ldx nav_prev
+        cpx #$2C
+        beq rn_seen
+        jsr page_flip
+        jmp rn_seen
+rn_n5
+        cmp #$0C                ; Return -> save preset (joystick-fire substitute)
+        bne rn_short
+        ldx nav_prev
+        cpx #$0C
+        beq rn_seen
+        jsr nav_save_preset
+        jmp rn_seen
+rn_short
+        ; letter shortcut: a free letter that's underlined in a param's label jumps
+        ; the selection straight to that param (A still holds raw KBCODE here). Only
+        ; the 6 params whose letter is UNIQUE have an entry (see shortcut_kc).
+        ldx #NSHORT-1
+rn_short_l
+        cmp shortcut_kc,x
+        beq rn_short_hit
+        dex
+        bpl rn_short_l
+        jmp rn_seen             ; not a shortcut key
+rn_short_hit
+        cmp nav_prev            ; A = this key = shortcut_kc[x]; held -> no re-jump
+        beq rn_seen
+        lda shortcut_param,x    ; jump (cur_param drives the page too)
+        sta cur_param
+rn_seen
+        lda KBCODE              ; remember this frame's key for next-frame edge detect
+        sta nav_prev
+        rts
+rn_none
+        lda #$FF
+        sta nav_prev
+        rts
+
+; Tab: jump the selection to the first param of the next page (0->1->2->0).
+; update_display derives the page from cur_param, so this is all it takes.
+page_flip
+        lda cur_param
+        cmp #PER_PAGE           ; page 0 (0..11) -> page 1
+        bcc pf_to1
+        cmp #PG2BASE            ; page 1 (12..15) -> page 2
+        bcc pf_to2
+        lda #0                  ; page 2 -> wrap to page 0
+        sta cur_param
+        rts
+pf_to1
+        lda #PER_PAGE
+        sta cur_param
+        rts
+pf_to2
+        lda #PG2BASE
+        sta cur_param
+        rts
+
+; Return mirrors the joystick fire button: save the patch, but only while the
+; PRESET param is selected. Keep prev_preset in sync so preset_tick won't reload.
+nav_save_preset
+        lda cur_param
+        cmp #17                 ; PRESET param index
+        bne nsp_done
+        jsr preset_save
+        lda preset_slot
+        sta prev_preset
+nsp_done
         rts
 
 seq_toggle_play
@@ -612,67 +760,69 @@ sq_lim
 sq_done
         rts
 
+; Unified directional input: up/down navigate, left/right adjust. ALL FOUR now
+; auto-repeat off one rep_timer (was: U/D edge-only, L/R repeated). Arrow keys are
+; merged in via kbd_dir (read_navkeys) so they drive the exact same path.
 update_input
         lda STICK0
         and #$0F
-        eor #$0F
+        eor #$0F                ; bit0=up bit1=down bit2=left bit3=right (active high)
+        ora kbd_dir             ; merge arrow keys -> identical nav/adjust/repeat
         sta pressed
         lda prev_pressed
         eor #$FF
         and pressed
-        sta edge
+        sta edge                ; freshly-pressed directions this frame
+        lda pressed
+        and #$0F
+        bne ui_held
+        lda #REPDELAY           ; nothing held -> re-arm the initial delay
+        sta rep_timer
+        jmp ui_done
+ui_held
         lda edge
+        and #$0F
+        bne ui_fresh            ; a fresh press -> act immediately
+        dec rep_timer
+        bne ui_done             ; still counting down -> no action this frame
+        lda #REPFAST            ; timer expired -> repeat at the fast rate
+        sta rep_timer
+        jmp ui_act
+ui_fresh
+        lda #REPDELAY
+        sta rep_timer
+ui_act
+        lda pressed             ; UP -> previous param (wrap)
         and #$01
-        beq ui_noup
+        beq ui_a_nodn
         dec cur_param
-        bpl ui_noup
+        bpl ui_a_nodn
         lda #NPARAM-1
         sta cur_param
-ui_noup
-        lda edge
+ui_a_nodn
+        lda pressed             ; DOWN -> next param (wrap)
         and #$02
-        beq ui_nodn
+        beq ui_a_nolr
         inc cur_param
         lda cur_param
         cmp #NPARAM
-        bne ui_nodn
+        bne ui_a_nolr
         lda #0
         sta cur_param
-ui_nodn
-        lda pressed
-        and #$0C
-        bne ui_lr_held
-        lda #REPDELAY
-        sta rep_timer
-        jmp ui_done
-ui_lr_held
-        lda edge
-        and #$0C
-        bne ui_lr_fresh
-        dec rep_timer
-        beq ui_lr_repeat
-        jmp ui_done
-ui_lr_fresh
-        lda #REPDELAY
-        sta rep_timer
-        jmp ui_lr_apply
-ui_lr_repeat
-        lda #REPFAST
-        sta rep_timer
-ui_lr_apply
-        lda pressed
+ui_a_nolr
+        lda pressed             ; LEFT -> value -1
         and #$04
-        beq ui_try_right
+        beq ui_a_tryr
         lda #$FF
         sta delta
-        jmp ui_adjust
-ui_try_right
-        lda pressed
+        jsr apply_adjust
+        jmp ui_done
+ui_a_tryr
+        lda pressed             ; RIGHT -> value +1
         and #$08
         beq ui_done
         lda #$01
         sta delta
-ui_adjust
         jsr apply_adjust
 ui_done
         lda pressed
@@ -969,6 +1119,10 @@ preset_offset
         sta tmp2
         rts
 preset_save
+        lda #40                 ; trigger the "SAVED" flash (~0.8s) on the PRESET cell
+        sta saved_flash
+        lda #$FF
+        sta prev_disp+17        ; force the PRESET value cell to redraw -> "SAVED"
         jsr preset_offset
         ldx #0
 ps_loop
@@ -1348,7 +1502,29 @@ gr8_init
         sta SDLSTL+1
         lda #$22                ; normal width + screen DMA (OS VBI -> DMACTL)
         sta SDMCTL
+        ; DEMO (DEACTIVATED): DLI colour-band handler. To re-enable, install
+        ; VDSLST/NMIEN here, set COLOR2 above to TITLE_COL, and restore the $80
+        ; DLI bits in dlist (scanlines 7 and 123). Handler kept below for reuse.
         rts
+
+; DEMO: DLI colour bands. Fires at the end of the title row (-> panel colour)
+; and just above the keyboard (-> neutral colour). dli_idx walks the table and
+; is reset to 0 each frame by the main loop.
+dli_handler
+        pha                     ; save A and X (X indexes the band table; the
+        txa                     ; main loop uses X mid-draw, so we must not
+        pha                     ; clobber it or fillrect/blit corrupts the FB)
+        ldx dli_idx
+        lda dli_band,x
+        sta WSYNC
+        sta COLPF2
+        inc dli_idx
+        pla
+        tax
+        pla
+        rti
+dli_band
+        .byte PANEL_COL, KBD_COL
 
 ; build the 192-entry scan-line address table (hides the FB1/FB2 split)
 build_linetab
@@ -1866,7 +2042,7 @@ dwl
         stx s_kc
         lda white_lblcol,x
         sta bc_col
-        lda #160
+        lda #KBTOP+36
         sta bc_scan
         lda white_lblch,x
         sta bc_code
@@ -1883,7 +2059,7 @@ dbl
         stx s_kc
         lda black_lblcol,x
         sta bc_col
-        lda #128
+        lda #KBTOP+4
         sta bc_scan
         lda black_lblch,x
         sta bc_code
@@ -1946,8 +2122,9 @@ ud_rst
         inx
         cpx pg_end
         bne ud_rst
+        lda cur_param           ; labels already drawn (focused) above -> sync
+        sta prev_param          ; prev_param so ud_pgsame doesn't redraw them again
         lda #$FF
-        sta prev_param
         sta prev_spos           ; force sequencer grid/transport redraw on page 2
         sta prev_splay
         sta prev_srec
@@ -1960,31 +2137,14 @@ ud_pgvm
         dex
         bpl ud_pgvm
 ud_pgsame
-        ; selection markers (current page; only when the selection moved)
+        ; focus highlight: when the selection moves, redraw the page's labels so the
+        ; newly-selected one is inverse and the old one reverts to normal (replaces
+        ; the old '>' marker). draw_page_labels applies pl_inv per param.
         lda cur_param
         cmp prev_param
         beq ud_nomk
         sta prev_param
-        ldx pg_base
-ud_mk
-        stx s_kc
-        lda p_lblcol,x
-        sec
-        sbc #1
-        sta bc_col
-        lda p_scan,x
-        sta bc_scan
-        lda #$00
-        cpx cur_param
-        bne ud_mk_sp
-        lda #$1E                ; '>'
-ud_mk_sp
-        sta bc_code
-        jsr blit_char
-        ldx s_kc
-        inx
-        cpx pg_end
-        bne ud_mk
+        jsr draw_page_labels
 ud_nomk
         ; per-parameter value redraw on change (current page only)
         ldx pg_base
@@ -2011,6 +2171,7 @@ ud_pn
         bne ud_noseq
         jsr seq_draw
 ud_noseq
+        jsr hint_update         ; context-sensitive hint line above the keyboard
         jsr draw_meters         ; per-voice VU bars (both pages)
         ; NOTE name + active-key indicator (on note change)
         lda note_idx
@@ -2259,11 +2420,118 @@ dpgl
         sta bc_col
         lda p_scan,x
         sta bc_scan
-        jsr print_strz
+        lda p_hl,x
+        sta hl_idx
+        lda p_hl_shift,x        ; is this param's shortcut a Shift+letter?
+        sta hl_shift
+        lda #0                  ; focus highlight: inverse the selected param's label
+        cpx cur_param
+        bne dpgl_inv
+        lda #$FF
+dpgl_inv
+        sta pl_inv
+        jsr print_label         ; (leaves bc_col at the label's end column)
+        lda clock15             ; 16-bit mode disables some FX -> strike them through
+        cmp #2
+        bne dpgl_next
+        ldx s_kc
+        lda p_inert16,x
+        beq dpgl_next
+        jsr draw_strike
+dpgl_next
         ldx s_kc
         inx
         cpx pg_end
         bne dpgl
+        rts
+
+; strike a horizontal line through the label just drawn (cols p_lblcol..bc_col at
+; the cell's middle row) -> the "this control is inert in 16-bit mode" marker.
+draw_strike
+        lda bc_scan
+        clc
+        adc #3
+        tay
+        lda linetab_lo,y
+        sta adjptr
+        lda linetab_hi,y
+        sta adjptr+1
+        ldx s_kc
+        ldy p_lblcol,x
+ds_l
+        cpy bc_col
+        bcs ds_done
+        lda #$FF
+        sta (adjptr),y
+        iny
+        jmp ds_l
+ds_done
+        rts
+
+; Print a label. The char at index hl_idx is the shortcut key, drawn highlighted
+; (HL_STYLE 1 = underline). pl_inv ($FF) renders the whole label in inverse video
+; -> the FOCUS highlight for the selected param (underline=shortcut, inverse=focus).
+print_label
+        lda #0
+        sta psi
+        lda pl_inv              ; base inverse for every cell (focus highlight)
+        sta bc_inv
+pl_l
+        ldy psi
+        lda (srcptr),y
+        cmp #$FF
+        beq pl_done
+        sta bc_code
+        lda psi
+        cmp hl_idx
+        bne pl_normal
+    .if HL_STYLE = 0
+        lda pl_inv              ; shortcut char = opposite of the label's base
+        eor #$FF
+        sta bc_inv
+        jsr blit_char
+        lda pl_inv
+        sta bc_inv
+    .else
+        lda hl_shift            ; SHIFT shortcut -> draw the char OPPOSITE the
+        beq pl_sc_draw          ; label's video (the cue for "add Shift")
+        lda pl_inv
+        eor #$FF
+        sta bc_inv
+pl_sc_draw
+        jsr blit_char           ; glyph + underline beneath it
+        jsr draw_underline
+        lda pl_inv              ; restore base video for the remaining chars
+        sta bc_inv
+    .endif
+        jmp pl_adv
+pl_normal
+        jsr blit_char
+pl_adv
+        inc bc_col
+        inc psi
+        jmp pl_l
+pl_done
+        lda #0                  ; leave bc_inv clean (num2/knob draws assume 0)
+        sta bc_inv
+        rts
+
+; DEMO: underline the glyph cell at bc_col, bottom row of bc_scan
+draw_underline
+        lda bc_scan
+        clc
+        adc #7
+        tay
+        lda linetab_lo,y
+        clc
+        adc bc_col
+        sta adjptr
+        lda linetab_hi,y
+        adc #0
+        sta adjptr+1
+        ldy #0
+        lda #$FF
+        sta (adjptr),y
         rts
 
 ; draw one parameter widget; X = param index
@@ -2274,8 +2542,12 @@ draw_param
         jmp draw_wave_selector
 dp_n1
         cmp #K_CLK
-        bne dp_n2
+        bne dp_chkpre
         jmp draw_clk_toggle
+dp_chkpre
+        cpx #17                 ; PRESET -> knob + name (INIT/PAD/LEAD/ARP) or SAVED
+        bne dp_n2
+        jmp draw_preset_widget
 dp_n2
         lda p_knobcx,x          ; KNOB / OCT: common knob setup
         sta kcx
@@ -2287,6 +2559,8 @@ dp_n2
         sta dp_numcol
         lda p_scan,x
         sta dp_scan
+        lda p_zoff,x            ; capture before draw_knob clobbers X
+        sta dp_zoff
         lda p_vaddr_lo,x
         sta srcptr
         lda p_vaddr_hi,x
@@ -2304,8 +2578,21 @@ dp_n2
         sta bc_col
         lda dp_scan
         sta bc_scan
+        lda dp_zoff             ; OFF-capable param sitting at 0 -> show "OFF"
+        beq dp_num
         lda dp_val
-        jsr num2
+        bne dp_num
+        jsr draw_off
+        rts
+dp_num
+        lda dp_val
+        jsr num2                ; num2 leaves bc_col at the 3rd cell
+        lda dp_zoff             ; OFF-capable -> clear the 3rd cell ("OFF" leftover)
+        beq dp_knobdone
+        lda #0
+        sta bc_code
+        jsr blit_char
+dp_knobdone
         rts
 dp_oct
         ldy dp_val              ; --- K_OCT ---
@@ -2317,6 +2604,138 @@ dp_oct
         lda dp_scan
         sta bc_scan
         jsr draw_octave_num
+        rts
+
+; Context-sensitive hint line. Pick an id from what's selected, and only redraw
+; when it changes (prev_hint):  2 = PRESET selected -> save tip,
+; 1 = sequencer page -> transport tip,  0 = default -> nav/hold tip.
+hint_update
+        lda cur_param
+        cmp #17                 ; PRESET param selected?
+        bne hu_n1
+        lda #2
+        jmp hu_have
+hu_n1
+        lda page
+        cmp #1                  ; sequencer page?
+        bne hu_n2
+        lda #1
+        jmp hu_have
+hu_n2
+        lda #0
+hu_have
+        cmp prev_hint
+        beq hu_done
+        sta prev_hint
+        jsr draw_hint
+hu_done
+        rts
+
+; draw the hint string for id in prev_hint, centred on the HINTSCAN row
+draw_hint
+        jsr clear_hint
+        ldx prev_hint
+        lda hint_lo,x
+        sta srcptr
+        lda hint_hi,x
+        sta srcptr+1
+        lda hint_col,x
+        sta bc_col
+        lda #HINTSCAN
+        sta bc_scan
+        lda #0
+        sta bc_inv
+        sta bc_mode
+        jsr print_strz
+        rts
+
+; blank the 8-scanline hint row (full 40-byte width) before redrawing
+clear_hint
+        lda #HINTSCAN
+        sta s1
+        ldx #8
+ch_row
+        ldy s1
+        lda linetab_lo,y
+        sta scrptr
+        lda linetab_hi,y
+        sta scrptr+1
+        ldy #39
+        lda #0
+ch_col
+        sta (scrptr),y
+        dey
+        bpl ch_col
+        inc s1
+        dex
+        bne ch_row
+        rts
+
+; PRESET widget: knob (slot 0..3) + the slot NAME (INIT/PAD/LEAD/ARP), or a brief
+; "SAVED" flash right after a save. X = 17 on entry. Names are 5 cells wide (padded)
+; so they overwrite each other and "SAVED" cleanly.
+draw_preset_widget
+        lda p_knobcx,x
+        sta kcx
+        lda p_scan,x
+        clc
+        adc #5
+        sta kcy
+        lda p_numcol,x
+        sta dp_numcol
+        lda p_scan,x
+        sta dp_scan
+        lda preset_slot
+        sta kfrm
+        jsr draw_knob
+        lda #0
+        sta bc_inv
+        sta bc_mode
+        lda dp_numcol
+        sta bc_col
+        lda dp_scan
+        sta bc_scan
+        lda saved_flash
+        beq dpw_name
+        lda #<txt_saved
+        sta srcptr
+        lda #>txt_saved
+        sta srcptr+1
+        jmp dpw_print
+dpw_name
+        ldy preset_slot
+        lda preset_name_lo,y
+        sta srcptr
+        lda preset_name_hi,y
+        sta srcptr+1
+dpw_print
+        jsr print_strz
+        rts
+
+; tick the SAVED flash; when it expires, force the PRESET name to redraw
+saved_flash_tick
+        lda saved_flash
+        beq sft_done
+        dec saved_flash
+        bne sft_done
+        lda #$FF                ; flash ended -> force PRESET value cell to redraw
+        sta prev_disp+17
+sft_done
+        rts
+
+; "OFF" (3 chars) at bc_col/bc_scan -> shown for effect params at value 0
+draw_off
+        lda #$2F                ; 'O'
+        sta bc_code
+        jsr blit_char
+        inc bc_col
+        lda #$26                ; 'F'
+        sta bc_code
+        jsr blit_char
+        inc bc_col
+        lda #$26                ; 'F'
+        sta bc_code
+        jsr blit_char
         rts
 
 ; NOTE name (3 chars) at col 7, scan 112 -- blank when silent
@@ -2729,6 +3148,48 @@ p_lblptr_hi
         .byte >txt_wave,>txt_vol,>txt_oct,>txt_atk,>txt_dec,>txt_det
         .byte >txt_sus,>txt_rel,>txt_clk,>txt_lfor,>txt_lfod,>txt_arp
         .byte >txt_tempo,>txt_arpm,>txt_porta,>txt_drum,>txt_hpf,>txt_preset,>txt_dbeat
+; Which char index in each label is the shortcut key (underlined). Renaming ARP
+; -> ARPEGGIO introduces a free 'G', which frees up enough letters to give EVERY
+; page-0 param a unique in-label letter, plus DRUMBEAT(B). Pages 1-2 (except
+; DRUMBEAT) have no spare free letter -> $FF (reach them via Tab + arrows).
+;   WAVE M=7  VOL V=0  OCT A=3  ATK K=5  DEC D=0  DET N=4
+;   SUS  S=0  REL L=2  CLK C=0  LFOR F=1 LFOD H=8  ARPEGGIO G=4   DRUMBEAT B=4
+;   page 0 + DRUMBEAT use PLAIN letters; the 5 page-1/2 params below use SHIFT+letter
+;   TEMPO M=2  ARP MODE D=6  PORTA A=4  HP FILTER H=0  PRESET S=3   (DRUM: none)
+p_hl
+        .byte 7,0,3,5,0,4
+        .byte 0,2,0,1,8,4
+        .byte 2,6,4,$FF, 0,3,4
+; 1 = this param's shortcut is a SHIFT+letter (drawn opposite video to its label)
+p_hl_shift
+        .byte 0,0,0,0,0,0
+        .byte 0,0,0,0,0,0
+        .byte 1,1,1,0, 1,1,0
+; 1 = inert in 16-BIT clock mode (channels 3/4 are paired): PORTA, DRUM, HP FILTER,
+; DRUMBEAT. Struck through when clock15 = 2 so users don't twiddle dead controls.
+p_inert16
+        .byte 0,0,0,0,0,0
+        .byte 0,0,0,0,0,0
+        .byte 0,0,1,1, 1,0,1
+; shortcut key -> param jump (read_navkeys). Letter is a FREE key (not piano)
+; underlined in the label; KBCODEs are the bridge/hardware values. Shift+letter
+; entries have bit7 ($80) set (Shift sets KBCODE bit7).
+shortcut_kc
+        .byte $25,$10,$3F,$05,$3A,$23,$3E,$00,$12,$38,$39,$3D,$15
+;             M   V   A   K   D   N   S   L   C   F   H   G   B    (plain)
+        .byte $A5,$BA,$BF,$B9,$BE
+;             ^M  ^D  ^A  ^H  ^S                                  (shift)
+shortcut_param
+        .byte 0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 18
+;             WAV VOL OCT ATK DEC DET SUS REL CLK LFR LFD ARP DBT
+        .byte 12, 13, 14, 16, 17
+;             TMP ARM POR HPF PRE
+; effect params that render value 0 as "OFF": DETUNE(5) LFO DEPTH(10) ARP(11)
+;                                             PORTA(14) DRUM(15) HP FILTER(16)
+p_zoff
+        .byte 0,0,0,0,0,1
+        .byte 0,0,0,0,1,1
+        .byte 0,0,1,1, 1,0,0
 
 ; knob geometry
 bitmask_tab
@@ -2788,10 +3249,10 @@ icon_ptr_hi
         org $3C00
 dlist
         .byte $70,$70,$70       ; 24 blank lines
-        .byte $4F               ; LMS + mode F
+        .byte $4F               ; LMS + mode F  (scanline 0 = title row)
         .word FB1
         :101 .byte $0F          ; 101 more lines (102 total from FB1)
-        .byte $4F
+        .byte $4F               ; scanline 102: LMS FB2
         .word FB2
         :89 .byte $0F           ; 89 more lines (90 total from FB2)
         .byte $41               ; JVB
@@ -2813,7 +3274,7 @@ txt_15k    .byte "15K",$FF
 txt_lfor   .byte "LFO RATE",$FF
 txt_lfod   .byte "LFO DEPTH",$FF
 txt_det    .byte "DETUNE",$FF
-txt_arp    .byte "ARP",$FF
+txt_arp    .byte "ARPEGGIO",$FF
 txt_tempo  .byte "TEMPO",$FF
 txt_arpm   .byte "ARP MODE",$FF
 txt_porta  .byte "PORTA",$FF
@@ -2825,5 +3286,22 @@ txt_play   .byte "PLAY",$FF
 txt_stop   .byte "STOP",$FF
 txt_rec    .byte "REC",$FF
 txt_blk3   .byte "   ",$FF
+
+; context hint strings (drawn on the HINTSCAN row); hint_col centres each
+hint_d0    .byte "TAB=PAGE  OPT=HOLD",$FF      ; default (18 chars)
+hint_d1    .byte "START=PLAY SEL=REC",$FF      ; sequencer page (18 chars)
+hint_d2    .byte "RET=SAVE PRESET",$FF         ; PRESET selected (15 chars)
+hint_lo    .byte <hint_d0,<hint_d1,<hint_d2
+hint_hi    .byte >hint_d0,>hint_d1,>hint_d2
+hint_col   .byte 11,11,12                      ; centre col per hint
+
+; PRESET slot names (5 cells, space-padded so they overwrite cleanly) + SAVED flash
+txt_saved  .byte "SAVED",$FF
+pn_init    .byte "INIT ",$FF
+pn_pad     .byte "PAD  ",$FF
+pn_lead    .byte "LEAD ",$FF
+pn_arp     .byte "ARP  ",$FF
+preset_name_lo .byte <pn_init,<pn_pad,<pn_lead,<pn_arp
+preset_name_hi .byte >pn_init,>pn_pad,>pn_lead,>pn_arp
 
         run main

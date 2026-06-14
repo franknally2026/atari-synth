@@ -26,7 +26,9 @@ def hpf_param(s, rep):
     rep.check("HPF defaults to 0 (off)", s.get_param(16) == 0, s.get_param(16))
     s.set("curparam", 16); s.frame(8)
     rep.check("nav to HPF -> page 2 (third page)", s.get("page") == 2, s.get("page"))
-    rep.check("HP FILTER label renders on page 2", s.cell(1, 16) == s.glyph(0x28), "no H")
+    # check the 'P' (col 2): the 'H' at col 1 is the Shift+H shortcut char, drawn
+    # opposite-video (XOR), so it isn't a plain inverse glyph when focused.
+    rep.check("HP FILTER label renders on page 2", s.cell(2, 16) == s.glyph(0x30, inv=True), "no P")
     s.joy(0, "right"); s.frame(100); s.joy(0, "centre"); s.frame(2)
     hi = s.get_param(16)
     s.joy(0, "left"); s.frame(130); s.joy(0, "centre"); s.frame(2)
