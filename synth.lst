@@ -2367,7 +2367,7 @@ Source: synth.asm
   2364 2FEF 85 CE		        sta srcptr+1
   2365 2FF1 4C FC 2F		        jmp sd_rput
   2366 2FF4			sd_norec
-  2367 2FF4 A9 A7		        lda #<txt_blk3
+  2367 2FF4 A9 AA		        lda #<txt_blk3
   2368 2FF6 85 CD		        sta srcptr
   2369 2FF8 A9 3D		        lda #>txt_blk3
   2370 2FFA 85 CE		        sta srcptr+1
@@ -2739,11 +2739,11 @@ Source: synth.asm
   2736 32C0			draw_hint
   2737 32C0 20 E7 32		        jsr clear_hint
   2738 32C3 AE D1 06		        ldx prev_hint
-  2739 32C6 BD E1 3D		        lda hint_lo,x
+  2739 32C6 BD FB 3D		        lda hint_lo,x
   2740 32C9 85 CD		        sta srcptr
-  2741 32CB BD E4 3D		        lda hint_hi,x
+  2741 32CB BD FE 3D		        lda hint_hi,x
   2742 32CE 85 CE		        sta srcptr+1
-  2743 32D0 BD E7 3D		        lda hint_col,x
+  2743 32D0 BD 01 3E		        lda hint_col,x
   2744 32D3 8D 49 06		        sta bc_col
   2745 32D6 A9 7C		        lda #HINTSCAN
   2746 32D8 8D 4A 06		        sta bc_scan
@@ -2801,16 +2801,16 @@ Source: synth.asm
   2798 3340 8D 4A 06		        sta bc_scan
   2799 3343 AD D4 06		        lda saved_flash
   2800 3346 F0 0B		        beq dpw_name
-  2801 3348 A9 EA		        lda #<txt_saved
+  2801 3348 A9 04		        lda #<txt_saved
   2802 334A 85 CD		        sta srcptr
-  2803 334C A9 3D		        lda #>txt_saved
+  2803 334C A9 3E		        lda #>txt_saved
   2804 334E 85 CE		        sta srcptr+1
   2805 3350 4C 60 33		        jmp dpw_print
   2806 3353			dpw_name
   2807 3353 AC C5 06		        ldy preset_slot
-  2808 3356 B9 08 3E		        lda preset_name_lo,y
+  2808 3356 B9 22 3E		        lda preset_name_lo,y
   2809 3359 85 CD		        sta srcptr
-  2810 335B B9 0C 3E		        lda preset_name_hi,y
+  2810 335B B9 26 3E		        lda preset_name_hi,y
   2811 335E 85 CE		        sta srcptr+1
   2812 3360			dpw_print
   2813 3360 20 0F 2C		        jsr print_strz
@@ -3378,7 +3378,7 @@ Source: synth.asm
   3375 				; and within one 1KB block (ANTIC's DL counter is 10-bit).
   3376 396E			        org $3C00
   3377 3C00			dlist
-  3378 3C00-3E0F> 70 70 70	        .byte $70,$70,$70       ; 24 blank lines
+  3378 3C00-3E29> 70 70 70	        .byte $70,$70,$70       ; 24 blank lines
   3379 3C03 4F			        .byte $4F               ; LMS + mode F  (scanline 0 = title row)
   3380 3C04 00 40		        .word FB1
   3381 3C06 0F 0F 0F 0F 0F 0F +         :101 .byte $0F          ; 101 more lines (102 total from FB1)
@@ -3422,24 +3422,24 @@ Source: synth.asm
   3419 3D92 32 28 39 34 28 2D + txt_dbeat  .byte "RHYTHM",$FF
   3420 3D99 30 2C 21 39 FF	txt_play   .byte "PLAY",$FF
   3421 3D9E 33 34 2F 30 FF	txt_stop   .byte "STOP",$FF
-  3422 3DA3 32 25 23 FF		txt_rec    .byte "REC",$FF
-  3423 3DA7 00 00 00 FF		txt_blk3   .byte "   ",$FF
+  3422 3DA3 32 25 23 2F 32 24 + txt_rec    .byte "RECORD",$FF
+  3423 3DAA 00 00 00 00 00 00 + txt_blk3   .byte "      ",$FF      ; 6 spaces -> clears the "RECORD" badge
   3424
   3425 				; context hint strings (drawn on the HINTSCAN row); hint_col centres each
-  3426 3DAB 34 21 22 1D 30 21 + hint_d0    .byte "TAB=PAGE  OPT=HOLD",$FF      ; default (18 chars)
-  3427 3DBE 33 34 21 32 34 1D + hint_d1    .byte "START=PLAY SEL=REC",$FF      ; sequencer page (18 chars)
-  3428 3DD1 32 25 34 1D 33 21 + hint_d2    .byte "RET=SAVE PRESET",$FF         ; PRESET selected (15 chars)
-  3429 3DE1 AB BE D1		hint_lo    .byte <hint_d0,<hint_d1,<hint_d2
-  3430 3DE4 3D 3D 3D		hint_hi    .byte >hint_d0,>hint_d1,>hint_d2
-  3431 3DE7 0B 0B 0C		hint_col   .byte 11,11,12                      ; centre col per hint
+  3426 3DB1 34 21 22 1D 2E 25 + hint_d0    .byte "TAB=NEXT PAGE   OPTION=HOLD",$FF   ; default (27 chars)
+  3427 3DCD 33 34 21 32 34 1D + hint_d1    .byte "START=PLAY   SELECT=RECORD",$FF    ; sequencer page (26 chars)
+  3428 3DE8 32 25 34 35 32 2E + hint_d2    .byte "RETURN=SAVE PRESET",$FF            ; PRESET selected (18 chars)
+  3429 3DFB B1 CD E8		hint_lo    .byte <hint_d0,<hint_d1,<hint_d2
+  3430 3DFE 3D 3D 3D		hint_hi    .byte >hint_d0,>hint_d1,>hint_d2
+  3431 3E01 06 07 0B		hint_col   .byte 6,7,11                        ; centre col per hint = (40-len)/2
   3432
   3433 				; PRESET slot names (5 cells, space-padded so they overwrite cleanly) + SAVED flash
-  3434 3DEA 33 21 36 25 24 FF	txt_saved  .byte "SAVED",$FF
-  3435 3DF0 29 2E 29 34 00 FF	pn_init    .byte "INIT ",$FF
-  3436 3DF6 30 21 24 00 00 FF	pn_pad     .byte "PAD  ",$FF
-  3437 3DFC 2C 25 21 24 00 FF	pn_lead    .byte "LEAD ",$FF
-  3438 3E02 21 32 30 00 00 FF	pn_arp     .byte "ARP  ",$FF
-  3439 3E08 F0 F6 FC 02		preset_name_lo .byte <pn_init,<pn_pad,<pn_lead,<pn_arp
-  3440 3E0C 3D 3D 3D 3E		preset_name_hi .byte >pn_init,>pn_pad,>pn_lead,>pn_arp
+  3434 3E04 33 21 36 25 24 FF	txt_saved  .byte "SAVED",$FF
+  3435 3E0A 29 2E 29 34 00 FF	pn_init    .byte "INIT ",$FF
+  3436 3E10 30 21 24 00 00 FF	pn_pad     .byte "PAD  ",$FF
+  3437 3E16 2C 25 21 24 00 FF	pn_lead    .byte "LEAD ",$FF
+  3438 3E1C 21 32 30 00 00 FF	pn_arp     .byte "ARP  ",$FF
+  3439 3E22 0A 10 16 1C		preset_name_lo .byte <pn_init,<pn_pad,<pn_lead,<pn_arp
+  3440 3E26 3E 3E 3E 3E		preset_name_hi .byte >pn_init,>pn_pad,>pn_lead,>pn_arp
   3441
   3442 02E0-02E1> 00 20		        run main

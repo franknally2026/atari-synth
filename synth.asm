@@ -3419,16 +3419,16 @@ txt_preset .byte "PRESET",$FF
 txt_dbeat  .byte "RHYTHM",$FF
 txt_play   .byte "PLAY",$FF
 txt_stop   .byte "STOP",$FF
-txt_rec    .byte "REC",$FF
-txt_blk3   .byte "   ",$FF
+txt_rec    .byte "RECORD",$FF
+txt_blk3   .byte "      ",$FF      ; 6 spaces -> clears the "RECORD" badge
 
 ; context hint strings (drawn on the HINTSCAN row); hint_col centres each
-hint_d0    .byte "TAB=PAGE  OPT=HOLD",$FF      ; default (18 chars)
-hint_d1    .byte "START=PLAY SEL=REC",$FF      ; sequencer page (18 chars)
-hint_d2    .byte "RET=SAVE PRESET",$FF         ; PRESET selected (15 chars)
+hint_d0    .byte "TAB=NEXT PAGE   OPTION=HOLD",$FF   ; default (27 chars)
+hint_d1    .byte "START=PLAY   SELECT=RECORD",$FF    ; sequencer page (26 chars)
+hint_d2    .byte "RETURN=SAVE PRESET",$FF            ; PRESET selected (18 chars)
 hint_lo    .byte <hint_d0,<hint_d1,<hint_d2
 hint_hi    .byte >hint_d0,>hint_d1,>hint_d2
-hint_col   .byte 11,11,12                      ; centre col per hint
+hint_col   .byte 6,7,11                        ; centre col per hint = (40-len)/2
 
 ; PRESET slot names (5 cells, space-padded so they overwrite cleanly) + SAVED flash
 txt_saved  .byte "SAVED",$FF
