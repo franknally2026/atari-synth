@@ -216,6 +216,8 @@ base8       = $06D5     ; 16-bit vibrato/detune scale = note AUDF16 >> 6
 acclo       = $06D6     ; add_scaled16 product (low)
 acchi       = $06D7     ; add_scaled16 product (high)
 scl_sgn     = $06D8     ; add_scaled16 saved signed offset
+dct_col     = $06D9     ; draw_clk_toggle: clock-name start column (from p_knobcx)
+dct_scan    = $06DA     ; draw_clk_toggle: clock-name scanline (from p_scan)
 
 NPARAM = 19             ; ...page2 16 HPF, 17 PRESET, 18 DRUMBEAT
 NSAVE  = 18             ; saved params per preset = all 19 except PRESET (skipped by index)
@@ -3091,14 +3093,29 @@ dws_ic
 
 ; CLOCK mode: show the active mode name (NORMAL / 15 KHZ / 16-BIT)
 draw_clk_toggle
-        lda #54                 ; clear strip: byte cols 29..38, 14 rows
+        ; CLOCK is a toggle (no knob): show the 6-char mode name in this param's
+        ; OWN value area. Read the position from the tables (X = param index) so it
+        ; follows CLOCK wherever the layout puts it -- it used to be hardcoded to the
+        ; old right-column/scan-56 slot, which now belongs to SUSTAIN (the "R08L" bug).
+        lda p_knobcx,x          ; name start col = knob centre / 8
+        lsr
+        lsr
+        lsr
+        sta dct_col
+        lda p_scan,x
+        sta dct_scan
+        lda dct_scan            ; clear 10 cols from (dct_col-1), 14 rows from scan-2
+        sec
+        sbc #2
         sta s1
         ldx #14
 dct_clr
         ldy s1
-        lda linetab_lo,y
+        lda dct_col
+        sec
+        sbc #1
         clc
-        adc #29
+        adc linetab_lo,y
         sta scrptr
         lda linetab_hi,y
         adc #0
@@ -3123,9 +3140,9 @@ dct_clr2
         lda #>clock_names
         adc #0
         sta srcptr+1
-        lda #30
+        lda dct_col
         sta bc_col
-        lda #56
+        lda dct_scan
         sta bc_scan
         lda #6
         sta pcnt
