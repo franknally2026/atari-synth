@@ -1,5 +1,5 @@
 """Portamento (pitch glide) — comprehensive coverage of the GLIDE parameter
-(param 14, on the FX/Patch screen / page 1; named PORTA pre-reorg). Glide is
+(param 14, on the FX/Patch screen / page 1; labelled PORTA pre-reorg). Glide is
 monophonic: with GLIDE > 0 a new note slides from the previously-played pitch on
 voice 0, one AUDF step every GLIDE frames.
 
@@ -9,12 +9,12 @@ pitch actually slides through intermediate frequencies, not jumps.
 import numpy as np
 from .. import dsp, notes
 
-PORTA = 0x06B6
-PORTA_TIMER = 0x06B7
+GLIDE = 0x06B6
+GLIDE_TIMER = 0x06B7
 
 
-def _settle_then_play(s, note_a, note_b, porta, settle=30):
-    """With PORTA set, play note_a (settle), then trigger note_b. Leaves the
+def _settle_then_play(s, note_a, note_b, glide, settle=30):
+    """With GLIDE set, play note_a (settle), then trigger note_b. Leaves the
     glide in progress; caller captures/samples. Returns nothing.
 
     NB: reset porta_timer to a full step delay when triggering note_b so the
@@ -29,12 +29,12 @@ def _settle_then_play(s, note_a, note_b, porta, settle=30):
     for i in range(4):
         s.set("vlevel", 0, i); s.set("vphase", 0, i)
     s.set("held", 0xFF); s.set("prevheld", 0xFF)
-    s.poke(PORTA, porta)
+    s.poke(GLIDE, glide)
     s.set("note_idx", note_a)
     for _ in range(settle):
         s.frame(1)
     s.set("note_idx", note_b)
-    s.poke(PORTA_TIMER, porta)   # full step delay -> first frame still shows note_a
+    s.poke(GLIDE_TIMER, glide)   # full step delay -> first frame still shows note_a
 
 
 def porta_param(s, rep):
@@ -59,7 +59,7 @@ def porta_register_ramp(s, rep):
     (deterministic register view of the glide)."""
     rep.section("portamento: AUDF ramps monotonically to the target")
     with s.frozen("read_keyboard"):
-        _settle_then_play(s, 0, 7, porta=8)       # idx24 (AUDF29) -> idx31 (AUDF19)
+        _settle_then_play(s, 0, 7, glide=8)       # idx24 (AUDF29) -> idx31 (AUDF19)
         seq = []
         for _ in range(110):
             s.frame(1); seq.append(s.chan(1)[0])
@@ -78,7 +78,7 @@ def porta_pitch_glide_acoustic(s, rep):
     frequencies (a glide), not a single jump."""
     rep.section("portamento: pitch audibly glides (PCM)")
     with s.frozen("read_keyboard"):
-        _settle_then_play(s, 0, 7, porta=8)
+        _settle_then_play(s, 0, 7, glide=8)
         clip = s.capture("porta_glide", 80, warmup=0)
         s.set("note_idx", 0xFF)
     # band-limit to the A..B region (~1000..1700Hz) so octave-error outliers
@@ -98,12 +98,12 @@ def porta_pitch_glide_acoustic(s, rep):
 
 
 def porta_rate_scales(s, rep):
-    """A higher PORTA value glides more slowly (takes more frames to reach the
+    """A higher GLIDE value glides more slowly (takes more frames to reach the
     target)."""
-    rep.section("portamento: higher PORTA = slower glide")
-    def glide_frames(porta):
+    rep.section("portamento: higher GLIDE = slower glide")
+    def glide_frames(glide):
         with s.frozen("read_keyboard"):
-            _settle_then_play(s, 0, 7, porta=porta)
+            _settle_then_play(s, 0, 7, glide=glide)
             n = 0
             for _ in range(200):
                 s.frame(1); n += 1
@@ -114,21 +114,21 @@ def porta_rate_scales(s, rep):
         return n
     fast = glide_frames(4)
     slow = glide_frames(12)
-    rep.check("PORTA 12 glides slower than PORTA 4",
-              slow > fast + 10, f"porta4={fast} frames, porta12={slow} frames")
+    rep.check("GLIDE 12 glides slower than GLIDE 4",
+              slow > fast + 10, f"glide4={fast} frames, glide12={slow} frames")
 
 
 def porta_off_instant(s, rep):
-    """PORTA 0 = off: the new note sounds at its target pitch immediately (no
+    """GLIDE 0 = off: the new note sounds at its target pitch immediately (no
     glide), and play is polyphonic (round-robin), not mono."""
-    rep.section("portamento: PORTA 0 = instant (no glide)")
+    rep.section("portamento: GLIDE 0 = instant (no glide)")
     with s.frozen("read_keyboard"):
-        _settle_then_play(s, 0, 7, porta=0)
+        _settle_then_play(s, 0, 7, glide=0)
         s.frame(2)
         held = s.get("held")
         audf = s.chan(held + 1)[0]
         s.set("note_idx", 0xFF)
-    rep.check("PORTA 0: new note is at target AUDF at once (no ramp)",
+    rep.check("GLIDE 0: new note is at target AUDF at once (no ramp)",
               audf == 19, f"AUDF={audf} on voice {held}")
 
 

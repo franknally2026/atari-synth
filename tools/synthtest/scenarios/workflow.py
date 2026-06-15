@@ -8,7 +8,6 @@ from ..harness import PARAM_VARS, PH_SUSTAIN
 
 PRESET = 0x06C5
 DRUM = 0x06BD
-DRUMBEAT = 0x06C9
 
 
 def _load_slot(s, slot):
@@ -20,7 +19,7 @@ def _freeze_modulation(s):
     """Stop LFO/detune/arp/portamento so a capture reflects the patch's steady
     timbre — far more stable for golden/round-trip comparison than a modulated
     (or gliding) one."""
-    s.set("lfod", 0); s.set("detune", 0); s.set("arp", 0); s.poke(0x06B6, 0)  # porta
+    s.set("lfod", 0); s.set("detune", 0); s.set("arp", 0); s.poke(0x06B6, 0)  # glide
     s.poke(0x0665, 0); s.poke(0x0668, 0)            # lfo_level_u, lfo_offset
     s.frame(2)
 
@@ -162,7 +161,7 @@ def capture_determinism(s, rep):
     def grab():
         with s.frozen("trigger_voices"):
             s.set("clock15", 0); s.poke(0x0689, 0); s.set("wave", 1); s.set("volume", 13)
-            s.set("sus", 14); s.set("lfod", 0); s.set("detune", 0); s.poke(0x06B6, 0)  # porta
+            s.set("sus", 14); s.set("lfod", 0); s.set("detune", 0); s.poke(0x06B6, 0)  # glide
             s.poke(0x0665, 0); s.poke(0x0668, 0)
             s.set("vnote", 0, 0); s.set("vlevel", 13, 0)   # idx 0 (~262Hz): rock-solid pitch
             s.set("vphase", PH_SUSTAIN, 0); s.set("vcount", 8, 0); s.set("held", 0)
