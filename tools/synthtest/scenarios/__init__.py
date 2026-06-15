@@ -20,11 +20,20 @@ REGISTRY = (
     + [(fn, True) for fn in acoustic.SCENARIOS]
     + [(acoustic.clock_switch_voice_wrap, True)]
     + [(sequencer.transport, False),
+       (sequencer.realtime_arm_clears_and_runs, False),
        (sequencer.multi_step_playback, False),
        (sequencer.step_entry_record, False),
        (sequencer.loop_length_wraps, False),
        (sequencer.realtime_record, False),
+       (sequencer.realtime_record_monitors_pattern, False),
+       (sequencer.realtime_overdub_keeps_existing, False),
+       (sequencer.realtime_record_drum_tap, False),
+       (sequencer.realtime_held_drum_no_tie, False),
+       (sequencer.drum_step_sounds_during_record, False),
+       (sequencer.rest_releases_note_on_playback, False),
        (sequencer.tie_sustains_no_reattack, False),
+       (sequencer.grid_glyphs, False),
+       (sequencer.head_marks_active_step, False),
        (sequencer.playback_audible, True)]
     + [(arpmodes.arpmode_param, False),
        (arpmodes.arpmode_patterns, False),

@@ -718,8 +718,12 @@ sq_step
 sq_nodrum
         cmp #$FF
         bne sq_playnote
-        lda seq_rec             ; rest: during playback, release the held note so
-        bne sq_nostep           ; the rest is silent (don't cut live monitoring)
+        lda seq_rec             ; rest step -> silence the gap by releasing the held
+        beq sq_restrel          ; voice. Playback always releases; while recording,
+        lda note_idx            ; keep a LIVE-held note (don't cut your own playing)
+        cmp #$FF                ; but still release when only monitoring (no key down).
+        bne sq_nostep
+sq_restrel
         lda #$FF
         sta held_voice
         jmp sq_nostep
@@ -736,10 +740,12 @@ sq_nostep
         lda rec_latch           ; a NEW onset latched since the last tick?
         cmp #$FF
         bne sq_cap              ; yes -> write the struck note (re-attack)
-        lda note_idx            ; else still holding the same note?
+        lda note_idx            ; else still holding the same key?
         cmp #$FF
         beq sq_adv              ; nothing held -> leave step (rest)
-        lda #$FE                ; held continuation -> TIE (sustains on playback)
+        cmp #$FD                ; a HELD drum key is a one-shot, not a sustain: don't
+        beq sq_adv              ; smear it into ties (leave following steps as rests)
+        lda #$FE                ; held pitch -> TIE (sustains on playback)
 sq_cap
         ldx seq_pos
         sta seq_notes,x
@@ -857,18 +863,17 @@ trigger_voices
         lda note_idx
         cmp #$FD                ; $FD(drum)/$FE/$FF are not pitched notes -> no
         bcc tv_keydown          ; voice trigger (the drum is handled separately)
-        ; no live key down: normally release everything. But during pure
-        ; sequencer PLAYBACK (playing, not recording) leave held_voice alone so
-        ; the step's note can sustain its envelope for the whole step instead of
-        ; being force-released after one frame (which made it near-silent).
-        lda seq_play
-        beq tv_relall
-        lda seq_rec
-        beq tv_done             ; playback -> sequencer manages the gate
-tv_relall
+        ; no pitched live key down. Always clear the live-key edge so the SAME
+        ; note can re-fire on its next press. While the clock runs (PLAYBACK *or*
+        ; real-time RECORD) leave held_voice alone: the sequencer owns the gate, so
+        ; a stepped note sustains its whole step AND overdub playback is audible
+        ; while armed (REC used to force-release here -> near-silent monitoring).
         lda #$FF
-        sta held_voice
         sta prev_held
+        ldy seq_play            ; test the clock WITHOUT disturbing A (= $FF)
+        bne tv_done             ; clock running -> sequencer manages the voice gate
+        sta held_voice          ; stopped -> release everything (A = $FF)
+tv_done
         rts
 tv_keydown
         cmp prev_held
@@ -879,7 +884,6 @@ tv_keydown
         clc
         adc note_idx
         jsr trigger_note
-tv_done
         rts
 
 ; trigger_note: A = absolute chromatic index -> grab next voice, start attack
@@ -2221,8 +2225,13 @@ sd_cell
         bne sd_putcell
 sd_notrest
         cmp #$FE
-        bne sd_filled
+        bne sd_nottie
         lda #$0D                ; '-' = tie (held note continues)
+        bne sd_putcell
+sd_nottie
+        cmp #$FD
+        bne sd_filled
+        lda #$0A                ; '*' = drum hit (distinct from a pitched note)
         bne sd_putcell
 sd_filled
         lda #$80                ; solid block = note
