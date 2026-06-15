@@ -3304,7 +3304,7 @@ seq_glyphs
         .byte $00,$00,$00,$18,$18,$00,$00,$00   ; 0 REST  - small centred dot
         .byte $00,$18,$14,$10,$10,$70,$70,$00   ; 1 NOTE  - eighth note (head+stem+flag)
         .byte $00,$00,$00,$7E,$7E,$00,$00,$00   ; 2 TIE   - centred horizontal bar
-        .byte $00,$18,$3C,$7E,$7E,$3C,$18,$00   ; 3 DRUM  - filled diamond
+        .byte $00,$42,$24,$18,$18,$24,$42,$00   ; 3 DRUM  - X (percussion hit)
 
 ; ----- text labels (screen codes, $FF-terminated) ---------------------------
 txt_title  .byte "ATARI POKEY SYNTH",$FF

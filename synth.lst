@@ -3307,7 +3307,7 @@ Source: synth.asm
   3304 3CCA 00 00 00 18 18 00 +         .byte $00,$00,$00,$18,$18,$00,$00,$00   ; 0 REST  - small centred dot
   3305 3CD2 00 18 14 10 10 70 +         .byte $00,$18,$14,$10,$10,$70,$70,$00   ; 1 NOTE  - eighth note (head+stem+flag)
   3306 3CDA 00 00 00 7E 7E 00 +         .byte $00,$00,$00,$7E,$7E,$00,$00,$00   ; 2 TIE   - centred horizontal bar
-  3307 3CE2 00 18 3C 7E 7E 3C +         .byte $00,$18,$3C,$7E,$7E,$3C,$18,$00   ; 3 DRUM  - filled diamond
+  3307 3CE2 00 42 24 18 18 24 +         .byte $00,$42,$24,$18,$18,$24,$42,$00   ; 3 DRUM  - X (percussion hit)
   3308
   3309 				; ----- text labels (screen codes, $FF-terminated) ---------------------------
   3310 3CEA 21 34 21 32 29 00 + txt_title  .byte "ATARI POKEY SYNTH",$FF
