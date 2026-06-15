@@ -14,7 +14,7 @@ LFO_OFFSET = 0x0668
 def _hold(s, idx, mode=notes.MODE_NORMAL, wave=1, volume=13):
     s.set("clock15", mode); s.poke(0x0689, mode)
     s.set("wave", wave); s.set("volume", volume); s.set("sus", 14)
-    s.set("lfod", 0); s.set("detune", 0); s.poke(0x06B6, 0)   # porta off
+    s.set("lfod", 0); s.set("detune", 0); s.poke(0x06B6, 0)   # glide off
     s.poke(LFO_LEVEL_U, 0); s.poke(LFO_OFFSET, 0)
     for i in range(4):
         s.set("vlevel", 0, i); s.set("vphase", 0, i)

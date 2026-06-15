@@ -1,5 +1,6 @@
-"""Arpeggiator MODES — comprehensive coverage of the new ARPMODE parameter
-(param 13, page 2): UP / DOWN / MINOR / OCTAVE patterns.
+"""Arpeggiator MODES — comprehensive coverage of the ARPMODE parameter
+(param 11, on screen 1 / page 0, next to ARPEGGIO): UP / DOWN / MINOR / OCTAVE
+patterns.
 
 Also regression-tests the TEMPO joystick-adjust fix: param_lo/hi used to omit
 TEMPO so apply_adjust ran off the end of the table; adding ARPMODE fixed that.

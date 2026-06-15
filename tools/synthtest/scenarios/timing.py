@@ -4,13 +4,13 @@ the sequencer/arp/drum-machine play at the tempo we designed, not just that
 events occur.
 
 PAL = 50 frames/s (20 ms/frame). Sequencer step = (16-tempo)*2+2 frames.
-Arp step = 16-arp_rate frames. Drum-beat period = (16-DRUMBEAT) tempo beats.
+Arp step = 16-arp_rate frames. Drum-beat period = (16-RHYTHM) tempo beats.
 """
 import numpy as np
 from .. import dsp
 
 DRUM = 0x06BD
-DRUMBEAT = 0x06C9
+RHYTHM = 0x06C9
 
 
 def seq_rhythm_from_audio(s, rep):
@@ -21,7 +21,7 @@ def seq_rhythm_from_audio(s, rep):
     rep.section("timing: sequencer tempo -> audible inter-onset interval")
     # clean slate: no residual modulation/auto-drum/arp that would add spurious
     # amplitude pulses (false onsets) on top of the sequenced notes
-    s.set("arp", 0); s.poke(DRUMBEAT, 0); s.poke(DRUM, 0); s.poke(0x06BE, 0)
+    s.set("arp", 0); s.poke(RHYTHM, 0); s.poke(DRUM, 0); s.poke(0x06BE, 0)
     s.set("lfod", 0); s.set("detune", 0); s.poke(0x06B6, 0); s.set("sustain_ped", 0)
     s.poke(0x0665, 0); s.poke(0x0668, 0)
     for i in range(16):
@@ -98,28 +98,28 @@ def arp_rate_exact(s, rep):
 
 
 def drumbeat_period_exact(s, rep):
-    """Auto drum-beat fires every (16-DRUMBEAT) tempo beats — exact frame gap
-    between channel-4 hits, verified for two DRUMBEAT values."""
-    rep.section("timing: DRUMBEAT auto period = (16-DRUMBEAT) tempo beats")
+    """Auto drum-beat fires every (16-RHYTHM) tempo beats — exact frame gap
+    between channel-4 hits, verified for two RHYTHM values."""
+    rep.section("timing: RHYTHM auto period = (16-RHYTHM) tempo beats")
     s.set("clock15", 0); s.poke(0x0689, 0); s.poke(DRUM, 6); s.set("tempo", 13)
     beat = (16 - 13) * 2 + 2                       # 8 frames per tempo beat
 
-    def hit_gaps(drumbeat):
-        s.poke(DRUMBEAT, drumbeat); s.poke(0x06BE, 0)         # drum_level
+    def hit_gaps(rhythm):
+        s.poke(RHYTHM, rhythm); s.poke(0x06BE, 0)         # drum_level
         s.poke(0x06CA, 1); s.poke(0x06CB, 1)                 # dbeat_timer, dbeat_cnt
-        tl = s.timeline((16 - drumbeat) * beat * 3 + 10, voices=(3,))
+        tl = s.timeline((16 - rhythm) * beat * 3 + 10, voices=(3,))
         c4 = [r["audc"][3] & 0x0F for r in tl.rows]
         # a hit is an UPWARD jump in level (the drum only rises on a re-strike;
         # otherwise it decays) — robust even when it re-fires before fully decaying
         hits = [i for i in range(1, len(c4)) if c4[i] > c4[i - 1]]
         return [hits[i + 1] - hits[i] for i in range(len(hits) - 1)]
 
-    for drumbeat in (15, 13):
-        exp = (16 - drumbeat) * beat               # db15 -> 1*8=8; db13 -> 3*8=24
-        gaps = hit_gaps(drumbeat)
+    for rhythm in (15, 13):
+        exp = (16 - rhythm) * beat               # rh15 -> 1*8=8; rh13 -> 3*8=24
+        gaps = hit_gaps(rhythm)
         ok = gaps and all(abs(g - exp) <= 1 for g in gaps)
-        rep.check(f"DRUMBEAT {drumbeat}: hits every {exp} frames", ok, f"gaps={gaps}")
-    s.poke(DRUMBEAT, 0); s.poke(DRUM, 0); s.poke(0x06BE, 0)
+        rep.check(f"RHYTHM {rhythm}: hits every {exp} frames", ok, f"gaps={gaps}")
+    s.poke(RHYTHM, 0); s.poke(DRUM, 0); s.poke(0x06BE, 0)
 
 
 SCENARIOS = [

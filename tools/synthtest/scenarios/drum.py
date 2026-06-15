@@ -197,7 +197,7 @@ def drum_coexists_with_melody(s, rep):
     s.poke(DRUM, 0); s.poke(DRUM_LEVEL, 0)
 
 
-DRUMBEAT = 0x06C9
+RHYTHM = 0x06C9
 
 
 def drum_key_fires(s, rep):
@@ -257,16 +257,16 @@ def drumbeat_param(s, rep):
     s.joy(0, "left"); s.frame(130); s.joy(0, "centre"); s.frame(2)
     lo = s.get_param(18)
     rep.check("RHYTHM clamps 15 / 0", hi == 15 and lo == 0, f"hi={hi} lo={lo}")
-    s.poke(DRUMBEAT, 0); s.set("curparam", 0); s.frame(6)
+    s.poke(RHYTHM, 0); s.set("curparam", 0); s.frame(6)
 
 
 def auto_beat(s, rep):
-    """DRUMBEAT > 0 auto-fires the drum, tempo-synced and free-running (no need
-    to start the sequencer). Higher DRUMBEAT = more frequent; 0 = off."""
-    rep.section("drumbeat: auto drum-machine pulse")
-    def hits(drumbeat, frames=80):
+    """RHYTHM > 0 auto-fires the drum, tempo-synced and free-running (no need
+    to start the sequencer). Higher RHYTHM = more frequent; 0 = off."""
+    rep.section("rhythm: auto drum-machine pulse")
+    def hits(rhythm, frames=80):
         s.set("clock15", 0); s.poke(0x0689, 0); s.poke(DRUM, 6); s.set("tempo", 13)
-        s.poke(DRUM_LEVEL, 0); s.poke(DRUMBEAT, drumbeat)
+        s.poke(DRUM_LEVEL, 0); s.poke(RHYTHM, rhythm)
         s.poke(0x06CA, 1); s.poke(0x06CB, 1)        # dbeat_timer, dbeat_cnt
         n, prev = 0, 0
         for _ in range(frames):
@@ -278,11 +278,11 @@ def auto_beat(s, rep):
     fast = hits(15)
     sparse = hits(4)
     off = hits(0)
-    rep.check("DRUMBEAT auto-fires the drum (free-running)", fast >= 4, f"{fast} hits")
-    rep.check("higher DRUMBEAT = more frequent than lower", fast > sparse,
+    rep.check("RHYTHM auto-fires the drum (free-running)", fast >= 4, f"{fast} hits")
+    rep.check("higher RHYTHM = more frequent than lower", fast > sparse,
               f"fast(15)={fast} sparse(4)={sparse}")
-    rep.check("DRUMBEAT 0 = no auto hits", off == 0, f"{off} hits")
-    s.poke(DRUMBEAT, 0); s.poke(DRUM, 0); s.poke(DRUM_LEVEL, 0)
+    rep.check("RHYTHM 0 = no auto hits", off == 0, f"{off} hits")
+    s.poke(RHYTHM, 0); s.poke(DRUM, 0); s.poke(DRUM_LEVEL, 0)
 
 
 SCENARIOS = [

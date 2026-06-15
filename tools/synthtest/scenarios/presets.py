@@ -100,7 +100,7 @@ def preset_changes_sound(s, rep):
     rep.check("INIT (pure) and LEAD (square+HP) sound clearly different",
               f_lead - f_init > 0.05 and f_lead > 0.1,
               f"INIT flatness={f_init:.3f} LEAD flatness={f_lead:.3f}")
-    # leave a clean state for later scenarios: load INIT (porta/hpf/etc = 0) and
+    # leave a clean state for later scenarios: load INIT (glide/hpf/etc = 0) and
     # let it actually apply
     _load_slot(s, 0)
 

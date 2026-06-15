@@ -7,7 +7,7 @@ import numpy as np
 from .. import dsp, notes
 from ..harness import PH_ATTACK, PH_SUSTAIN, PH_RELEASE, PH_IDLE
 
-PORTA = 0x06B6
+GLIDE = 0x06B6
 DRUM = 0x06BD
 HPF = 0x06C0
 DRUM_LEVEL = 0x06BE
@@ -22,7 +22,7 @@ def note_range_extremes(s, rep):
     joystick-heavy predecessors (an emulator-state artifact, not an engine bug)."""
     rep.section("stress: note-range extremes + chromatic clamp")
     s.set("clock15", 0); s.poke(0x0689, 0); s.set("wave", 1); s.set("volume", 13)
-    s.set("sus", 14); s.set("lfod", 0); s.set("detune", 0); s.poke(PORTA, 0)
+    s.set("sus", 14); s.set("lfod", 0); s.set("detune", 0); s.poke(GLIDE, 0)
     s.poke(0x0665, 0); s.poke(0x0668, 0)   # zero LFO counter+offset (clean AUDF)
     chrom = notes.chromatic()
     # octave_base = [0,12,24,36,48]: (octave, semitone) -> absolute idx
@@ -106,17 +106,17 @@ def porta_plus_arp(s, rep):
     s.set("clock15", 0); s.poke(0x0689, 0); s.set("wave", 1); s.set("volume", 13)
     s.set("sus", 12); s.set("lfod", 0); s.set("detune", 0); s.set("octave", 1)
     s.set("atk", 0); s.set("rel", 1)
-    s.poke(PORTA, 6)
+    s.poke(GLIDE, 6)
     with s.frozen("read_keyboard"):
         s.set("note_idx", 0); s.set("lastv", 3)
         s.set("arp_step", 0); s.set("arp_timer", 1); s.set("arp", 6)
         clip = s.capture("porta_arp", 90)
         heard = dsp.distinct_pitches(clip)
-        rep.check("porta+arp stays audible and cycles notes",
+        rep.check("glide+arp stays audible and cycles notes",
                   dsp.rms(clip) >= 4e-3 and len(heard) >= 2,
                   f"rms={dsp.rms(clip):.4f} heard={sorted(heard)}")
         s.set("arp", 0); s.set("note_idx", 0xFF)
-    s.poke(PORTA, 0); s.frame(2)
+    s.poke(GLIDE, 0); s.frame(2)
 
 
 def mega_combo(s, rep):
@@ -241,7 +241,7 @@ def rapid_retrigger(s, rep):
     rep.section("stress: rapid retriggering then clean release")
     s.set("clock15", 0); s.poke(0x0689, 0); s.set("wave", 1); s.set("volume", 13)
     s.set("sus", 10); s.set("atk", 0); s.set("rel", 1); s.set("arp", 0)
-    s.poke(PORTA, 0)
+    s.poke(GLIDE, 0)
     seen = set()
     with s.frozen("read_keyboard"):
         for n in range(24):
@@ -283,15 +283,15 @@ def porta_in_16bit(s, rep):
     rep.section("stress: portamento is a clean no-op in 16-bit mode")
     s.set("clock15", 2); s.poke(0x0689, 2); s.set("wave", 1); s.set("volume", 13)
     s.set("sus", 14); s.set("lfod", 0); s.set("detune", 0); s.set("octave", 2)
-    s.poke(PORTA, 10)
+    s.poke(GLIDE, 10)
     with s.held_key(0):                        # idx 24 in 16-bit
         clip = s.capture("porta_16bit", 30)
     expect = notes.predicted_freq(24, notes.MODE_16BIT)
     f = dsp.median_pitch(clip)
-    rep.check("16-bit note with PORTA on is audible and in tune",
+    rep.check("16-bit note with GLIDE on is audible and in tune",
               dsp.rms(clip) >= 4e-3 and f > 0 and abs(notes.cents(f, expect)) <= 60,
               f"{f:.1f}Hz vs {expect:.1f}Hz, rms={dsp.rms(clip):.4f}")
-    s.poke(PORTA, 0); s.set("clock15", 0); s.poke(0x0689, 0)
+    s.poke(GLIDE, 0); s.set("clock15", 0); s.poke(0x0689, 0)
 
 
 def drum_plus_hpfilter(s, rep):
@@ -317,7 +317,7 @@ def seq_plus_arp(s, rep):
     both off must return to silence."""
     rep.section("stress: sequencer + arpeggiator simultaneously")
     s.set("clock15", 0); s.poke(0x0689, 0); s.set("wave", 1); s.set("volume", 13)
-    s.set("sus", 10); s.set("atk", 0); s.set("rel", 1); s.set("octave", 2); s.poke(PORTA, 0)
+    s.set("sus", 10); s.set("atk", 0); s.set("rel", 1); s.set("octave", 2); s.poke(GLIDE, 0)
     for i in range(16):
         s.set("seq_notes", (0xFF if i % 2 else (i % 12)), i)
     s.set("seq_len", 16); s.set("seq_rec", 0); s.set("tempo", 12)

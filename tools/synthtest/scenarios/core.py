@@ -157,7 +157,7 @@ def param_nav_and_clamp(s, rep):
     """UP/DOWN navigation steps through params in visual order, and LEFT/RIGHT
     adjust clamps each at 0..max."""
     rep.section("params: navigation order + adjust clamp")
-    # DOWN x5 from WAVEFORM must reach DETUNE (param 5): index order == visual
+    # DOWN x5 from WAVEFORM must reach LFO DEPTH (param 5): index order == visual
     # order, so no param is unreachable in sequence.
     s.set("curparam", 0); s.frame(2)
     for _ in range(5):
