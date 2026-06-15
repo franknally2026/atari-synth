@@ -33,10 +33,10 @@ def _show_seq_page(s):
     redraw from the current seq state. cur_param drives the page, but `page`
     catches up a few frames later (input auto-repeat lag), so poll until page==1
     before invalidating the grid/head caches and re-blitting."""
-    s.set("curparam", 12)                       # TEMPO -> sequencer page
+    s.set("curparam", 16)                       # TEMPO -> sequencer screen (page 2)
     for _ in range(24):
         s.frame(1)
-        if s.get("page") == 1:
+        if s.get("page") == 2:
             break
     s.poke(SEQ_DIRTY, 1); s.poke(PREV_SPOS, 0xFF); s.frame(4)
 
@@ -112,7 +112,7 @@ def realtime_record(s, rep):
     """SELECT alone = real-time record: a held note is captured as ONE struck
     note + tie markers (not re-struck each step), gaps stay rests."""
     rep.section("sequencer: real-time recording (held note -> struck + ties)")
-    s.set("curparam", 12); s.frame(6)
+    s.set("curparam", 16); s.frame(6)
     s.set("tempo", 8); s.set("octave", 2)
     if s.get("seq_play"):
         s.consol(start=True); s.frame(3); s.consol(); s.frame(3)
@@ -188,7 +188,7 @@ def realtime_arm_clears_and_runs(s, rep):
     (seq_play=1), and records from step 0. Disarming punches out but keeps the
     loop playing."""
     rep.section("sequencer: SELECT arms real-time record (clears + runs clock)")
-    s.set("curparam", 12); s.frame(2)
+    s.set("curparam", 16); s.frame(2)
     # the first console edge after an idle console is swallowed, so prime it with a
     # throwaway SELECT cycle, then force a clean disarmed start.
     s.consol(); s.frame(3)

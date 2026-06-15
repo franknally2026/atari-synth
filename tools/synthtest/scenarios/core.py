@@ -162,10 +162,11 @@ def param_nav_and_clamp(s, rep):
     s.set("curparam", 0); s.frame(2)
     for _ in range(5):
         s.joy(0, "down"); s.frame(3); s.joy(0, "centre"); s.frame(3)
-    rep.check("DOWN x5 -> DETUNE (param 5)", s.get("curparam") == 5, s.get("curparam"))
+    rep.check("DOWN x5 -> LFO DEPTH (param 5)", s.get("curparam") == 5, s.get("curparam"))
     # clamp: RIGHT to max, LEFT to min, for a representative spread of params
-    for pidx, name, hi_exp in [(1, "VOLUME", 15), (3, "ATTACK", 15), (6, "SUSTAIN", 15),
-                               (9, "LFO RATE", 15), (11, "ARP", 15), (2, "OCTAVE", 4)]:
+    for pidx, name, hi_exp in [(1, "VOLUME", 15), (2, "OCTAVE", 4),
+                               (4, "LFO RATE", 15), (6, "ATTACK", 15), (8, "SUSTAIN", 15),
+                               (10, "ARPEGGIO", 15), (11, "ARP MODE", 3)]:
         s.set("curparam", pidx); s.frame(2)
         s.joy(0, "right"); s.frame(90); s.joy(0, "centre"); s.frame(2)
         hi = s.get_param(pidx)
@@ -176,11 +177,11 @@ def param_nav_and_clamp(s, rep):
 
 
 def two_page_nav(s, rep):
-    """Navigating past page-0 params shows page 2 (sequencer) and back."""
-    rep.section("UI: two-page panel navigation")
-    s.set("curparam", 12); s.frame(20)             # -> page 2 (TEMPO)
-    rep.check("nav to param 12 -> page 2", s.get("page") == 1, s.get("page"))
-    rep.check("page 2 shows TEMPO label", s.cell(1, 16) == s.glyph(0x34, inv=True), "no T")
+    """Navigating past the screen-1 params shows the next screen and back."""
+    rep.section("UI: multi-page panel navigation")
+    s.set("curparam", 12); s.frame(20)             # -> page 1 (FX screen, DETUNE)
+    rep.check("nav to param 12 -> page 1", s.get("page") == 1, s.get("page"))
+    rep.check("FX screen shows DETUNE label", s.cell(1, 16) == s.glyph(0x24, inv=True), "no D")
     s.set("curparam", 0); s.frame(20)              # -> page 0 (WAVEFORM)
     rep.check("back to param 0 -> page 0", s.get("page") == 0, s.get("page"))
     rep.check("page 0 redraws WAVEFORM label", s.cell(1, 16) == s.glyph(0x37, inv=True), "no W")

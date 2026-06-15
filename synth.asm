@@ -218,7 +218,8 @@ acchi       = $06D7     ; add_scaled16 product (high)
 scl_sgn     = $06D8     ; add_scaled16 saved signed offset
 
 NPARAM = 19             ; ...page2 16 HPF, 17 PRESET, 18 DRUMBEAT
-NSAVE  = 17             ; params 0..16 are saved in a preset (PRESET itself is not)
+NSAVE  = 18             ; saved params per preset = all 19 except PRESET (skipped by index)
+PRESET_IDX = 15         ; PRESET param's index in the new layout
 PG2BASE = 16            ; first param index on page 2 (the third page)
 PER_PAGE = 12
 K_KNOB = 0              ; 0..15 value -> knob + 2-digit number
@@ -236,7 +237,7 @@ REPDELAY = 15
 REPFAST  = 4
 DECAYRATE = 4
 NUMKEYS  = 17
-NSHORT   = 18           ; 13 plain (page 0 + DRUMBEAT) + 5 Shift (page 1/2)
+NSHORT   = 19           ; 12 plain (page 0 + DETUNE) + 7 Shift (the rest) = all 19
 
 ; --- DEMO: shortcut-letter highlight style (0 = inverse video, 1 = underline)
 HL_STYLE = 1
@@ -601,7 +602,7 @@ pf_to2
 ; PRESET param is selected. Keep prev_preset in sync so preset_tick won't reload.
 nav_save_preset
         lda cur_param
-        cmp #17                 ; PRESET param index
+        cmp #PRESET_IDX         ; PRESET param index
         bne nsp_done
         jsr preset_save
         lda preset_slot
@@ -1113,7 +1114,7 @@ preset_tick
         sta tmpA                ; tmpA = 1 if pressed (survives jsr preset_save,
                                 ; which only touches tmp2 — NOT tmpA)
         ldx cur_param
-        cpx #17                 ; PRESET param selected?
+        cpx #PRESET_IDX         ; PRESET param selected?
         bne pt_load
         lda tmpA
         beq pt_load
@@ -1133,7 +1134,7 @@ pt_load
 pt_done
         rts
 
-; bank offset of the current slot (slot * NSAVE) -> tmp2
+; bank offset of the current slot (slot * NSAVE = slot*18) -> tmp2
 preset_offset
         lda preset_slot
         asl                     ; *16
@@ -1141,17 +1142,21 @@ preset_offset
         asl
         asl
         clc
-        adc preset_slot         ; + slot = *17
+        adc preset_slot         ; *17
+        clc
+        adc preset_slot         ; *18 = NSAVE
         sta tmp2
         rts
 preset_save
         lda #40                 ; trigger the "SAVED" flash (~0.8s) on the PRESET cell
         sta saved_flash
         lda #$FF
-        sta prev_disp+17        ; force the PRESET value cell to redraw -> "SAVED"
+        sta prev_disp+PRESET_IDX ; force the PRESET value cell to redraw -> "SAVED"
         jsr preset_offset
         ldx #0
 ps_loop
+        cpx #PRESET_IDX
+        beq ps_skip             ; never save PRESET (the slot selector) into a slot
         lda param_lo,x
         sta srcptr
         lda param_hi,x
@@ -1161,14 +1166,17 @@ ps_loop
         ldy tmp2
         sta preset_bank,y       ; -> bank slot
         inc tmp2
+ps_skip
         inx
-        cpx #NSAVE
+        cpx #NPARAM
         bne ps_loop
         rts
 preset_load
         jsr preset_offset
         ldx #0
 pl_loop
+        cpx #PRESET_IDX
+        beq pl_skip             ; PRESET is not stored -> leave the selector alone
         lda param_lo,x
         sta srcptr
         lda param_hi,x
@@ -1178,17 +1186,19 @@ pl_loop
         ldy #0
         sta (srcptr),y          ; -> param
         inc tmp2
+pl_skip
         inx
-        cpx #NSAVE
+        cpx #NPARAM
         bne pl_loop
         rts
-; factory patches: NSAVE bytes each, in param order
-;   wave vol oct atk dec det sus rel clk lfor lfod arp tempo arpm porta drum hpf
+; factory patches: NSAVE(18) bytes each, in the saved-param order (all params in
+; index order EXCEPT PRESET, which the save/load loop skips):
+;   wave vol oct clk lfor lfod atk dec sus rel arp arpm det hpf glide tempo drum rhythm
 preset_factory
-        .byte 1,10,2,0,2,0, 8,3,0,8,0,0, 8,0,0,0,0          ; 0 INIT
-        .byte 1,12,2,6,4,6, 14,8,0,4,5,0, 8,0,0,0,0         ; 1 PAD
-        .byte 0,13,3,0,2,0, 10,3,0,9,8,0, 8,0,6,0,4         ; 2 LEAD (porta+HP)
-        .byte 0,12,2,0,0,8, 8,2,0,8,0,9, 10,0,0,0,0         ; 3 ARP
+        .byte 1,10,2,0,8,0, 0,2,8,3,0,0, 0,0,0,8,0,0        ; 0 INIT
+        .byte 1,12,2,0,4,5, 6,4,14,8,0,0, 6,0,0,8,0,0       ; 1 PAD
+        .byte 0,13,3,0,9,8, 0,2,10,3,0,0, 0,4,6,8,0,0       ; 2 LEAD (glide+HP)
+        .byte 0,12,2,0,8,0, 0,0,8,2,9,0, 8,0,0,10,0,0       ; 3 ARP
 
 update_sound
         lda sus_level
@@ -2237,9 +2247,9 @@ ud_pn
         inx
         cpx pg_end
         bne ud_pl
-        ; page-2 sequencer grid (step cells + play head + transport)
+        ; sequencer grid (step cells + play head + transport) on the last page
         lda page
-        cmp #1
+        cmp #2
         bne ud_noseq
         jsr seq_draw
 ud_noseq
@@ -2634,7 +2644,7 @@ dp_n1
         bne dp_chkpre
         jmp draw_clk_toggle
 dp_chkpre
-        cpx #17                 ; PRESET -> knob + name (INIT/PAD/LEAD/ARP) or SAVED
+        cpx #PRESET_IDX         ; PRESET -> knob + name (INIT/PAD/LEAD/ARP) or SAVED
         bne dp_n2
         jmp draw_preset_widget
 dp_n2
@@ -2700,13 +2710,13 @@ dp_oct
 ; 1 = sequencer page -> transport tip,  0 = default -> nav/hold tip.
 hint_update
         lda cur_param
-        cmp #17                 ; PRESET param selected?
+        cmp #PRESET_IDX         ; PRESET param selected?
         bne hu_n1
         lda #2
         jmp hu_have
 hu_n1
         lda page
-        cmp #1                  ; sequencer page?
+        cmp #2                  ; sequencer page (now the last page)?
         bne hu_n2
         lda #1
         jmp hu_have
@@ -2808,7 +2818,7 @@ saved_flash_tick
         dec saved_flash
         bne sft_done
         lda #$FF                ; flash ended -> force PRESET value cell to redraw
-        sta prev_disp+17
+        sta prev_disp+PRESET_IDX
 sft_done
         rts
 
@@ -3181,18 +3191,24 @@ key_scan
 ; NB: param_lo/hi MUST have one entry per param (0..NPARAM-1). They previously
 ; omitted TEMPO (index 12) -> apply_adjust read past the table when adjusting
 ; TEMPO via the joystick (wrote stray RAM). Now includes TEMPO + ARPMODE.
+; NEW LAYOUT (2026-06-15): screen 1 VOICE = 0..11, screen 2 FX/PATCH = 12..15,
+; screen 3 SEQUENCER/RHYTHM = 16..18 (+ step grid). Index order == visual order.
+;   0 WAVEFORM 1 VOLUME 2 OCTAVE 3 CLOCK 4 LFO RATE 5 LFO DEPTH   (page0 left col)
+;   6 ATTACK 7 DECAY 8 SUSTAIN 9 RELEASE 10 ARPEGGIO 11 ARP MODE  (page0 right col)
+;   12 DETUNE 13 HP FILTER 14 GLIDE 15 PRESET                     (page1)
+;   16 TEMPO 17 DRUM 18 RHYTHM                                    (page2 + grid)
 param_lo
-        .byte <wave_idx,<volume,<octave,<atk_rate,<dec_rate,<detune
-        .byte <sus_level,<rel_rate,<clock15,<lfo_rate,<lfo_depth,<arp_rate
-        .byte <tempo,<arp_mode,<porta_rate,<drum_dec,<hpf_cut,<preset_slot,<drum_beat
+        .byte <wave_idx,<volume,<octave,<clock15,<lfo_rate,<lfo_depth
+        .byte <atk_rate,<dec_rate,<sus_level,<rel_rate,<arp_rate,<arp_mode
+        .byte <detune,<hpf_cut,<porta_rate,<preset_slot, <tempo,<drum_dec,<drum_beat
 param_hi
-        .byte >wave_idx,>volume,>octave,>atk_rate,>dec_rate,>detune
-        .byte >sus_level,>rel_rate,>clock15,>lfo_rate,>lfo_depth,>arp_rate
-        .byte >tempo,>arp_mode,>porta_rate,>drum_dec,>hpf_cut,>preset_slot,>drum_beat
+        .byte >wave_idx,>volume,>octave,>clock15,>lfo_rate,>lfo_depth
+        .byte >atk_rate,>dec_rate,>sus_level,>rel_rate,>arp_rate,>arp_mode
+        .byte >detune,>hpf_cut,>porta_rate,>preset_slot, >tempo,>drum_dec,>drum_beat
 param_max
-        .byte 3,15,4,15,15,15, 15,15,2,15,15,15, 15,3,15,15, 15,3,15
+        .byte 3,15,4,2,15,15, 15,15,15,15,15,3, 15,15,15,3, 15,15,15
 param_maxp1
-        .byte 4,16,5,16,16,16, 16,16,3,16,16,16, 16,4,16,16, 16,4,16
+        .byte 4,16,5,3,16,16, 16,16,16,16,16,4, 16,16,16,4, 16,16,16
 
 ; ----- parameter descriptor tables (NPARAM entries) -------------------------
 ;        0 WAVE  1 VOL  2 OCT  3 ATK  4 DEC | 5 SUS  6 REL  7 CLK  8 LFOR 9 LFOD
@@ -3205,10 +3221,10 @@ param_maxp1
 ; reuse the page-0 grid, so all tables index by absolute param).
 ;        page 2: 12 TEMPO (r0 left) 13 ARPMODE (r0 right) 14 PORTA (r1 left) 15 DRUM (r1 right)
 p_kind
-        .byte K_WAVE,K_KNOB,K_OCT,K_KNOB,K_KNOB,K_KNOB
-        .byte K_KNOB,K_KNOB,K_CLK,K_KNOB,K_KNOB,K_KNOB
-        .byte K_KNOB,K_KNOB,K_KNOB,K_KNOB                 ; 12 TEMPO,13 ARPMODE,14 PORTA,15 DRUM
-        .byte K_KNOB,K_KNOB,K_KNOB                        ; 16 HPF, 17 PRESET, 18 DRUMBEAT
+        .byte K_WAVE,K_KNOB,K_OCT,K_CLK,K_KNOB,K_KNOB     ; 0 WAVE 1 VOL 2 OCT 3 CLK 4 LFOR 5 LFOD
+        .byte K_KNOB,K_KNOB,K_KNOB,K_KNOB,K_KNOB,K_KNOB   ; 6 ATK 7 DEC 8 SUS 9 REL 10 ARP 11 ARPM
+        .byte K_KNOB,K_KNOB,K_KNOB,K_KNOB                 ; 12 DETUNE 13 HPF 14 GLIDE 15 PRESET
+        .byte K_KNOB,K_KNOB,K_KNOB                        ; 16 TEMPO 17 DRUM 18 RHYTHM
 p_scan
         .byte 16,36,56,76,96,110, 16,36,56,76,96,110
         .byte 16,16,36,36, 16,16,36
@@ -3222,21 +3238,21 @@ p_numcol
         .byte 13,13,13,13,13,13, 33,33,33,33,33,33
         .byte 13,33,13,33, 13,33,13
 p_vaddr_lo
-        .byte <wave_idx,<volume,<octave,<atk_rate,<dec_rate,<detune
-        .byte <sus_level,<rel_rate,<clock15,<lfo_rate,<lfo_depth,<arp_rate
-        .byte <tempo,<arp_mode,<porta_rate,<drum_dec,<hpf_cut,<preset_slot,<drum_beat
+        .byte <wave_idx,<volume,<octave,<clock15,<lfo_rate,<lfo_depth
+        .byte <atk_rate,<dec_rate,<sus_level,<rel_rate,<arp_rate,<arp_mode
+        .byte <detune,<hpf_cut,<porta_rate,<preset_slot, <tempo,<drum_dec,<drum_beat
 p_vaddr_hi
-        .byte >wave_idx,>volume,>octave,>atk_rate,>dec_rate,>detune
-        .byte >sus_level,>rel_rate,>clock15,>lfo_rate,>lfo_depth,>arp_rate
-        .byte >tempo,>arp_mode,>porta_rate,>drum_dec,>hpf_cut,>preset_slot,>drum_beat
+        .byte >wave_idx,>volume,>octave,>clock15,>lfo_rate,>lfo_depth
+        .byte >atk_rate,>dec_rate,>sus_level,>rel_rate,>arp_rate,>arp_mode
+        .byte >detune,>hpf_cut,>porta_rate,>preset_slot, >tempo,>drum_dec,>drum_beat
 p_lblptr_lo
-        .byte <txt_wave,<txt_vol,<txt_oct,<txt_atk,<txt_dec,<txt_det
-        .byte <txt_sus,<txt_rel,<txt_clk,<txt_lfor,<txt_lfod,<txt_arp
-        .byte <txt_tempo,<txt_arpm,<txt_porta,<txt_drum,<txt_hpf,<txt_preset,<txt_dbeat
+        .byte <txt_wave,<txt_vol,<txt_oct,<txt_clk,<txt_lfor,<txt_lfod
+        .byte <txt_atk,<txt_dec,<txt_sus,<txt_rel,<txt_arp,<txt_arpm
+        .byte <txt_det,<txt_hpf,<txt_porta,<txt_preset, <txt_tempo,<txt_drum,<txt_dbeat
 p_lblptr_hi
-        .byte >txt_wave,>txt_vol,>txt_oct,>txt_atk,>txt_dec,>txt_det
-        .byte >txt_sus,>txt_rel,>txt_clk,>txt_lfor,>txt_lfod,>txt_arp
-        .byte >txt_tempo,>txt_arpm,>txt_porta,>txt_drum,>txt_hpf,>txt_preset,>txt_dbeat
+        .byte >txt_wave,>txt_vol,>txt_oct,>txt_clk,>txt_lfor,>txt_lfod
+        .byte >txt_atk,>txt_dec,>txt_sus,>txt_rel,>txt_arp,>txt_arpm
+        .byte >txt_det,>txt_hpf,>txt_porta,>txt_preset, >txt_tempo,>txt_drum,>txt_dbeat
 ; Which char index in each label is the shortcut key (underlined). Renaming ARP
 ; -> ARPEGGIO introduces a free 'G', which frees up enough letters to give EVERY
 ; page-0 param a unique in-label letter, plus DRUMBEAT(B). Pages 1-2 (except
@@ -3245,40 +3261,45 @@ p_lblptr_hi
 ;   SUS  S=0  REL L=2  CLK C=0  LFOR F=1 LFOD H=8  ARPEGGIO G=4   DRUMBEAT B=4
 ;   page 0 + DRUMBEAT use PLAIN letters; the 5 page-1/2 params below use SHIFT+letter
 ;   TEMPO M=2  ARP MODE D=6  PORTA A=4  HP FILTER H=0  PRESET S=3   (DRUM: none)
+; char index of each label's shortcut letter (underlined). New layout: page-0
+; params keep plain letters; DETUNE keeps plain N; the rest use SHIFT+letter.
+;   WAVE M7 VOL V0 OCT A3 CLK C0 LFOR F1 LFOD H8 ATK K5 DEC D0 SUS S0 REL L2
+;   ARPEGGIO G4   ARP MODE ^A0   DETUNE N4   HP FILTER ^F3   GLIDE ^G0
+;   PRESET ^S3    TEMPO ^M2   DRUM ^D0   RHYTHM ^H1
 p_hl
-        .byte 7,0,3,5,0,4
-        .byte 0,2,0,1,8,4
-        .byte 2,6,4,$FF, 0,3,4
+        .byte 7,0,3,0,1,8
+        .byte 5,0,0,2,4,0
+        .byte 4,3,0,3, 2,0,1
 ; 1 = this param's shortcut is a SHIFT+letter (drawn opposite video to its label)
 p_hl_shift
         .byte 0,0,0,0,0,0
-        .byte 0,0,0,0,0,0
-        .byte 1,1,1,0, 1,1,0
-; 1 = inert in 16-BIT clock mode (channels 3/4 are paired): PORTA, DRUM, HP FILTER,
-; DRUMBEAT. Struck through when clock15 = 2 so users don't twiddle dead controls.
+        .byte 0,0,0,0,0,1
+        .byte 0,1,1,1, 1,1,1
+; 1 = inert in 16-BIT clock mode (channels 3/4 are paired): HP FILTER(13), GLIDE(14),
+; DRUM(17), RHYTHM(18). Struck through when clock15 = 2 so users don't twiddle dead ones.
 p_inert16
         .byte 0,0,0,0,0,0
         .byte 0,0,0,0,0,0
-        .byte 0,0,1,1, 1,0,1
+        .byte 0,1,1,0, 0,1,1
 ; shortcut key -> param jump (read_navkeys). Letter is a FREE key (not piano)
 ; underlined in the label; KBCODEs are the bridge/hardware values. Shift+letter
 ; entries have bit7 ($80) set (Shift sets KBCODE bit7).
 shortcut_kc
-        .byte $25,$10,$3F,$05,$3A,$23,$3E,$00,$12,$38,$39,$3D,$15
-;             M   V   A   K   D   N   S   L   C   F   H   G   B    (plain)
-        .byte $A5,$BA,$BF,$B9,$BE
-;             ^M  ^D  ^A  ^H  ^S                                  (shift)
+        .byte $25,$10,$3F,$12,$38,$39,$05,$3A,$3E,$00,$3D,$23
+;             M   V   A   C   F   H   K   D   S   L   G   N    (plain)
+        .byte $BF,$B8,$BD,$BE,$A5,$BA,$B9
+;             ^A  ^F  ^G  ^S  ^M  ^D  ^H                      (shift)
 shortcut_param
-        .byte 0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 18
-;             WAV VOL OCT ATK DEC DET SUS REL CLK LFR LFD ARP DBT
-        .byte 12, 13, 14, 16, 17
-;             TMP ARM POR HPF PRE
-; effect params that render value 0 as "OFF": DETUNE(5) LFO DEPTH(10) ARP(11)
-;                                             PORTA(14) DRUM(15) HP FILTER(16)
+        .byte 0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 12
+;             WAV VOL OCT CLK LFR LFD ATK DEC SUS REL ARP DET
+        .byte 11, 13, 14, 15, 16, 17, 18
+;             ARM HPF GLI PRE TMP DRM RHY
+; effect params that render value 0 as "OFF": LFO DEPTH(5) ARPEGGIO(10) DETUNE(12)
+;                                             HP FILTER(13) GLIDE(14) DRUM(17)
 p_zoff
         .byte 0,0,0,0,0,1
-        .byte 0,0,0,0,1,1
-        .byte 0,0,1,1, 1,0,0
+        .byte 0,0,0,0,1,0
+        .byte 1,1,1,0, 0,1,0
 
 ; knob geometry
 bitmask_tab
@@ -3374,11 +3395,11 @@ txt_det    .byte "DETUNE",$FF
 txt_arp    .byte "ARPEGGIO",$FF
 txt_tempo  .byte "TEMPO",$FF
 txt_arpm   .byte "ARP MODE",$FF
-txt_porta  .byte "PORTA",$FF
+txt_porta  .byte "GLIDE",$FF
 txt_drum   .byte "DRUM",$FF
 txt_hpf    .byte "HP FILTER",$FF
 txt_preset .byte "PRESET",$FF
-txt_dbeat  .byte "DRUMBEAT",$FF
+txt_dbeat  .byte "RHYTHM",$FF
 txt_play   .byte "PLAY",$FF
 txt_stop   .byte "STOP",$FF
 txt_rec    .byte "REC",$FF

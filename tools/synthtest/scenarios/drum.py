@@ -23,16 +23,18 @@ def _hit(s, decay):
 
 def drum_param(s, rep):
     rep.section("drum: parameter (default / clamp / nav / label)")
-    rep.check("DRUM defaults to 0 (off)", s.get_param(15) == 0, s.get_param(15))
-    s.set("curparam", 15); s.frame(6)
-    rep.check("nav to DRUM -> page 2", s.get("page") == 1, s.get("page"))
+    rep.check("DRUM defaults to 0 (off)", s.get_param(17) == 0, s.get_param(17))
+    s.set("curparam", 17); s.frame(6)
+    rep.check("nav to DRUM -> sequencer screen (page 2)", s.get("page") == 2, s.get("page"))
     s.joy(0, "right"); s.frame(100); s.joy(0, "centre"); s.frame(2)
-    hi = s.get_param(15)
+    hi = s.get_param(17)
     s.joy(0, "left"); s.frame(130); s.joy(0, "centre"); s.frame(2)
-    lo = s.get_param(15)
+    lo = s.get_param(17)
     rep.check("DRUM clamps 15 / 0", hi == 15 and lo == 0, f"hi={hi} lo={lo}")
-    # 'DRUM' label on page 2 row1 right (col 21, scan 36): 'D' = screen code $24
-    rep.check("DRUM label renders on page 2", s.cell(21, 36) == s.glyph(0x24, inv=True), "no D")
+    # 'DRUM' on the sequencer screen, row0 right (col 21, scan 16). 'D' (col21) is the
+    # Shift+D shortcut char (opposite-video when focused), so check 'R' at col 22.
+    rep.check("DRUM label renders on the sequencer screen",
+              s.cell(22, 16) == s.glyph(0x32, inv=True), "no R")
     s.poke(DRUM, 0); s.set("curparam", 0); s.frame(6)
 
 
@@ -243,16 +245,18 @@ def drum_lane_record(s, rep):
 
 
 def drumbeat_param(s, rep):
-    rep.section("drumbeat: DRUMBEAT parameter (page 2)")
-    rep.check("DRUMBEAT defaults to 0", s.get_param(18) == 0, s.get_param(18))
+    rep.section("rhythm: RHYTHM parameter (sequencer screen)")
+    rep.check("RHYTHM defaults to 0", s.get_param(18) == 0, s.get_param(18))
     s.set("curparam", 18); s.frame(8)
-    rep.check("nav to DRUMBEAT -> page 2", s.get("page") == 2, s.get("page"))
-    rep.check("DRUMBEAT label renders (page 2 row1)", s.cell(1, 36) == s.glyph(0x24, inv=True), "no D")
+    rep.check("nav to RHYTHM -> sequencer screen (page 2)", s.get("page") == 2, s.get("page"))
+    # 'RHYTHM' on the sequencer screen, row1 left (col 1, scan 36): 'R' = $32
+    rep.check("RHYTHM label renders on the sequencer screen",
+              s.cell(1, 36) == s.glyph(0x32, inv=True), "no R")
     s.joy(0, "right"); s.frame(100); s.joy(0, "centre"); s.frame(2)
     hi = s.get_param(18)
     s.joy(0, "left"); s.frame(130); s.joy(0, "centre"); s.frame(2)
     lo = s.get_param(18)
-    rep.check("DRUMBEAT clamps 15 / 0", hi == 15 and lo == 0, f"hi={hi} lo={lo}")
+    rep.check("RHYTHM clamps 15 / 0", hi == 15 and lo == 0, f"hi={hi} lo={lo}")
     s.poke(DRUMBEAT, 0); s.set("curparam", 0); s.frame(6)
 
 

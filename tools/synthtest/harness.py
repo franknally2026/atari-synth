@@ -52,11 +52,13 @@ VARS = {
     "seq_prevn": 0x06A6, "seq_len": 0x06B3,
 }
 
-# Panel parameter index -> work-variable name (index order == visual order;
-# see effects-roadmap / synth.asm param tables). 0..12.
-PARAM_VARS = ["wave", "volume", "octave", "atk", "dec", "detune",
-              "sus", "rel", "clock15", "lfor", "lfod", "arp", "tempo", "arp_mode",
-              "porta_rate", "drum_dec", "hpf_cut", "preset", "drum_beat"]
+# Panel parameter index -> work-variable name (index order == visual order).
+# NEW LAYOUT (2026-06-15): screen 1 VOICE 0-11, screen 2 FX/PATCH 12-15,
+# screen 3 SEQUENCER/RHYTHM 16-18 (+ step grid). See synth.asm param tables.
+PARAM_VARS = ["wave", "volume", "octave", "clock15", "lfor", "lfod",
+              "atk", "dec", "sus", "rel", "arp", "arp_mode",
+              "detune", "hpf_cut", "porta_rate", "preset",
+              "tempo", "drum_dec", "drum_beat"]
 
 # Envelope phases (jump-table order in update_sound)
 PH_IDLE, PH_ATTACK, PH_DECAY, PH_SUSTAIN, PH_RELEASE = 0, 1, 2, 3, 4

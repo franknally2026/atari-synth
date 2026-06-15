@@ -37,17 +37,19 @@ def _settle_then_play(s, note_a, note_b, porta, settle=30):
 
 
 def porta_param(s, rep):
-    rep.section("portamento: parameter (default / clamp / nav / label)")
-    rep.check("PORTA defaults to 0 (off)", s.get_param(14) == 0, s.get_param(14))
+    rep.section("glide: parameter (default / clamp / nav / label)")
+    rep.check("GLIDE defaults to 0 (off)", s.get_param(14) == 0, s.get_param(14))
     s.set("curparam", 14); s.frame(6)
-    rep.check("nav to PORTA -> page 2", s.get("page") == 1, s.get("page"))
+    rep.check("nav to GLIDE -> FX screen (page 1)", s.get("page") == 1, s.get("page"))
     s.joy(0, "right"); s.frame(100); s.joy(0, "centre"); s.frame(2)
     hi = s.get_param(14)
     s.joy(0, "left"); s.frame(130); s.joy(0, "centre"); s.frame(2)
     lo = s.get_param(14)
-    rep.check("PORTA clamps 15 / 0", hi == 15 and lo == 0, f"hi={hi} lo={lo}")
-    # 'PORTA' label on page 2, row 1 (scan 36), left col 1: 'P'
-    rep.check("PORTA label renders on page 2", s.cell(1, 36) == s.glyph(0x30, inv=True), "no P")
+    rep.check("GLIDE clamps 15 / 0", hi == 15 and lo == 0, f"hi={hi} lo={lo}")
+    # 'GLIDE' on the FX screen, row1 left (col 1, scan 36). 'G' (col1) is the Shift+G
+    # shortcut char (opposite-video when focused), so check 'L' at col 2 instead.
+    rep.check("GLIDE label renders on the FX screen",
+              s.cell(2, 36) == s.glyph(0x2C, inv=True), "no L")
     s.set("curparam", 0); s.frame(6)
 
 

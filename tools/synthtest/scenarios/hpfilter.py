@@ -22,17 +22,18 @@ def _voice0(s, idx, wave=0):
 
 
 def hpf_param(s, rep):
-    rep.section("hpfilter: parameter on a new third page")
-    rep.check("HPF defaults to 0 (off)", s.get_param(16) == 0, s.get_param(16))
-    s.set("curparam", 16); s.frame(8)
-    rep.check("nav to HPF -> page 2 (third page)", s.get("page") == 2, s.get("page"))
-    # check the 'P' (col 2): the 'H' at col 1 is the Shift+H shortcut char, drawn
-    # opposite-video (XOR), so it isn't a plain inverse glyph when focused.
-    rep.check("HP FILTER label renders on page 2", s.cell(2, 16) == s.glyph(0x30, inv=True), "no P")
+    rep.section("hpfilter: parameter on the FX/PATCH screen (page 1)")
+    rep.check("HPF defaults to 0 (off)", s.get_param(13) == 0, s.get_param(13))
+    s.set("curparam", 13); s.frame(8)
+    rep.check("nav to HPF -> FX screen (page 1)", s.get("page") == 1, s.get("page"))
+    # HP FILTER is page-1 right column (col 21, scan 16). Check the 'P' at col 22;
+    # the shortcut is now Shift+F (col 24), so 'H'/'P' are plain focused-inverse.
+    rep.check("HP FILTER label renders on the FX screen",
+              s.cell(22, 16) == s.glyph(0x30, inv=True), "no P")
     s.joy(0, "right"); s.frame(100); s.joy(0, "centre"); s.frame(2)
-    hi = s.get_param(16)
+    hi = s.get_param(13)
     s.joy(0, "left"); s.frame(130); s.joy(0, "centre"); s.frame(2)
-    lo = s.get_param(16)
+    lo = s.get_param(13)
     rep.check("HPF clamps 15 / 0", hi == 15 and lo == 0, f"hi={hi} lo={lo}")
     s.poke(HPF, 0); s.set("curparam", 0); s.frame(8)
 
