@@ -34,7 +34,11 @@ REGISTRY = (
        (sequencer.tie_sustains_no_reattack, False),
        (sequencer.grid_glyphs, False),
        (sequencer.head_marks_active_step, False),
-       (sequencer.playback_audible, True)]
+       (sequencer.playback_audible, True),
+       (sequencer.record_then_playback_melodic_acoustic, True),
+       (sequencer.held_note_playback_audible_acoustic, True),
+       (sequencer.drum_record_playback_acoustic, True),
+       (sequencer.armed_record_empty_silent_acoustic, True)]
     + [(arpmodes.arpmode_param, False),
        (arpmodes.arpmode_patterns, False),
        (arpmodes.arpmode_direction, False),

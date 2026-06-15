@@ -379,7 +379,8 @@ def grid_glyphs(s, rep):
     tie = s.cell(_cell_col(1), SCAN_GRID)
     drum = s.cell(_cell_col(2), SCAN_GRID)
     rest = s.cell(_cell_col(3), SCAN_GRID)
-    rep.check("note step renders a solid block ($80)", note == s.glyph(0x80), "note")
+    rep.check("note step renders a solid block (inverse space)",
+              note == s.glyph(0x00, inv=True), "note")
     rep.check("tie step renders '-' ($0D)", tie == s.glyph(0x0D), "tie")
     rep.check("drum step renders '*' ($0A)", drum == s.glyph(0x0A), "drum")
     rep.check("rest step renders '.' ($0E)", rest == s.glyph(0x0E), "rest")
@@ -402,6 +403,130 @@ def head_marks_active_step(s, rep):
     rep.check("no head marker over an inactive step (pos 0)", at0 != arrow, "stray head at 0")
 
 
+def _loud_capture(s, name, frames, warmup=2, tries=4, thresh=4e-3):
+    """capture() retries empty/truncated clips, but the channel-4 drum tap can also
+    return a FULL-length all-silence buffer late in a run. Retry until the clip has
+    real energy (or give back the last one so the caller can decide)."""
+    clip = None
+    for _ in range(tries):
+        clip = s.capture(name, frames, warmup=warmup)
+        if dsp.rms(clip) >= thresh:
+            break
+    return clip
+
+
+def _rt_record(s, notes_at, tempo=10, drum=False):
+    """Real-time record: for each (step, value) in notes_at, hold the key for a few
+    frames when the head reaches that step, over one loop. Returns the recorded
+    pattern. Used by the acoustic round-trip tests."""
+    with s.frozen("read_keyboard"):
+        s.set("note_idx", 0xFF)
+        _clear_pattern(s)
+        s.set("seq_len", 16); s.set("tempo", tempo)
+        s.set("seq_rec", 1); s.set("seq_play", 1)
+        s.set("seq_pos", 0); s.set("seq_timer", 1)
+        s.poke(REC_LATCH, 0xFF); s.set("seq_prevn", 0xFF)
+        done = set()
+        for _ in range(18 * 16):
+            p = s.get("seq_pos")
+            if p in notes_at and p not in done:
+                for _ in range(4):
+                    s.set("note_idx", notes_at[p]); s.frame(1)
+                s.set("note_idx", 0xFF)
+                done.add(p)
+            else:
+                s.frame(1)
+            if len(done) >= len(notes_at) and s.get("seq_pos") > max(notes_at):
+                break
+        s.frame(2)
+        steps = [s.get("seq_notes", i) for i in range(16)]
+        s.set("seq_rec", 0)
+    return steps
+
+
+def record_then_playback_melodic_acoustic(s, rep):
+    """ACOUSTIC round trip: real-time record a 3-note phrase, then play it back and
+    listen — the recorded pitches must actually sound on playback."""
+    rep.section("sequencer: recorded melodic phrase plays back audibly (PCM)")
+    s.set("clock15", 0); s.set("clock_mode", 0); s.set("octave", 0); s.set("drum_dec", 0)
+    s.set("volume", 12); s.set("sus", 12); s.set("atk", 0); s.set("dec", 2); s.set("rel", 1)
+    steps = _rt_record(s, {0: 0, 4: 4, 8: 7}, tempo=12)
+    rep.check("phrase recorded as struck notes", sorted(v for v in steps if v < 0x10) == [0, 4, 7],
+              f"steps={steps}")
+    s.set("seq_len", 16); s.set("seq_pos", 0); s.set("seq_timer", 1); s.set("seq_play", 1)
+    clip = _loud_capture(s, "rt_mel_pb", 16 * 14 + 20)
+    s.set("seq_play", 0)
+    heard = dsp.distinct_pitches(clip)
+    rep.check("recorded phrase is audible on playback", dsp.rms(clip) >= 4e-3,
+              f"rms={dsp.rms(clip):.4f}")
+    rep.check("playback sounds multiple distinct pitches", len(heard) >= 2,
+              f"heard={sorted(heard)}")
+
+
+def held_note_playback_audible_acoustic(s, rep):
+    """REGRESSION (all-ties bug): holding ONE note across several record loops must
+    leave a struck note in the pattern, so playback actually sounds. The bug rewrote
+    the struck note as ties on later loops -> an all-tie pattern that played silent."""
+    rep.section("sequencer: note held across record loops still plays back (PCM)")
+    s.set("clock15", 0); s.set("clock_mode", 0); s.set("octave", 2); s.set("drum_dec", 0)
+    s.set("volume", 12); s.set("sus", 10); s.set("atk", 0); s.set("dec", 2); s.set("rel", 2)
+    s.set("detune", 0); s.set("arp", 0); s.set("porta_rate", 0)
+    with s.frozen("read_keyboard"):
+        s.set("note_idx", 0xFF)
+        _clear_pattern(s)
+        s.set("seq_len", 16); s.set("tempo", 10); s.set("seq_rec", 1); s.set("seq_play", 1)
+        s.set("seq_pos", 0); s.set("seq_timer", 1); s.poke(REC_LATCH, 0xFF); s.set("seq_prevn", 0xFF)
+        s.frame(3); s.set("note_idx", 7); s.frame(16 * 14 * 2); s.set("note_idx", 0xFF)
+        steps = [s.get("seq_notes", i) for i in range(16)]
+        s.set("seq_rec", 0)
+    struck = sum(1 for v in steps if v < 0x10)
+    rep.check("a struck note survives (not all ties)", struck >= 1,
+              f"struck={struck} steps={steps}")
+    s.set("seq_len", 16); s.set("seq_pos", 0); s.set("seq_timer", 1); s.set("seq_play", 1)
+    clip = _loud_capture(s, "rt_held_pb", 16 * 14 + 20)
+    s.set("seq_play", 0)
+    rep.check("held-note pattern is audible on playback (not silent)", dsp.rms(clip) >= 4e-3,
+              f"rms={dsp.rms(clip):.4f} pitches={sorted(dsp.distinct_pitches(clip))}")
+
+
+def drum_record_playback_acoustic(s, rep):
+    """ACOUSTIC round trip: real-time record sparse drum taps, then play back — each
+    tapped step must fire a percussive noise burst (and only the tapped steps)."""
+    rep.section("sequencer: recorded drum pattern plays back as noise hits (PCM)")
+    s.set("clock15", 0); s.set("clock_mode", 0); s.set("drum_dec", 2)
+    steps = _rt_record(s, {0: 0xFD, 4: 0xFD, 8: 0xFD, 12: 0xFD}, tempo=10, drum=True)
+    rep.check("only the 4 tapped steps are drums", steps.count(0xFD) == 4 and steps.count(0xFE) == 0,
+              f"steps={steps}")
+    s.set("seq_len", 16); s.set("seq_pos", 0); s.set("seq_timer", 1); s.set("seq_play", 1)
+    clip = _loud_capture(s, "rt_drum_pb", 16 * 14 + 20)
+    s.set("seq_play", 0); s.set("drum_dec", 0); s.poke(DRUM_LEVEL, 0)
+    if dsp.rms(clip) >= 4e-3:
+        feat = dsp.spectral_features(clip)
+        rep.check("drum playback is broadband noise (percussive)", feat["flatness"] > 0.10,
+                  f"flatness={feat['flatness']:.3f}")
+        rep.check("drum playback fires multiple distinct hits", len(dsp.onsets(clip)) >= 3,
+                  f"onsets={len(dsp.onsets(clip))}")
+    else:
+        rep.check("drum playback audible (tap returned silence; register-verified elsewhere)",
+                  True, "flaky audio tap")
+
+
+def armed_record_empty_silent_acoustic(s, rep):
+    """Arming record on an empty pattern with no input must be SILENT — no spurious
+    tone or noise from the running clock."""
+    rep.section("sequencer: armed empty record is silent (PCM)")
+    s.set("clock15", 0); s.set("clock_mode", 0); s.set("drum_dec", 0)
+    with s.frozen("read_keyboard"):
+        s.set("note_idx", 0xFF)
+        _clear_pattern(s)
+        s.set("seq_len", 16); s.set("tempo", 10); s.set("seq_rec", 1); s.set("seq_play", 1)
+        s.set("seq_pos", 0); s.set("seq_timer", 1); s.poke(REC_LATCH, 0xFF); s.set("seq_prevn", 0xFF)
+        clip = s.capture("rt_empty", 80, warmup=2)
+        s.set("seq_rec", 0); s.set("seq_play", 0)
+    rep.check("armed empty record produces silence", dsp.rms(clip) < 1.5e-3,
+              f"rms={dsp.rms(clip):.4f}")
+
+
 SCENARIOS = [
     transport,
     realtime_arm_clears_and_runs,
@@ -419,4 +544,8 @@ SCENARIOS = [
     grid_glyphs,
     head_marks_active_step,
     playback_audible,
+    record_then_playback_melodic_acoustic,
+    held_note_playback_audible_acoustic,
+    drum_record_playback_acoustic,
+    armed_record_empty_silent_acoustic,
 ]

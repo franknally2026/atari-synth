@@ -729,6 +729,12 @@ sq_restrel
         jmp sq_nostep
 sq_playnote
         sta tmpA
+        lda seq_rec             ; while RECORDING, don't let the clock re-strike a note
+        beq sq_pn_go            ; you're already holding live -> that would double it
+        lda tmpA                ; (two unison voices) and re-attack your sustained note
+        cmp note_idx            ; every loop. note_idx is the live semitone; tmpA is the
+        beq sq_nostep           ; step's. Same -> skip the clock trigger, keep monitoring.
+sq_pn_go
         ldy octave
         lda octave_base,y
         clc
@@ -745,7 +751,11 @@ sq_nostep
         beq sq_adv              ; nothing held -> leave step (rest)
         cmp #$FD                ; a HELD drum key is a one-shot, not a sustain: don't
         beq sq_adv              ; smear it into ties (leave following steps as rests)
-        lda #$FE                ; held pitch -> TIE (sustains on playback)
+        ldx seq_pos             ; held pitch -> extend with a TIE, but ONLY into a
+        lda seq_notes,x         ; REST. On a later loop this step already holds the
+        cmp #$FF                ; struck note (or its ties); rewriting it as a tie
+        bne sq_adv              ; would wipe the attack and play back silent. Leave it.
+        lda #$FE                ; held pitch over a rest -> TIE (sustains on playback)
 sq_cap
         ldx seq_pos
         sta seq_notes,x
@@ -2217,6 +2227,8 @@ sd_cell
         sta bc_col
         lda #56
         sta bc_scan
+        lda #0                  ; default normal video (notes flip this for a block)
+        sta bc_inv
         ldx s_kc
         lda seq_notes,x
         cmp #$FF
@@ -2234,10 +2246,14 @@ sd_nottie
         lda #$0A                ; '*' = drum hit (distinct from a pitched note)
         bne sd_putcell
 sd_filled
-        lda #$80                ; solid block = note
+        lda #$FF                ; note = SOLID block: inverse-video space ($00 EOR $FF).
+        sta bc_inv              ; (code $80 read garbage past the 128-glyph ROM font)
+        lda #$00
 sd_putcell
         sta bc_code
         jsr blit_char
+        lda #0                  ; restore normal video for the head/transport draws
+        sta bc_inv
         ldx s_kc
         inx
         cpx #16
