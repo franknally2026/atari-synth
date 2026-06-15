@@ -901,9 +901,17 @@ tn_ok
 tn_alloc
         ldx last_voice
         inx
-        cpx vlimit              ; wrap when x >= vlimit (not just ==): switching
-        bcc tn_nowrap           ; to 16-bit drops vlimit 4->2, so a stale
-        ldx #0                  ; last_voice of 2/3 must still wrap (else OOB)
+        cpx vlimit              ; wrap when x >= vlimit (16-bit drops 4->2, so a
+        bcs tn_wrap0            ; stale last_voice of 2/3 must still wrap)
+        cpx #3                  ; reserve voice 3 (channel 4) for the drum in 8-bit
+        bne tn_nowrap           ; mode when DRUM is enabled, else a melody note here
+        lda clock15             ; gets stomped by the drum's noise -> sounds wrong.
+        cmp #2                  ; 16-bit: voice 3 doesn't exist (vlimit=2) -> n/a
+        beq tn_nowrap
+        lda drum_dec            ; DRUM off -> voice 3 is a normal melody voice
+        beq tn_nowrap
+tn_wrap0
+        ldx #0                  ; skip voice 3 -> melody uses voices 0..2
 tn_nowrap
         stx last_voice
 tn_setnote

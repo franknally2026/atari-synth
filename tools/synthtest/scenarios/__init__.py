@@ -45,6 +45,7 @@ REGISTRY = (
        (drum.drum_decay, False),
        (drum.drum_off, False),
        (drum.drum_acoustic, True),
+       (drum.drum_reserves_voice3, False),
        (drum.drum_decay_scales, False),
        (drum.drum_coexists_with_melody, True)]
     + [(hpfilter.hpf_param, False),
