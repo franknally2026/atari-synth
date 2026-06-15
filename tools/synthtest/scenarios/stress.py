@@ -15,25 +15,28 @@ DRUM_LEVEL = 0x06BE
 
 def note_range_extremes(s, rep):
     """The very lowest and highest chromatic notes, and the trigger clamp at
-    idx 64 (notes beyond the table must not run off the end)."""
+    idx 64 (notes beyond the table must not run off the end).
+
+    Played through the REAL trigger path via held_key (octave_base[octave]+semitone)
+    rather than poking a frozen voice — the old frozen-poke approach was flaky after
+    joystick-heavy predecessors (an emulator-state artifact, not an engine bug)."""
     rep.section("stress: note-range extremes + chromatic clamp")
-    with s.frozen("trigger_voices"):
-        s.set("clock15", 0); s.poke(0x0689, 0); s.set("wave", 1); s.set("volume", 13)
-        s.set("sus", 14); s.set("lfod", 0); s.set("detune", 0); s.poke(PORTA, 0)
-        s.poke(0x0665, 0); s.poke(0x0668, 0)   # zero LFO counter+offset (clean AUDF)
-        for idx in (0, 64):
-            for i in range(4):
-                s.set("vlevel", 0, i); s.set("vphase", 0, i)
-            s.set("vnote", idx, 0); s.set("vlevel", 13, 0)
-            s.set("vphase", PH_SUSTAIN, 0); s.set("vcount", 8, 0); s.set("held", 0)
-            s.frame(2)
-            f, c = s.chan(1)
-            audf = notes.chromatic()[idx]
-            rep.check(f"idx {idx} emits its AUDF ({audf}) and sounds",
-                      f == audf and c != 0, f"AUDF={f} AUDC={c:#x}")
+    s.set("clock15", 0); s.poke(0x0689, 0); s.set("wave", 1); s.set("volume", 13)
+    s.set("sus", 14); s.set("lfod", 0); s.set("detune", 0); s.poke(PORTA, 0)
+    s.poke(0x0665, 0); s.poke(0x0668, 0)   # zero LFO counter+offset (clean AUDF)
+    chrom = notes.chromatic()
+    # octave_base = [0,12,24,36,48]: (octave, semitone) -> absolute idx
+    for octv, semi, idx in [(0, 0, 0), (4, 16, 64)]:    # lowest, highest table entry
+        s.set("octave", octv)
+        with s.held_key(semi):
+            s.frame(6)
+            hv = s.get("held")
+            f, c = s.chan(hv + 1) if hv != 0xFF else (0, 0)
+            rep.check(f"idx {idx} emits its AUDF ({chrom[idx]}) and sounds",
+                      hv != 0xFF and f == chrom[idx] and c != 0,
+                      f"voice={hv} AUDF={f} AUDC={c:#x}")
     # clamp: octave 4 (base 48) + a high semitone must clamp the absolute note
-    # to 64 (the last table entry), not index past it. Set octave BEFORE the
-    # note triggers (held_key triggers on entry).
+    # to 64 (the last table entry), not index past it.
     s.set("octave", 4)
     with s.held_key(20):                      # 48 + 20 = 68 -> clamp to 64
         s.frame(4)

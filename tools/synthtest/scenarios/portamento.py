@@ -9,11 +9,17 @@ import numpy as np
 from .. import dsp, notes
 
 PORTA = 0x06B6
+PORTA_TIMER = 0x06B7
 
 
 def _settle_then_play(s, note_a, note_b, porta, settle=30):
     """With PORTA set, play note_a (settle), then trigger note_b. Leaves the
-    glide in progress; caller captures/samples. Returns nothing."""
+    glide in progress; caller captures/samples. Returns nothing.
+
+    NB: reset porta_timer to a full step delay when triggering note_b so the
+    first sampled frame deterministically shows the OLD pitch (the glide origin)
+    before any step. Otherwise the start sample depends on porta_timer's phase
+    carried over from earlier scenarios — a 1-frame fragility (start 29 vs 28)."""
     s.set("clock15", 0); s.poke(0x0689, 0); s.set("octave", 2)
     s.set("volume", 13); s.set("sus", 12); s.set("atk", 0); s.set("rel", 2)
     s.set("lfod", 0); s.set("detune", 0)
@@ -27,20 +33,23 @@ def _settle_then_play(s, note_a, note_b, porta, settle=30):
     for _ in range(settle):
         s.frame(1)
     s.set("note_idx", note_b)
+    s.poke(PORTA_TIMER, porta)   # full step delay -> first frame still shows note_a
 
 
 def porta_param(s, rep):
-    rep.section("portamento: parameter (default / clamp / nav / label)")
-    rep.check("PORTA defaults to 0 (off)", s.get_param(14) == 0, s.get_param(14))
+    rep.section("glide: parameter (default / clamp / nav / label)")
+    rep.check("GLIDE defaults to 0 (off)", s.get_param(14) == 0, s.get_param(14))
     s.set("curparam", 14); s.frame(6)
-    rep.check("nav to PORTA -> page 2", s.get("page") == 1, s.get("page"))
+    rep.check("nav to GLIDE -> FX screen (page 1)", s.get("page") == 1, s.get("page"))
     s.joy(0, "right"); s.frame(100); s.joy(0, "centre"); s.frame(2)
     hi = s.get_param(14)
     s.joy(0, "left"); s.frame(130); s.joy(0, "centre"); s.frame(2)
     lo = s.get_param(14)
-    rep.check("PORTA clamps 15 / 0", hi == 15 and lo == 0, f"hi={hi} lo={lo}")
-    # 'PORTA' label on page 2, row 1 (scan 36), left col 1: 'P'
-    rep.check("PORTA label renders on page 2", s.cell(1, 36) == s.glyph(0x30), "no P")
+    rep.check("GLIDE clamps 15 / 0", hi == 15 and lo == 0, f"hi={hi} lo={lo}")
+    # 'GLIDE' on the FX screen, row1 left (col 1, scan 36). 'G' (col1) is the Shift+G
+    # shortcut char (opposite-video when focused), so check 'L' at col 2 instead.
+    rep.check("GLIDE label renders on the FX screen",
+              s.cell(2, 36) == s.glyph(0x2C, inv=True), "no L")
     s.set("curparam", 0); s.frame(6)
 
 

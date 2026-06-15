@@ -95,32 +95,29 @@ def melody_plus_drums(s, rep):
 
 
 def preset_roundtrip_all_params(s, rep):
-    """Full preset fidelity: set all 17 saved params to a known signature, save,
-    perturb every one (and DRUMBEAT), reload — assert all 17 restore exactly and
-    that DRUMBEAT (not saved) keeps its perturbed value."""
-    rep.section("workflow: full 17-param preset round-trip")
-    # a distinct signature within each param's range (idx 0..16)
-    sig = {0: 2, 1: 11, 2: 3, 3: 5, 4: 6, 5: 9, 6: 7, 7: 4, 8: 0,
-           9: 10, 10: 8, 11: 3, 12: 9, 13: 2, 14: 6, 15: 7, 16: 5}
+    """Full preset fidelity: set all 18 saved params (everything except the PRESET
+    selector at idx 15) to a known signature, save, perturb every one, reload —
+    assert they all restore exactly and the PRESET selector itself is not stored."""
+    rep.section("workflow: full 18-param preset round-trip")
+    # distinct value within each param's range; idx 15 (PRESET) is skipped
+    sig = {0: 2, 1: 11, 2: 3, 3: 1, 4: 6, 5: 9, 6: 7, 7: 4, 8: 13,
+           9: 10, 10: 8, 11: 3, 12: 9, 13: 2, 14: 6, 16: 5, 17: 12, 18: 7}
     _load_slot(s, 0)
-    s.set("curparam", 17); s.frame(8)
+    s.set("curparam", 15); s.frame(8)
     for idx, v in sig.items():
         s.set(PARAM_VARS[idx], v)
-    s.set(PARAM_VARS[18], 12)                          # DRUMBEAT (not saved)
     s.frame(2)
     s.joy(0, "centre", fire=True); s.frame(8); s.joy(0, "centre"); s.frame(3)   # save slot 0
     # perturb everything
     for idx in sig:
         s.set(PARAM_VARS[idx], 1 if sig[idx] != 1 else 2)
-    s.set(PARAM_VARS[18], 3)
     # reload slot 0
     s.poke(PRESET, 2); s.frame(6); s.poke(PRESET, 0); s.frame(10)
     bad = {idx: (s.get_param(idx), v) for idx, v in sig.items() if s.get_param(idx) != v}
-    rep.check("all 17 saved params restore exactly", not bad,
+    rep.check("all 18 saved params restore exactly", not bad,
               "ok" if not bad else f"mismatch {bad}")
-    rep.check("DRUMBEAT (unsaved) keeps its perturbed value", s.get_param(18) == 3,
-              f"drumbeat={s.get_param(18)}")
-    rep.check("PRESET selector intact", s.get_param(17) == 0, s.get_param(17))
+    rep.check("PRESET selector itself is not stored (stays slot 0)",
+              s.get_param(15) == 0, s.get_param(15))
     s.set("curparam", 0); s.poke(PRESET, 0); s.frame(6)
 
 
@@ -195,7 +192,7 @@ def full_user_session(s, rep):
     rep.check("A: built patch is audible & pitched", rA >= 4e-3 and pA > 0,
               f"rms={rA:.4f} pitch={pA:.0f}Hz")
     # B: save to slot 1, then record + play a pattern
-    s.set("curparam", 17); s.frame(8)
+    s.set("curparam", 15); s.frame(8)
     s.joy(0, "centre", fire=True); s.frame(8); s.joy(0, "centre"); s.frame(3)   # save slot 0
     s.set("curparam", 0); s.frame(4)
     with s.frozen("read_keyboard"):

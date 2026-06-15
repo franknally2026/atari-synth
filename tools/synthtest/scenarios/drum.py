@@ -23,16 +23,18 @@ def _hit(s, decay):
 
 def drum_param(s, rep):
     rep.section("drum: parameter (default / clamp / nav / label)")
-    rep.check("DRUM defaults to 0 (off)", s.get_param(15) == 0, s.get_param(15))
-    s.set("curparam", 15); s.frame(6)
-    rep.check("nav to DRUM -> page 2", s.get("page") == 1, s.get("page"))
+    rep.check("DRUM defaults to 0 (off)", s.get_param(17) == 0, s.get_param(17))
+    s.set("curparam", 17); s.frame(6)
+    rep.check("nav to DRUM -> sequencer screen (page 2)", s.get("page") == 2, s.get("page"))
     s.joy(0, "right"); s.frame(100); s.joy(0, "centre"); s.frame(2)
-    hi = s.get_param(15)
+    hi = s.get_param(17)
     s.joy(0, "left"); s.frame(130); s.joy(0, "centre"); s.frame(2)
-    lo = s.get_param(15)
+    lo = s.get_param(17)
     rep.check("DRUM clamps 15 / 0", hi == 15 and lo == 0, f"hi={hi} lo={lo}")
-    # 'DRUM' label on page 2 row1 right (col 21, scan 36): 'D' = screen code $24
-    rep.check("DRUM label renders on page 2", s.cell(21, 36) == s.glyph(0x24), "no D")
+    # 'DRUM' on the sequencer screen, row0 right (col 21, scan 16). 'D' (col21) is the
+    # Shift+D shortcut char (opposite-video when focused), so check 'R' at col 22.
+    rep.check("DRUM label renders on the sequencer screen",
+              s.cell(22, 16) == s.glyph(0x32, inv=True), "no R")
     s.poke(DRUM, 0); s.set("curparam", 0); s.frame(6)
 
 
@@ -46,8 +48,9 @@ def drum_seq_trigger(s, rep):
     s.set("seq_len", 16); s.set("tempo", 2); s.set("seq_rec", 0)
     s.set("seq_pos", 0); s.set("seq_timer", 1); s.set("seq_play", 1)
     peak = 0
-    for _ in range(6):
-        s.frame(1); peak = max(peak, s.chan(4)[1] & 0x0F)
+    for _ in range(16):     # generous window: the hit's fire-frame shifts with the
+        s.frame(1)          # tempo phase carried in from prior scenarios (the slow
+        peak = max(peak, s.chan(4)[1] & 0x0F)   # DRUM=10 decay keeps it ringing)
     s.set("seq_play", 0)
     rep.check("$FD step drives channel 4 to a loud noise hit", peak >= 12,
               f"peak AUDC4 level={peak}, AUDF4={s.chan(4)[0]}")
@@ -147,6 +150,30 @@ def drum_decay_scales(s, rep):
     s.poke(DRUM, 0); s.poke(DRUM_LEVEL, 0)
 
 
+def drum_reserves_voice3(s, rep):
+    """With DRUM enabled, melody notes must NEVER allocate voice 3 (= channel 4):
+    the drum overrides channel 4 with noise, so a melody note there would play as
+    noise. With DRUM off, all 4 voices are available again."""
+    rep.section("drum: voice 3 (channel 4) reserved for the drum when enabled")
+    def voices(drum_on):
+        with s.frozen("read_keyboard"):
+            s.set("clock15", 0); s.poke(0x0689, 0); s.set("wave", 1); s.set("volume", 12)
+            s.set("atk", 0); s.set("sus", 14); s.set("rel", 8)
+            s.poke(DRUM, 10 if drum_on else 0); s.set("lastv", 3)
+            for i in range(4):
+                s.set("vlevel", 0, i); s.set("vphase", 0, i)
+            used = set()
+            for n in range(8):
+                s.set("prevheld", 0xFF); s.set("held", 0xFF); s.set("note_idx", 0xFF); s.frame(2)
+                s.set("note_idx", n % 5); s.frame(3)
+                used.add(s.get("held"))
+            return sorted(v for v in used if v != 0xFF)
+    on, off = voices(True), voices(False)
+    rep.check("DRUM on: melody uses voices 0-2 only (not 3)", on == [0, 1, 2], f"used={on}")
+    rep.check("DRUM off: all 4 voices used", off == [0, 1, 2, 3], f"used={off}")
+    s.poke(DRUM, 0)
+
+
 def drum_coexists_with_melody(s, rep):
     """The drum (channel 4) plays alongside melodic voices (channels 1-3)
     without killing them: a held chord tone is still present while the drum
@@ -218,16 +245,18 @@ def drum_lane_record(s, rep):
 
 
 def drumbeat_param(s, rep):
-    rep.section("drumbeat: DRUMBEAT parameter (page 2)")
-    rep.check("DRUMBEAT defaults to 0", s.get_param(18) == 0, s.get_param(18))
+    rep.section("rhythm: RHYTHM parameter (sequencer screen)")
+    rep.check("RHYTHM defaults to 0", s.get_param(18) == 0, s.get_param(18))
     s.set("curparam", 18); s.frame(8)
-    rep.check("nav to DRUMBEAT -> page 2", s.get("page") == 2, s.get("page"))
-    rep.check("DRUMBEAT label renders (page 2 row1)", s.cell(1, 36) == s.glyph(0x24), "no D")
+    rep.check("nav to RHYTHM -> sequencer screen (page 2)", s.get("page") == 2, s.get("page"))
+    # 'RHYTHM' on the sequencer screen, row1 left (col 1, scan 36): 'R' = $32
+    rep.check("RHYTHM label renders on the sequencer screen",
+              s.cell(1, 36) == s.glyph(0x32, inv=True), "no R")
     s.joy(0, "right"); s.frame(100); s.joy(0, "centre"); s.frame(2)
     hi = s.get_param(18)
     s.joy(0, "left"); s.frame(130); s.joy(0, "centre"); s.frame(2)
     lo = s.get_param(18)
-    rep.check("DRUMBEAT clamps 15 / 0", hi == 15 and lo == 0, f"hi={hi} lo={lo}")
+    rep.check("RHYTHM clamps 15 / 0", hi == 15 and lo == 0, f"hi={hi} lo={lo}")
     s.poke(DRUMBEAT, 0); s.set("curparam", 0); s.frame(6)
 
 

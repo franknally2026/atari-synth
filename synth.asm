@@ -33,6 +33,11 @@ AUDC1   = $D201         ; channel-1 control (distortion | volume)
 AUDCTL  = $D208         ; POKEY global audio control
 
 ROMFONT = $E000         ; OS ROM character set (8 bytes/glyph, screen-code index)
+; DEMO: DLI colour-band hardware registers
+WSYNC   = $D40A         ; wait for horizontal sync (write)
+COLPF2  = $D018         ; playfield-2 colour (hi-res: hue of fg + bg)
+NMIEN   = $D40E         ; NMI enable (bit7 = DLI, bit6 = VBI)
+VDSLST  = $0200         ; DLI vector
 FB1     = $4000         ; framebuffer region 1 (scan lines 0..101)
 FB2     = $5000         ; framebuffer region 2 (scan lines 102..191)
 linetab_lo = $6000      ; 192 bytes: low byte of each scan line's address
@@ -44,7 +49,10 @@ linetab_hi = $60C0      ; 192 bytes: high byte
                         ; pointers -> draw_page_labels looped forever). Don't move it
                         ; back into program space.
 
-KBTOP   = 124           ; piano keyboard top scan line
+KBTOP   = 132           ; piano keyboard top scan line (shifted down 8 from 124 to
+                        ; open a hint-line row at HINTSCAN; uses the slack below
+                        ; the keyboard, so the keys stay full size)
+HINTSCAN = 124          ; context-sensitive hint line, just above the keyboard
 
 ; ----- zero-page pointers (free OS scratch $CB-$D1) -------------------------
 scrptr  = $CB           ; word: general dest pointer
@@ -195,9 +203,25 @@ dm_lo       = $06B1     ; meter draw scratch: lower envelope level
 dm_hi       = $06B2     ; meter draw scratch: higher envelope level
 seq_len     = $06B3     ; playback loop length = number of recorded steps (1..16)
 rec_latch   = $06B4     ; real-time record: note played since last step ($FF=none)
+hl_idx      = $06CC     ; DEMO: char index in current label to highlight
+dli_idx     = $06CD     ; DEMO: which colour band the next DLI sets (reset each frame)
+kbd_dir     = $06CE     ; arrow-key direction bits (mirrors STICK0: U/D/L/R) for update_input
+nav_prev    = $06CF     ; last nav-key KBCODE ($FF=none); edge-detect Tab/Return
+dp_zoff     = $06D0     ; draw_param: 1 = this param renders value 0 as "OFF"
+prev_hint   = $06D1     ; last drawn hint-line id ($FF = force redraw)
+pl_inv      = $06D2     ; print_label base inverse: $FF = focused param (inverse video)
+hl_shift    = $06D3     ; 1 = the shortcut char is a SHIFT key (drawn opposite video)
+saved_flash = $06D4     ; >0 = show "SAVED" over the PRESET name for this many frames
+base8       = $06D5     ; 16-bit vibrato/detune scale = note AUDF16 >> 6
+acclo       = $06D6     ; add_scaled16 product (low)
+acchi       = $06D7     ; add_scaled16 product (high)
+scl_sgn     = $06D8     ; add_scaled16 saved signed offset
+dct_col     = $06D9     ; draw_clk_toggle: clock-name start column (from p_knobcx)
+dct_scan    = $06DA     ; draw_clk_toggle: clock-name scanline (from p_scan)
 
 NPARAM = 19             ; ...page2 16 HPF, 17 PRESET, 18 DRUMBEAT
-NSAVE  = 17             ; params 0..16 are saved in a preset (PRESET itself is not)
+NSAVE  = 18             ; saved params per preset = all 19 except PRESET (skipped by index)
+PRESET_IDX = 15         ; PRESET param's index in the new layout
 PG2BASE = 16            ; first param index on page 2 (the third page)
 PER_PAGE = 12
 K_KNOB = 0              ; 0..15 value -> knob + 2-digit number
@@ -215,6 +239,22 @@ REPDELAY = 15
 REPFAST  = 4
 DECAYRATE = 4
 NUMKEYS  = 17
+NSHORT   = 19           ; 12 plain (page 0 + DETUNE) + 7 Shift (the rest) = all 19
+
+; --- DEMO: shortcut-letter highlight style (0 = inverse video, 1 = underline)
+HL_STYLE = 1
+
+; --- DEMO: DLI colour palette (0 = cool blue/green, 1 = warm orange/gold)
+PALETTE = 0
+    .if PALETTE = 0
+TITLE_COL = $90         ; band A (title row): blue hue, near-black bg + bright text
+PANEL_COL = $C0         ; band B (panel): green hue
+KBD_COL   = $00         ; band C (keyboard): neutral white
+    .else
+TITLE_COL = $30         ; band A: red-orange hue
+PANEL_COL = $F0         ; band B: gold hue
+KBD_COL   = $00         ; band C: neutral white
+    .endif
 
 ; ----------------------------------------------------------------------------
         org $2000
@@ -311,6 +351,7 @@ init_voice
         sta dbeat_cnt
         lda #$FF
         sta prev_page           ; force first-frame page render
+        sta prev_hint           ; force first-frame hint-line draw
         sta seq_prevn
         sta prev_spos
         ldx #15                 ; clear sequencer pattern
@@ -353,6 +394,7 @@ preset_copy
 loop
         jsr wait_vbl            ; sync, then draw starting at the frame top
         lda #0
+        sta dli_idx             ; DEMO: restart colour-band sequence for this frame
         sta ATRACT
         ; voice count: 16-bit mode (clock 2) uses 2 voices, else 4
         ldx #4
@@ -367,6 +409,8 @@ lp_vl
         cmp prev_clkm
         beq lp_same
         sta prev_clkm
+        lda #$FF                ; clock mode changed -> force a panel redraw so the
+        sta prev_page           ; 16-bit inert-strikes refresh on the current page
         ldx #3
 lp_clr
         lda #0
@@ -382,10 +426,12 @@ lp_clr
 lp_same
         jsr read_keyboard
         jsr read_console
+        jsr read_navkeys        ; arrows -> kbd_dir; Tab = page flip; Return = save
         jsr trigger_voices
         jsr drum_key_tick       ; '1' key -> live drum hit (edge)
         jsr update_input
         jsr preset_tick         ; PRESET knob -> load; fire on PRESET -> save
+        jsr saved_flash_tick    ; tick the "SAVED" flash on the PRESET cell
         jsr lfo_tick
         jsr arp_tick
         jsr seq_tick
@@ -455,6 +501,115 @@ rc_nostart
 rc_nosel
         lda con_now
         sta con_prev
+        rts
+
+; Navigation keys (laptop play, no joystick needed). The Atari arrow keys are
+; Ctrl + the -/=/+/* keys; Ctrl sets KBCODE bit6 ($40), so they read UNMASKED as
+; $4E/$4F/$46/$47 (read_keyboard masks #$3F for the note matrix and ignores
+; these). Arrows set kbd_dir level bits -> update_input gives them the same
+; nav/adjust/auto-repeat as the joystick. Tab/Return are edge-triggered via nav_prev.
+;   Up=$4E Down=$4F Left=$46 Right=$47   Tab=$2C (page flip)   Return=$0C (save)
+read_navkeys
+        lda #0
+        sta kbd_dir
+        lda SKSTAT
+        and #$04
+        bne rn_none             ; no key down
+        lda KBCODE
+        cmp #$4E                ; UP    (Ctrl+MINUS)
+        bne rn_n1
+        lda #$01
+        sta kbd_dir
+        jmp rn_seen
+rn_n1
+        cmp #$4F                ; DOWN  (Ctrl+EQUALS)
+        bne rn_n2
+        lda #$02
+        sta kbd_dir
+        jmp rn_seen
+rn_n2
+        cmp #$46                ; LEFT  (Ctrl+PLUS)
+        bne rn_n3
+        lda #$04
+        sta kbd_dir
+        jmp rn_seen
+rn_n3
+        cmp #$47                ; RIGHT (Ctrl+ASTERISK)
+        bne rn_n4
+        lda #$08
+        sta kbd_dir
+        jmp rn_seen
+rn_n4
+        cmp #$2C                ; Tab -> cycle page (edge only, no repeat)
+        bne rn_n5
+        ldx nav_prev
+        cpx #$2C
+        beq rn_seen
+        jsr page_flip
+        jmp rn_seen
+rn_n5
+        cmp #$0C                ; Return -> save preset (joystick-fire substitute)
+        bne rn_short
+        ldx nav_prev
+        cpx #$0C
+        beq rn_seen
+        jsr nav_save_preset
+        jmp rn_seen
+rn_short
+        ; letter shortcut: a free letter that's underlined in a param's label jumps
+        ; the selection straight to that param (A still holds raw KBCODE here). Only
+        ; the 6 params whose letter is UNIQUE have an entry (see shortcut_kc).
+        ldx #NSHORT-1
+rn_short_l
+        cmp shortcut_kc,x
+        beq rn_short_hit
+        dex
+        bpl rn_short_l
+        jmp rn_seen             ; not a shortcut key
+rn_short_hit
+        cmp nav_prev            ; A = this key = shortcut_kc[x]; held -> no re-jump
+        beq rn_seen
+        lda shortcut_param,x    ; jump (cur_param drives the page too)
+        sta cur_param
+rn_seen
+        lda KBCODE              ; remember this frame's key for next-frame edge detect
+        sta nav_prev
+        rts
+rn_none
+        lda #$FF
+        sta nav_prev
+        rts
+
+; Tab: jump the selection to the first param of the next page (0->1->2->0).
+; update_display derives the page from cur_param, so this is all it takes.
+page_flip
+        lda cur_param
+        cmp #PER_PAGE           ; page 0 (0..11) -> page 1
+        bcc pf_to1
+        cmp #PG2BASE            ; page 1 (12..15) -> page 2
+        bcc pf_to2
+        lda #0                  ; page 2 -> wrap to page 0
+        sta cur_param
+        rts
+pf_to1
+        lda #PER_PAGE
+        sta cur_param
+        rts
+pf_to2
+        lda #PG2BASE
+        sta cur_param
+        rts
+
+; Return mirrors the joystick fire button: save the patch, but only while the
+; PRESET param is selected. Keep prev_preset in sync so preset_tick won't reload.
+nav_save_preset
+        lda cur_param
+        cmp #PRESET_IDX         ; PRESET param index
+        bne nsp_done
+        jsr preset_save
+        lda preset_slot
+        sta prev_preset
+nsp_done
         rts
 
 seq_toggle_play
@@ -570,13 +725,23 @@ sq_step
 sq_nodrum
         cmp #$FF
         bne sq_playnote
-        lda seq_rec             ; rest: during playback, release the held note so
-        bne sq_nostep           ; the rest is silent (don't cut live monitoring)
+        lda seq_rec             ; rest step -> silence the gap by releasing the held
+        beq sq_restrel          ; voice. Playback always releases; while recording,
+        lda note_idx            ; keep a LIVE-held note (don't cut your own playing)
+        cmp #$FF                ; but still release when only monitoring (no key down).
+        bne sq_nostep
+sq_restrel
         lda #$FF
         sta held_voice
         jmp sq_nostep
 sq_playnote
         sta tmpA
+        lda seq_rec             ; while RECORDING, don't let the clock re-strike a note
+        beq sq_pn_go            ; you're already holding live -> that would double it
+        lda tmpA                ; (two unison voices) and re-attack your sustained note
+        cmp note_idx            ; every loop. note_idx is the live semitone; tmpA is the
+        beq sq_nostep           ; step's. Same -> skip the clock trigger, keep monitoring.
+sq_pn_go
         ldy octave
         lda octave_base,y
         clc
@@ -588,10 +753,16 @@ sq_nostep
         lda rec_latch           ; a NEW onset latched since the last tick?
         cmp #$FF
         bne sq_cap              ; yes -> write the struck note (re-attack)
-        lda note_idx            ; else still holding the same note?
+        lda note_idx            ; else still holding the same key?
         cmp #$FF
         beq sq_adv              ; nothing held -> leave step (rest)
-        lda #$FE                ; held continuation -> TIE (sustains on playback)
+        cmp #$FD                ; a HELD drum key is a one-shot, not a sustain: don't
+        beq sq_adv              ; smear it into ties (leave following steps as rests)
+        ldx seq_pos             ; held pitch -> extend with a TIE, but ONLY into a
+        lda seq_notes,x         ; REST. On a later loop this step already holds the
+        cmp #$FF                ; struck note (or its ties); rewriting it as a tie
+        bne sq_adv              ; would wipe the attack and play back silent. Leave it.
+        lda #$FE                ; held pitch over a rest -> TIE (sustains on playback)
 sq_cap
         ldx seq_pos
         sta seq_notes,x
@@ -612,67 +783,69 @@ sq_lim
 sq_done
         rts
 
+; Unified directional input: up/down navigate, left/right adjust. ALL FOUR now
+; auto-repeat off one rep_timer (was: U/D edge-only, L/R repeated). Arrow keys are
+; merged in via kbd_dir (read_navkeys) so they drive the exact same path.
 update_input
         lda STICK0
         and #$0F
-        eor #$0F
+        eor #$0F                ; bit0=up bit1=down bit2=left bit3=right (active high)
+        ora kbd_dir             ; merge arrow keys -> identical nav/adjust/repeat
         sta pressed
         lda prev_pressed
         eor #$FF
         and pressed
-        sta edge
+        sta edge                ; freshly-pressed directions this frame
+        lda pressed
+        and #$0F
+        bne ui_held
+        lda #REPDELAY           ; nothing held -> re-arm the initial delay
+        sta rep_timer
+        jmp ui_done
+ui_held
         lda edge
+        and #$0F
+        bne ui_fresh            ; a fresh press -> act immediately
+        dec rep_timer
+        bne ui_done             ; still counting down -> no action this frame
+        lda #REPFAST            ; timer expired -> repeat at the fast rate
+        sta rep_timer
+        jmp ui_act
+ui_fresh
+        lda #REPDELAY
+        sta rep_timer
+ui_act
+        lda pressed             ; UP -> previous param (wrap)
         and #$01
-        beq ui_noup
+        beq ui_a_nodn
         dec cur_param
-        bpl ui_noup
+        bpl ui_a_nodn
         lda #NPARAM-1
         sta cur_param
-ui_noup
-        lda edge
+ui_a_nodn
+        lda pressed             ; DOWN -> next param (wrap)
         and #$02
-        beq ui_nodn
+        beq ui_a_nolr
         inc cur_param
         lda cur_param
         cmp #NPARAM
-        bne ui_nodn
+        bne ui_a_nolr
         lda #0
         sta cur_param
-ui_nodn
-        lda pressed
-        and #$0C
-        bne ui_lr_held
-        lda #REPDELAY
-        sta rep_timer
-        jmp ui_done
-ui_lr_held
-        lda edge
-        and #$0C
-        bne ui_lr_fresh
-        dec rep_timer
-        beq ui_lr_repeat
-        jmp ui_done
-ui_lr_fresh
-        lda #REPDELAY
-        sta rep_timer
-        jmp ui_lr_apply
-ui_lr_repeat
-        lda #REPFAST
-        sta rep_timer
-ui_lr_apply
-        lda pressed
+ui_a_nolr
+        lda pressed             ; LEFT -> value -1
         and #$04
-        beq ui_try_right
+        beq ui_a_tryr
         lda #$FF
         sta delta
-        jmp ui_adjust
-ui_try_right
-        lda pressed
+        jsr apply_adjust
+        jmp ui_done
+ui_a_tryr
+        lda pressed             ; RIGHT -> value +1
         and #$08
         beq ui_done
         lda #$01
         sta delta
-ui_adjust
         jsr apply_adjust
 ui_done
         lda pressed
@@ -707,18 +880,17 @@ trigger_voices
         lda note_idx
         cmp #$FD                ; $FD(drum)/$FE/$FF are not pitched notes -> no
         bcc tv_keydown          ; voice trigger (the drum is handled separately)
-        ; no live key down: normally release everything. But during pure
-        ; sequencer PLAYBACK (playing, not recording) leave held_voice alone so
-        ; the step's note can sustain its envelope for the whole step instead of
-        ; being force-released after one frame (which made it near-silent).
-        lda seq_play
-        beq tv_relall
-        lda seq_rec
-        beq tv_done             ; playback -> sequencer manages the gate
-tv_relall
+        ; no pitched live key down. Always clear the live-key edge so the SAME
+        ; note can re-fire on its next press. While the clock runs (PLAYBACK *or*
+        ; real-time RECORD) leave held_voice alone: the sequencer owns the gate, so
+        ; a stepped note sustains its whole step AND overdub playback is audible
+        ; while armed (REC used to force-release here -> near-silent monitoring).
         lda #$FF
-        sta held_voice
         sta prev_held
+        ldy seq_play            ; test the clock WITHOUT disturbing A (= $FF)
+        bne tv_done             ; clock running -> sequencer manages the voice gate
+        sta held_voice          ; stopped -> release everything (A = $FF)
+tv_done
         rts
 tv_keydown
         cmp prev_held
@@ -729,7 +901,6 @@ tv_keydown
         clc
         adc note_idx
         jsr trigger_note
-tv_done
         rts
 
 ; trigger_note: A = absolute chromatic index -> grab next voice, start attack
@@ -751,9 +922,17 @@ tn_ok
 tn_alloc
         ldx last_voice
         inx
-        cpx vlimit              ; wrap when x >= vlimit (not just ==): switching
-        bcc tn_nowrap           ; to 16-bit drops vlimit 4->2, so a stale
-        ldx #0                  ; last_voice of 2/3 must still wrap (else OOB)
+        cpx vlimit              ; wrap when x >= vlimit (16-bit drops 4->2, so a
+        bcs tn_wrap0            ; stale last_voice of 2/3 must still wrap)
+        cpx #3                  ; reserve voice 3 (channel 4) for the drum in 8-bit
+        bne tn_nowrap           ; mode when DRUM is enabled, else a melody note here
+        lda clock15             ; gets stomped by the drum's noise -> sounds wrong.
+        cmp #2                  ; 16-bit: voice 3 doesn't exist (vlimit=2) -> n/a
+        beq tn_nowrap
+        lda drum_dec            ; DRUM off -> voice 3 is a normal melody voice
+        beq tn_nowrap
+tn_wrap0
+        ldx #0                  ; skip voice 3 -> melody uses voices 0..2
 tn_nowrap
         stx last_voice
 tn_setnote
@@ -937,7 +1116,7 @@ preset_tick
         sta tmpA                ; tmpA = 1 if pressed (survives jsr preset_save,
                                 ; which only touches tmp2 — NOT tmpA)
         ldx cur_param
-        cpx #17                 ; PRESET param selected?
+        cpx #PRESET_IDX         ; PRESET param selected?
         bne pt_load
         lda tmpA
         beq pt_load
@@ -957,7 +1136,7 @@ pt_load
 pt_done
         rts
 
-; bank offset of the current slot (slot * NSAVE) -> tmp2
+; bank offset of the current slot (slot * NSAVE = slot*18) -> tmp2
 preset_offset
         lda preset_slot
         asl                     ; *16
@@ -965,13 +1144,21 @@ preset_offset
         asl
         asl
         clc
-        adc preset_slot         ; + slot = *17
+        adc preset_slot         ; *17
+        clc
+        adc preset_slot         ; *18 = NSAVE
         sta tmp2
         rts
 preset_save
+        lda #40                 ; trigger the "SAVED" flash (~0.8s) on the PRESET cell
+        sta saved_flash
+        lda #$FF
+        sta prev_disp+PRESET_IDX ; force the PRESET value cell to redraw -> "SAVED"
         jsr preset_offset
         ldx #0
 ps_loop
+        cpx #PRESET_IDX
+        beq ps_skip             ; never save PRESET (the slot selector) into a slot
         lda param_lo,x
         sta srcptr
         lda param_hi,x
@@ -981,14 +1168,17 @@ ps_loop
         ldy tmp2
         sta preset_bank,y       ; -> bank slot
         inc tmp2
+ps_skip
         inx
-        cpx #NSAVE
+        cpx #NPARAM
         bne ps_loop
         rts
 preset_load
         jsr preset_offset
         ldx #0
 pl_loop
+        cpx #PRESET_IDX
+        beq pl_skip             ; PRESET is not stored -> leave the selector alone
         lda param_lo,x
         sta srcptr
         lda param_hi,x
@@ -998,17 +1188,19 @@ pl_loop
         ldy #0
         sta (srcptr),y          ; -> param
         inc tmp2
+pl_skip
         inx
-        cpx #NSAVE
+        cpx #NPARAM
         bne pl_loop
         rts
-; factory patches: NSAVE bytes each, in param order
-;   wave vol oct atk dec det sus rel clk lfor lfod arp tempo arpm porta drum hpf
+; factory patches: NSAVE(18) bytes each, in the saved-param order (all params in
+; index order EXCEPT PRESET, which the save/load loop skips):
+;   wave vol oct clk lfor lfod atk dec sus rel arp arpm det hpf glide tempo drum rhythm
 preset_factory
-        .byte 1,10,2,0,2,0, 8,3,0,8,0,0, 8,0,0,0,0          ; 0 INIT
-        .byte 1,12,2,6,4,6, 14,8,0,4,5,0, 8,0,0,0,0         ; 1 PAD
-        .byte 0,13,3,0,2,0, 10,3,0,9,8,0, 8,0,6,0,4         ; 2 LEAD (porta+HP)
-        .byte 0,12,2,0,0,8, 8,2,0,8,0,9, 10,0,0,0,0         ; 3 ARP
+        .byte 1,10,2,0,8,0, 0,2,8,3,0,0, 0,0,0,8,0,0        ; 0 INIT
+        .byte 1,12,2,0,4,5, 6,4,14,8,0,0, 6,0,0,8,0,0       ; 1 PAD
+        .byte 0,13,3,0,9,8, 0,2,10,3,0,0, 0,4,6,8,0,0       ; 2 LEAD (glide+HP)
+        .byte 0,12,2,0,8,0, 0,0,8,2,9,0, 8,0,0,10,0,0       ; 3 ARP
 
 update_sound
         lda sus_level
@@ -1196,30 +1388,28 @@ us_emit16
         sta nlo
         lda chrom16_hi,y
         sta nhi
-        lda lfo_offset          ; + vibrato (signed 16-bit)
-        bmi u16_lneg
-        clc
-        adc nlo
-        sta nlo
+        ; 16-bit notes use a big AUDF (hundreds..thousands), so the raw +-7 LFO /
+        ; +-9 detune offsets that are huge in 8-bit are inaudible here. Scale them
+        ; to the note: base8 = AUDF16 >> 6, then offset' = offset * base8 makes the
+        ; wobble a fixed % of pitch at any note (and can't wrap a high note).
         lda nhi
-        adc #0
-        sta nhi
-        jmp u16_det
-u16_lneg
-        clc
-        adc nlo
-        sta nlo
-        lda nhi
-        adc #$FF
-        sta nhi
-u16_det
-        clc                     ; + detune (positive)
+        asl
+        asl
+        sta base8               ; nhi << 2  (max ~208)
         lda nlo
-        adc dvoff,x
-        sta nlo
-        lda nhi
-        adc #0
-        sta nhi
+        lsr
+        lsr
+        lsr
+        lsr
+        lsr
+        lsr                     ; nlo >> 6  (0..3)
+        clc
+        adc base8
+        sta base8               ; base8 = AUDF16 >> 6
+        lda lfo_offset          ; vibrato, scaled to the note
+        jsr add_scaled16        ; (preserves X = voice index)
+        lda dvoff,x             ; detune, scaled to the note
+        jsr add_scaled16
         ldy wave_idx            ; AUDC for the audible (high) channel
         lda wave_base,y
         ora voice_level,x
@@ -1278,6 +1468,53 @@ wait_vbl
 wv_l
         cmp RTCLOK+2
         beq wv_l
+        rts
+
+; add_scaled16: nlo:nhi += (signed A) * base8, as a signed 16-bit add. Used by the
+; 16-bit output path to apply LFO vibrato and detune scaled to the note's pitch.
+; A = signed offset (small, +-0..15). Preserves X. Clobbers A/Y.
+add_scaled16
+        sta scl_sgn             ; remember the sign
+        bne as_go
+        rts                     ; offset 0 -> nothing
+as_go
+        bpl as_pos
+        eor #$FF                ; A = magnitude of a negative offset
+        clc
+        adc #1
+as_pos
+        tay                     ; Y = magnitude (loop count)
+        lda #0
+        sta acclo
+        sta acchi
+as_mul
+        clc                     ; acc += base8  (acc = base8 * magnitude)
+        lda acclo
+        adc base8
+        sta acclo
+        lda acchi
+        adc #0
+        sta acchi
+        dey
+        bne as_mul
+        lda scl_sgn
+        bmi as_sub
+        clc                     ; positive -> nlo:nhi += acc
+        lda nlo
+        adc acclo
+        sta nlo
+        lda nhi
+        adc acchi
+        sta nhi
+        rts
+as_sub
+        sec                     ; negative -> nlo:nhi -= acc
+        lda nlo
+        sbc acclo
+        sta nlo
+        lda nhi
+        sbc acchi
+        sta nhi
         rts
 
 ; ----------------------------------------------------------------------------
@@ -1348,7 +1585,29 @@ gr8_init
         sta SDLSTL+1
         lda #$22                ; normal width + screen DMA (OS VBI -> DMACTL)
         sta SDMCTL
+        ; DEMO (DEACTIVATED): DLI colour-band handler. To re-enable, install
+        ; VDSLST/NMIEN here, set COLOR2 above to TITLE_COL, and restore the $80
+        ; DLI bits in dlist (scanlines 7 and 123). Handler kept below for reuse.
         rts
+
+; DEMO: DLI colour bands. Fires at the end of the title row (-> panel colour)
+; and just above the keyboard (-> neutral colour). dli_idx walks the table and
+; is reset to 0 each frame by the main loop.
+dli_handler
+        pha                     ; save A and X (X indexes the band table; the
+        txa                     ; main loop uses X mid-draw, so we must not
+        pha                     ; clobber it or fillrect/blit corrupts the FB)
+        ldx dli_idx
+        lda dli_band,x
+        sta WSYNC
+        sta COLPF2
+        inc dli_idx
+        pla
+        tax
+        pla
+        rti
+dli_band
+        .byte PANEL_COL, KBD_COL
 
 ; build the 192-entry scan-line address table (hides the FB1/FB2 split)
 build_linetab
@@ -1571,6 +1830,7 @@ blit_char
         clc
         adc #>ROMFONT
         sta scrptr+1
+blit_glyph                      ; alt entry: scrptr already -> an 8-byte glyph bitmap
         ldx #0
 bc_l
         txa
@@ -1866,7 +2126,7 @@ dwl
         stx s_kc
         lda white_lblcol,x
         sta bc_col
-        lda #160
+        lda #KBTOP+36
         sta bc_scan
         lda white_lblch,x
         sta bc_code
@@ -1883,7 +2143,7 @@ dbl
         stx s_kc
         lda black_lblcol,x
         sta bc_col
-        lda #128
+        lda #KBTOP+4
         sta bc_scan
         lda black_lblch,x
         sta bc_code
@@ -1946,8 +2206,9 @@ ud_rst
         inx
         cpx pg_end
         bne ud_rst
+        lda cur_param           ; labels already drawn (focused) above -> sync
+        sta prev_param          ; prev_param so ud_pgsame doesn't redraw them again
         lda #$FF
-        sta prev_param
         sta prev_spos           ; force sequencer grid/transport redraw on page 2
         sta prev_splay
         sta prev_srec
@@ -1960,31 +2221,14 @@ ud_pgvm
         dex
         bpl ud_pgvm
 ud_pgsame
-        ; selection markers (current page; only when the selection moved)
+        ; focus highlight: when the selection moves, redraw the page's labels so the
+        ; newly-selected one is inverse and the old one reverts to normal (replaces
+        ; the old '>' marker). draw_page_labels applies pl_inv per param.
         lda cur_param
         cmp prev_param
         beq ud_nomk
         sta prev_param
-        ldx pg_base
-ud_mk
-        stx s_kc
-        lda p_lblcol,x
-        sec
-        sbc #1
-        sta bc_col
-        lda p_scan,x
-        sta bc_scan
-        lda #$00
-        cpx cur_param
-        bne ud_mk_sp
-        lda #$1E                ; '>'
-ud_mk_sp
-        sta bc_code
-        jsr blit_char
-        ldx s_kc
-        inx
-        cpx pg_end
-        bne ud_mk
+        jsr draw_page_labels
 ud_nomk
         ; per-parameter value redraw on change (current page only)
         ldx pg_base
@@ -2005,12 +2249,13 @@ ud_pn
         inx
         cpx pg_end
         bne ud_pl
-        ; page-2 sequencer grid (step cells + play head + transport)
+        ; sequencer grid (step cells + play head + transport) on the last page
         lda page
-        cmp #1
+        cmp #2
         bne ud_noseq
         jsr seq_draw
 ud_noseq
+        jsr hint_update         ; context-sensitive hint line above the keyboard
         jsr draw_meters         ; per-voice VU bars (both pages)
         ; NOTE name + active-key indicator (on note change)
         lda note_idx
@@ -2035,6 +2280,9 @@ seq_draw
         lda #0
         sta seq_dirty
         ldx #0
+        lda #0                  ; custom step glyphs draw as-is (no inverse)
+        sta bc_inv
+        ldx #0
 sd_cell
         stx s_kc
         txa                     ; col = 4 + step*2
@@ -2045,21 +2293,35 @@ sd_cell
         lda #56
         sta bc_scan
         ldx s_kc
+        ; map the step value -> custom-glyph index (0 rest,1 note,2 tie,3 drum)
         lda seq_notes,x
         cmp #$FF
-        bne sd_notrest
-        lda #$0E                ; '.' = rest
-        bne sd_putcell
-sd_notrest
+        bne sd_n1
+        lda #0                  ; rest -> dot
+        beq sd_putcell
+sd_n1
         cmp #$FE
-        bne sd_filled
-        lda #$0D                ; '-' = tie (held note continues)
+        bne sd_n2
+        lda #2                  ; tie -> bar
         bne sd_putcell
-sd_filled
-        lda #$80                ; solid block = note
+sd_n2
+        cmp #$FD
+        bne sd_note
+        lda #3                  ; drum -> diamond
+        bne sd_putcell
+sd_note
+        lda #1                  ; pitched note -> filled square
 sd_putcell
-        sta bc_code
-        jsr blit_char
+        asl                     ; index*8 -> offset into seq_glyphs (8 bytes each)
+        asl
+        asl
+        clc
+        adc #<seq_glyphs
+        sta scrptr
+        lda #0
+        adc #>seq_glyphs
+        sta scrptr+1
+        jsr blit_glyph          ; blit our custom 8x8 bitmap at bc_col/bc_scan
         ldx s_kc
         inx
         cpx #16
@@ -2259,11 +2521,118 @@ dpgl
         sta bc_col
         lda p_scan,x
         sta bc_scan
-        jsr print_strz
+        lda p_hl,x
+        sta hl_idx
+        lda p_hl_shift,x        ; is this param's shortcut a Shift+letter?
+        sta hl_shift
+        lda #0                  ; focus highlight: inverse the selected param's label
+        cpx cur_param
+        bne dpgl_inv
+        lda #$FF
+dpgl_inv
+        sta pl_inv
+        jsr print_label         ; (leaves bc_col at the label's end column)
+        lda clock15             ; 16-bit mode disables some FX -> strike them through
+        cmp #2
+        bne dpgl_next
+        ldx s_kc
+        lda p_inert16,x
+        beq dpgl_next
+        jsr draw_strike
+dpgl_next
         ldx s_kc
         inx
         cpx pg_end
         bne dpgl
+        rts
+
+; strike a horizontal line through the label just drawn (cols p_lblcol..bc_col at
+; the cell's middle row) -> the "this control is inert in 16-bit mode" marker.
+draw_strike
+        lda bc_scan
+        clc
+        adc #3
+        tay
+        lda linetab_lo,y
+        sta adjptr
+        lda linetab_hi,y
+        sta adjptr+1
+        ldx s_kc
+        ldy p_lblcol,x
+ds_l
+        cpy bc_col
+        bcs ds_done
+        lda #$FF
+        sta (adjptr),y
+        iny
+        jmp ds_l
+ds_done
+        rts
+
+; Print a label. The char at index hl_idx is the shortcut key, drawn highlighted
+; (HL_STYLE 1 = underline). pl_inv ($FF) renders the whole label in inverse video
+; -> the FOCUS highlight for the selected param (underline=shortcut, inverse=focus).
+print_label
+        lda #0
+        sta psi
+        lda pl_inv              ; base inverse for every cell (focus highlight)
+        sta bc_inv
+pl_l
+        ldy psi
+        lda (srcptr),y
+        cmp #$FF
+        beq pl_done
+        sta bc_code
+        lda psi
+        cmp hl_idx
+        bne pl_normal
+    .if HL_STYLE = 0
+        lda pl_inv              ; shortcut char = opposite of the label's base
+        eor #$FF
+        sta bc_inv
+        jsr blit_char
+        lda pl_inv
+        sta bc_inv
+    .else
+        lda hl_shift            ; SHIFT shortcut -> draw the char OPPOSITE the
+        beq pl_sc_draw          ; label's video (the cue for "add Shift")
+        lda pl_inv
+        eor #$FF
+        sta bc_inv
+pl_sc_draw
+        jsr blit_char           ; glyph + underline beneath it
+        jsr draw_underline
+        lda pl_inv              ; restore base video for the remaining chars
+        sta bc_inv
+    .endif
+        jmp pl_adv
+pl_normal
+        jsr blit_char
+pl_adv
+        inc bc_col
+        inc psi
+        jmp pl_l
+pl_done
+        lda #0                  ; leave bc_inv clean (num2/knob draws assume 0)
+        sta bc_inv
+        rts
+
+; DEMO: underline the glyph cell at bc_col, bottom row of bc_scan
+draw_underline
+        lda bc_scan
+        clc
+        adc #7
+        tay
+        lda linetab_lo,y
+        clc
+        adc bc_col
+        sta adjptr
+        lda linetab_hi,y
+        adc #0
+        sta adjptr+1
+        ldy #0
+        lda #$FF
+        sta (adjptr),y
         rts
 
 ; draw one parameter widget; X = param index
@@ -2274,8 +2643,12 @@ draw_param
         jmp draw_wave_selector
 dp_n1
         cmp #K_CLK
-        bne dp_n2
+        bne dp_chkpre
         jmp draw_clk_toggle
+dp_chkpre
+        cpx #PRESET_IDX         ; PRESET -> knob + name (INIT/PAD/LEAD/ARP) or SAVED
+        bne dp_n2
+        jmp draw_preset_widget
 dp_n2
         lda p_knobcx,x          ; KNOB / OCT: common knob setup
         sta kcx
@@ -2287,6 +2660,8 @@ dp_n2
         sta dp_numcol
         lda p_scan,x
         sta dp_scan
+        lda p_zoff,x            ; capture before draw_knob clobbers X
+        sta dp_zoff
         lda p_vaddr_lo,x
         sta srcptr
         lda p_vaddr_hi,x
@@ -2304,8 +2679,21 @@ dp_n2
         sta bc_col
         lda dp_scan
         sta bc_scan
+        lda dp_zoff             ; OFF-capable param sitting at 0 -> show "OFF"
+        beq dp_num
         lda dp_val
-        jsr num2
+        bne dp_num
+        jsr draw_off
+        rts
+dp_num
+        lda dp_val
+        jsr num2                ; num2 leaves bc_col at the 3rd cell
+        lda dp_zoff             ; OFF-capable -> clear the 3rd cell ("OFF" leftover)
+        beq dp_knobdone
+        lda #0
+        sta bc_code
+        jsr blit_char
+dp_knobdone
         rts
 dp_oct
         ldy dp_val              ; --- K_OCT ---
@@ -2317,6 +2705,138 @@ dp_oct
         lda dp_scan
         sta bc_scan
         jsr draw_octave_num
+        rts
+
+; Context-sensitive hint line. Pick an id from what's selected, and only redraw
+; when it changes (prev_hint):  2 = PRESET selected -> save tip,
+; 1 = sequencer page -> transport tip,  0 = default -> nav/hold tip.
+hint_update
+        lda cur_param
+        cmp #PRESET_IDX         ; PRESET param selected?
+        bne hu_n1
+        lda #2
+        jmp hu_have
+hu_n1
+        lda page
+        cmp #2                  ; sequencer page (now the last page)?
+        bne hu_n2
+        lda #1
+        jmp hu_have
+hu_n2
+        lda #0
+hu_have
+        cmp prev_hint
+        beq hu_done
+        sta prev_hint
+        jsr draw_hint
+hu_done
+        rts
+
+; draw the hint string for id in prev_hint, centred on the HINTSCAN row
+draw_hint
+        jsr clear_hint
+        ldx prev_hint
+        lda hint_lo,x
+        sta srcptr
+        lda hint_hi,x
+        sta srcptr+1
+        lda hint_col,x
+        sta bc_col
+        lda #HINTSCAN
+        sta bc_scan
+        lda #0
+        sta bc_inv
+        sta bc_mode
+        jsr print_strz
+        rts
+
+; blank the 8-scanline hint row (full 40-byte width) before redrawing
+clear_hint
+        lda #HINTSCAN
+        sta s1
+        ldx #8
+ch_row
+        ldy s1
+        lda linetab_lo,y
+        sta scrptr
+        lda linetab_hi,y
+        sta scrptr+1
+        ldy #39
+        lda #0
+ch_col
+        sta (scrptr),y
+        dey
+        bpl ch_col
+        inc s1
+        dex
+        bne ch_row
+        rts
+
+; PRESET widget: knob (slot 0..3) + the slot NAME (INIT/PAD/LEAD/ARP), or a brief
+; "SAVED" flash right after a save. X = 17 on entry. Names are 5 cells wide (padded)
+; so they overwrite each other and "SAVED" cleanly.
+draw_preset_widget
+        lda p_knobcx,x
+        sta kcx
+        lda p_scan,x
+        clc
+        adc #5
+        sta kcy
+        lda p_numcol,x
+        sta dp_numcol
+        lda p_scan,x
+        sta dp_scan
+        lda preset_slot
+        sta kfrm
+        jsr draw_knob
+        lda #0
+        sta bc_inv
+        sta bc_mode
+        lda dp_numcol
+        sta bc_col
+        lda dp_scan
+        sta bc_scan
+        lda saved_flash
+        beq dpw_name
+        lda #<txt_saved
+        sta srcptr
+        lda #>txt_saved
+        sta srcptr+1
+        jmp dpw_print
+dpw_name
+        ldy preset_slot
+        lda preset_name_lo,y
+        sta srcptr
+        lda preset_name_hi,y
+        sta srcptr+1
+dpw_print
+        jsr print_strz
+        rts
+
+; tick the SAVED flash; when it expires, force the PRESET name to redraw
+saved_flash_tick
+        lda saved_flash
+        beq sft_done
+        dec saved_flash
+        bne sft_done
+        lda #$FF                ; flash ended -> force PRESET value cell to redraw
+        sta prev_disp+PRESET_IDX
+sft_done
+        rts
+
+; "OFF" (3 chars) at bc_col/bc_scan -> shown for effect params at value 0
+draw_off
+        lda #$2F                ; 'O'
+        sta bc_code
+        jsr blit_char
+        inc bc_col
+        lda #$26                ; 'F'
+        sta bc_code
+        jsr blit_char
+        inc bc_col
+        lda #$26                ; 'F'
+        sta bc_code
+        jsr blit_char
         rts
 
 ; NOTE name (3 chars) at col 7, scan 112 -- blank when silent
@@ -2573,14 +3093,29 @@ dws_ic
 
 ; CLOCK mode: show the active mode name (NORMAL / 15 KHZ / 16-BIT)
 draw_clk_toggle
-        lda #54                 ; clear strip: byte cols 29..38, 14 rows
+        ; CLOCK is a toggle (no knob): show the 6-char mode name in this param's
+        ; OWN value area. Read the position from the tables (X = param index) so it
+        ; follows CLOCK wherever the layout puts it -- it used to be hardcoded to the
+        ; old right-column/scan-56 slot, which now belongs to SUSTAIN (the "R08L" bug).
+        lda p_knobcx,x          ; name start col = knob centre / 8
+        lsr
+        lsr
+        lsr
+        sta dct_col
+        lda p_scan,x
+        sta dct_scan
+        lda dct_scan            ; clear 10 cols from (dct_col-1), 14 rows from scan-2
+        sec
+        sbc #2
         sta s1
         ldx #14
 dct_clr
         ldy s1
-        lda linetab_lo,y
+        lda dct_col
+        sec
+        sbc #1
         clc
-        adc #29
+        adc linetab_lo,y
         sta scrptr
         lda linetab_hi,y
         adc #0
@@ -2605,9 +3140,9 @@ dct_clr2
         lda #>clock_names
         adc #0
         sta srcptr+1
-        lda #30
+        lda dct_col
         sta bc_col
-        lda #56
+        lda dct_scan
         sta bc_scan
         lda #6
         sta pcnt
@@ -2673,18 +3208,24 @@ key_scan
 ; NB: param_lo/hi MUST have one entry per param (0..NPARAM-1). They previously
 ; omitted TEMPO (index 12) -> apply_adjust read past the table when adjusting
 ; TEMPO via the joystick (wrote stray RAM). Now includes TEMPO + ARPMODE.
+; NEW LAYOUT (2026-06-15): screen 1 VOICE = 0..11, screen 2 FX/PATCH = 12..15,
+; screen 3 SEQUENCER/RHYTHM = 16..18 (+ step grid). Index order == visual order.
+;   0 WAVEFORM 1 VOLUME 2 OCTAVE 3 CLOCK 4 LFO RATE 5 LFO DEPTH   (page0 left col)
+;   6 ATTACK 7 DECAY 8 SUSTAIN 9 RELEASE 10 ARPEGGIO 11 ARP MODE  (page0 right col)
+;   12 DETUNE 13 HP FILTER 14 GLIDE 15 PRESET                     (page1)
+;   16 TEMPO 17 DRUM 18 RHYTHM                                    (page2 + grid)
 param_lo
-        .byte <wave_idx,<volume,<octave,<atk_rate,<dec_rate,<detune
-        .byte <sus_level,<rel_rate,<clock15,<lfo_rate,<lfo_depth,<arp_rate
-        .byte <tempo,<arp_mode,<porta_rate,<drum_dec,<hpf_cut,<preset_slot,<drum_beat
+        .byte <wave_idx,<volume,<octave,<clock15,<lfo_rate,<lfo_depth
+        .byte <atk_rate,<dec_rate,<sus_level,<rel_rate,<arp_rate,<arp_mode
+        .byte <detune,<hpf_cut,<porta_rate,<preset_slot, <tempo,<drum_dec,<drum_beat
 param_hi
-        .byte >wave_idx,>volume,>octave,>atk_rate,>dec_rate,>detune
-        .byte >sus_level,>rel_rate,>clock15,>lfo_rate,>lfo_depth,>arp_rate
-        .byte >tempo,>arp_mode,>porta_rate,>drum_dec,>hpf_cut,>preset_slot,>drum_beat
+        .byte >wave_idx,>volume,>octave,>clock15,>lfo_rate,>lfo_depth
+        .byte >atk_rate,>dec_rate,>sus_level,>rel_rate,>arp_rate,>arp_mode
+        .byte >detune,>hpf_cut,>porta_rate,>preset_slot, >tempo,>drum_dec,>drum_beat
 param_max
-        .byte 3,15,4,15,15,15, 15,15,2,15,15,15, 15,3,15,15, 15,3,15
+        .byte 3,15,4,2,15,15, 15,15,15,15,15,3, 15,15,15,3, 15,15,15
 param_maxp1
-        .byte 4,16,5,16,16,16, 16,16,3,16,16,16, 16,4,16,16, 16,4,16
+        .byte 4,16,5,3,16,16, 16,16,16,16,16,4, 16,16,16,4, 16,16,16
 
 ; ----- parameter descriptor tables (NPARAM entries) -------------------------
 ;        0 WAVE  1 VOL  2 OCT  3 ATK  4 DEC | 5 SUS  6 REL  7 CLK  8 LFOR 9 LFOD
@@ -2697,10 +3238,10 @@ param_maxp1
 ; reuse the page-0 grid, so all tables index by absolute param).
 ;        page 2: 12 TEMPO (r0 left) 13 ARPMODE (r0 right) 14 PORTA (r1 left) 15 DRUM (r1 right)
 p_kind
-        .byte K_WAVE,K_KNOB,K_OCT,K_KNOB,K_KNOB,K_KNOB
-        .byte K_KNOB,K_KNOB,K_CLK,K_KNOB,K_KNOB,K_KNOB
-        .byte K_KNOB,K_KNOB,K_KNOB,K_KNOB                 ; 12 TEMPO,13 ARPMODE,14 PORTA,15 DRUM
-        .byte K_KNOB,K_KNOB,K_KNOB                        ; 16 HPF, 17 PRESET, 18 DRUMBEAT
+        .byte K_WAVE,K_KNOB,K_OCT,K_CLK,K_KNOB,K_KNOB     ; 0 WAVE 1 VOL 2 OCT 3 CLK 4 LFOR 5 LFOD
+        .byte K_KNOB,K_KNOB,K_KNOB,K_KNOB,K_KNOB,K_KNOB   ; 6 ATK 7 DEC 8 SUS 9 REL 10 ARP 11 ARPM
+        .byte K_KNOB,K_KNOB,K_KNOB,K_KNOB                 ; 12 DETUNE 13 HPF 14 GLIDE 15 PRESET
+        .byte K_KNOB,K_KNOB,K_KNOB                        ; 16 TEMPO 17 DRUM 18 RHYTHM
 p_scan
         .byte 16,36,56,76,96,110, 16,36,56,76,96,110
         .byte 16,16,36,36, 16,16,36
@@ -2714,21 +3255,68 @@ p_numcol
         .byte 13,13,13,13,13,13, 33,33,33,33,33,33
         .byte 13,33,13,33, 13,33,13
 p_vaddr_lo
-        .byte <wave_idx,<volume,<octave,<atk_rate,<dec_rate,<detune
-        .byte <sus_level,<rel_rate,<clock15,<lfo_rate,<lfo_depth,<arp_rate
-        .byte <tempo,<arp_mode,<porta_rate,<drum_dec,<hpf_cut,<preset_slot,<drum_beat
+        .byte <wave_idx,<volume,<octave,<clock15,<lfo_rate,<lfo_depth
+        .byte <atk_rate,<dec_rate,<sus_level,<rel_rate,<arp_rate,<arp_mode
+        .byte <detune,<hpf_cut,<porta_rate,<preset_slot, <tempo,<drum_dec,<drum_beat
 p_vaddr_hi
-        .byte >wave_idx,>volume,>octave,>atk_rate,>dec_rate,>detune
-        .byte >sus_level,>rel_rate,>clock15,>lfo_rate,>lfo_depth,>arp_rate
-        .byte >tempo,>arp_mode,>porta_rate,>drum_dec,>hpf_cut,>preset_slot,>drum_beat
+        .byte >wave_idx,>volume,>octave,>clock15,>lfo_rate,>lfo_depth
+        .byte >atk_rate,>dec_rate,>sus_level,>rel_rate,>arp_rate,>arp_mode
+        .byte >detune,>hpf_cut,>porta_rate,>preset_slot, >tempo,>drum_dec,>drum_beat
 p_lblptr_lo
-        .byte <txt_wave,<txt_vol,<txt_oct,<txt_atk,<txt_dec,<txt_det
-        .byte <txt_sus,<txt_rel,<txt_clk,<txt_lfor,<txt_lfod,<txt_arp
-        .byte <txt_tempo,<txt_arpm,<txt_porta,<txt_drum,<txt_hpf,<txt_preset,<txt_dbeat
+        .byte <txt_wave,<txt_vol,<txt_oct,<txt_clk,<txt_lfor,<txt_lfod
+        .byte <txt_atk,<txt_dec,<txt_sus,<txt_rel,<txt_arp,<txt_arpm
+        .byte <txt_det,<txt_hpf,<txt_porta,<txt_preset, <txt_tempo,<txt_drum,<txt_dbeat
 p_lblptr_hi
-        .byte >txt_wave,>txt_vol,>txt_oct,>txt_atk,>txt_dec,>txt_det
-        .byte >txt_sus,>txt_rel,>txt_clk,>txt_lfor,>txt_lfod,>txt_arp
-        .byte >txt_tempo,>txt_arpm,>txt_porta,>txt_drum,>txt_hpf,>txt_preset,>txt_dbeat
+        .byte >txt_wave,>txt_vol,>txt_oct,>txt_clk,>txt_lfor,>txt_lfod
+        .byte >txt_atk,>txt_dec,>txt_sus,>txt_rel,>txt_arp,>txt_arpm
+        .byte >txt_det,>txt_hpf,>txt_porta,>txt_preset, >txt_tempo,>txt_drum,>txt_dbeat
+; Which char index in each label is the shortcut key (underlined). Renaming ARP
+; -> ARPEGGIO introduces a free 'G', which frees up enough letters to give EVERY
+; page-0 param a unique in-label letter, plus DRUMBEAT(B). Pages 1-2 (except
+; DRUMBEAT) have no spare free letter -> $FF (reach them via Tab + arrows).
+;   WAVE M=7  VOL V=0  OCT A=3  ATK K=5  DEC D=0  DET N=4
+;   SUS  S=0  REL L=2  CLK C=0  LFOR F=1 LFOD H=8  ARPEGGIO G=4   DRUMBEAT B=4
+;   page 0 + DRUMBEAT use PLAIN letters; the 5 page-1/2 params below use SHIFT+letter
+;   TEMPO M=2  ARP MODE D=6  PORTA A=4  HP FILTER H=0  PRESET S=3   (DRUM: none)
+; char index of each label's shortcut letter (underlined). New layout: page-0
+; params keep plain letters; DETUNE keeps plain N; the rest use SHIFT+letter.
+;   WAVE M7 VOL V0 OCT A3 CLK C0 LFOR F1 LFOD H8 ATK K5 DEC D0 SUS S0 REL L2
+;   ARPEGGIO G4   ARP MODE ^A0   DETUNE N4   HP FILTER ^F3   GLIDE ^G0
+;   PRESET ^S3    TEMPO ^M2   DRUM ^D0   RHYTHM ^H1
+p_hl
+        .byte 7,0,3,0,1,8
+        .byte 5,0,0,2,4,0
+        .byte 4,3,0,3, 2,0,1
+; 1 = this param's shortcut is a SHIFT+letter (drawn opposite video to its label)
+p_hl_shift
+        .byte 0,0,0,0,0,0
+        .byte 0,0,0,0,0,1
+        .byte 0,1,1,1, 1,1,1
+; 1 = inert in 16-BIT clock mode (channels 3/4 are paired): HP FILTER(13), GLIDE(14),
+; DRUM(17), RHYTHM(18). Struck through when clock15 = 2 so users don't twiddle dead ones.
+p_inert16
+        .byte 0,0,0,0,0,0
+        .byte 0,0,0,0,0,0
+        .byte 0,1,1,0, 0,1,1
+; shortcut key -> param jump (read_navkeys). Letter is a FREE key (not piano)
+; underlined in the label; KBCODEs are the bridge/hardware values. Shift+letter
+; entries have bit7 ($80) set (Shift sets KBCODE bit7).
+shortcut_kc
+        .byte $25,$10,$3F,$12,$38,$39,$05,$3A,$3E,$00,$3D,$23
+;             M   V   A   C   F   H   K   D   S   L   G   N    (plain)
+        .byte $BF,$B8,$BD,$BE,$A5,$BA,$B9
+;             ^A  ^F  ^G  ^S  ^M  ^D  ^H                      (shift)
+shortcut_param
+        .byte 0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 12
+;             WAV VOL OCT CLK LFR LFD ATK DEC SUS REL ARP DET
+        .byte 11, 13, 14, 15, 16, 17, 18
+;             ARM HPF GLI PRE TMP DRM RHY
+; effect params that render value 0 as "OFF": LFO DEPTH(5) ARPEGGIO(10) DETUNE(12)
+;                                             HP FILTER(13) GLIDE(14) DRUM(17)
+p_zoff
+        .byte 0,0,0,0,0,1
+        .byte 0,0,0,0,1,0
+        .byte 1,1,1,0, 0,1,0
 
 ; knob geometry
 bitmask_tab
@@ -2788,14 +3376,22 @@ icon_ptr_hi
         org $3C00
 dlist
         .byte $70,$70,$70       ; 24 blank lines
-        .byte $4F               ; LMS + mode F
+        .byte $4F               ; LMS + mode F  (scanline 0 = title row)
         .word FB1
         :101 .byte $0F          ; 101 more lines (102 total from FB1)
-        .byte $4F
+        .byte $4F               ; scanline 102: LMS FB2
         .word FB2
         :89 .byte $0F           ; 89 more lines (90 total from FB2)
         .byte $41               ; JVB
         .word dlist
+
+; ----- custom step-cell glyphs (8 bytes each, MSB = leftmost pixel) ----------
+; index 0 rest, 1 note, 2 tie, 3 drum.  blit via blit_glyph (scrptr -> entry).
+seq_glyphs
+        .byte $00,$00,$00,$18,$18,$00,$00,$00   ; 0 REST  - small centred dot
+        .byte $00,$18,$14,$10,$10,$70,$70,$00   ; 1 NOTE  - eighth note (head+stem+flag)
+        .byte $00,$00,$00,$7E,$7E,$00,$00,$00   ; 2 TIE   - centred horizontal bar
+        .byte $00,$42,$24,$18,$18,$24,$42,$00   ; 3 DRUM  - X (percussion hit)
 
 ; ----- text labels (screen codes, $FF-terminated) ---------------------------
 txt_title  .byte "ATARI POKEY SYNTH",$FF
@@ -2813,17 +3409,34 @@ txt_15k    .byte "15K",$FF
 txt_lfor   .byte "LFO RATE",$FF
 txt_lfod   .byte "LFO DEPTH",$FF
 txt_det    .byte "DETUNE",$FF
-txt_arp    .byte "ARP",$FF
+txt_arp    .byte "ARPEGGIO",$FF
 txt_tempo  .byte "TEMPO",$FF
 txt_arpm   .byte "ARP MODE",$FF
-txt_porta  .byte "PORTA",$FF
+txt_porta  .byte "GLIDE",$FF
 txt_drum   .byte "DRUM",$FF
 txt_hpf    .byte "HP FILTER",$FF
 txt_preset .byte "PRESET",$FF
-txt_dbeat  .byte "DRUMBEAT",$FF
+txt_dbeat  .byte "RHYTHM",$FF
 txt_play   .byte "PLAY",$FF
 txt_stop   .byte "STOP",$FF
 txt_rec    .byte "REC",$FF
 txt_blk3   .byte "   ",$FF
+
+; context hint strings (drawn on the HINTSCAN row); hint_col centres each
+hint_d0    .byte "TAB=PAGE  OPT=HOLD",$FF      ; default (18 chars)
+hint_d1    .byte "START=PLAY SEL=REC",$FF      ; sequencer page (18 chars)
+hint_d2    .byte "RET=SAVE PRESET",$FF         ; PRESET selected (15 chars)
+hint_lo    .byte <hint_d0,<hint_d1,<hint_d2
+hint_hi    .byte >hint_d0,>hint_d1,>hint_d2
+hint_col   .byte 11,11,12                      ; centre col per hint
+
+; PRESET slot names (5 cells, space-padded so they overwrite cleanly) + SAVED flash
+txt_saved  .byte "SAVED",$FF
+pn_init    .byte "INIT ",$FF
+pn_pad     .byte "PAD  ",$FF
+pn_lead    .byte "LEAD ",$FF
+pn_arp     .byte "ARP  ",$FF
+preset_name_lo .byte <pn_init,<pn_pad,<pn_lead,<pn_arp
+preset_name_hi .byte >pn_init,>pn_pad,>pn_lead,>pn_arp
 
         run main

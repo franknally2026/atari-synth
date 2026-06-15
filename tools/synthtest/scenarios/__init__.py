@@ -5,7 +5,8 @@ reported as skipped, not failed) when the emulator build lacks the
 AUDIO_RECORD bridge command, so the framework degrades gracefully.
 """
 from . import (bridge, core, acoustic, combos, sequencer, arpmodes, portamento,
-               drum, hpfilter, presets, stress, quantitative, timing, workflow)
+               drum, hpfilter, presets, stress, quantitative, timing, workflow,
+               input)
 
 # (scenario, needs_audio). Sequencer behavioural checks don't need audio; only
 # its PCM playback check does.
@@ -19,12 +20,25 @@ REGISTRY = (
     + [(fn, True) for fn in acoustic.SCENARIOS]
     + [(acoustic.clock_switch_voice_wrap, True)]
     + [(sequencer.transport, False),
+       (sequencer.realtime_arm_clears_and_runs, False),
        (sequencer.multi_step_playback, False),
        (sequencer.step_entry_record, False),
        (sequencer.loop_length_wraps, False),
        (sequencer.realtime_record, False),
+       (sequencer.realtime_record_monitors_pattern, False),
+       (sequencer.realtime_overdub_keeps_existing, False),
+       (sequencer.realtime_record_drum_tap, False),
+       (sequencer.realtime_held_drum_no_tie, False),
+       (sequencer.drum_step_sounds_during_record, False),
+       (sequencer.rest_releases_note_on_playback, False),
        (sequencer.tie_sustains_no_reattack, False),
-       (sequencer.playback_audible, True)]
+       (sequencer.grid_glyphs, False),
+       (sequencer.head_marks_active_step, False),
+       (sequencer.playback_audible, True),
+       (sequencer.record_then_playback_melodic_acoustic, True),
+       (sequencer.held_note_playback_audible_acoustic, True),
+       (sequencer.drum_record_playback_acoustic, True),
+       (sequencer.armed_record_empty_silent_acoustic, True)]
     + [(arpmodes.arpmode_param, False),
        (arpmodes.arpmode_patterns, False),
        (arpmodes.arpmode_direction, False),
@@ -44,6 +58,7 @@ REGISTRY = (
        (drum.drum_decay, False),
        (drum.drum_off, False),
        (drum.drum_acoustic, True),
+       (drum.drum_reserves_voice3, False),
        (drum.drum_decay_scales, False),
        (drum.drum_coexists_with_melody, True)]
     + [(hpfilter.hpf_param, False),
@@ -75,6 +90,7 @@ REGISTRY = (
        (quantitative.adsr_frame_timing, False),
        (quantitative.sustain_clamp, False),
        (quantitative.lfo_depth_monotonic, False),
+       (quantitative.lfo_vibrato_16bit, False),
        (quantitative.detune_beat_hz, True),
        (quantitative.waveform_harmonics, True)]
     + [(timing.seq_rhythm_from_audio, True),
@@ -93,4 +109,7 @@ REGISTRY = (
        (combos.sixteenbit_plus_effects, True),
        (combos.effects_on_chord, True),
        (combos.combo_timeline_no_collapse, False)]
+    # input scenarios run LAST: they poke cur_param/volume and overwrite preset
+    # slot 0, so keeping them at the end avoids polluting earlier scenarios.
+    + [(fn, False) for fn in input.SCENARIOS]
 )

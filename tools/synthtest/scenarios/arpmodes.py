@@ -35,19 +35,20 @@ def _arp_order(s, mode, frames=40, rate=12):
 
 
 def arpmode_param(s, rep):
-    """ARPMODE is param 13 on page 2: default 0, clamps 0..3, label renders."""
+    """ARPMODE is param 11 on screen 1 (with ARPEGGIO): default 0, clamps 0..3."""
     rep.section("arpmode: parameter (default / clamp / label)")
-    rep.check("ARPMODE defaults to 0 (UP)", s.get_param(13) == 0, s.get_param(13))
-    # select param 13 and clamp via the joystick
-    s.set("curparam", 13); s.frame(6)
-    rep.check("nav to ARPMODE -> page 2", s.get("page") == 1, s.get("page"))
+    rep.check("ARPMODE defaults to 0 (UP)", s.get_param(11) == 0, s.get_param(11))
+    # select param 11 and clamp via the joystick
+    s.set("curparam", 11); s.frame(6)
+    rep.check("nav to ARPMODE -> screen 1 (page 0)", s.get("page") == 0, s.get("page"))
     s.joy(0, "right"); s.frame(40); s.joy(0, "centre"); s.frame(2)
-    hi = s.get_param(13)
+    hi = s.get_param(11)
     s.joy(0, "left"); s.frame(40); s.joy(0, "centre"); s.frame(2)
-    lo = s.get_param(13)
+    lo = s.get_param(11)
     rep.check("ARPMODE clamps 3 / 0", hi == 3 and lo == 0, f"hi={hi} lo={lo}")
-    # the 'ARP MODE' label is drawn on page 2 (right column, scan 16): 'A'
-    rep.check("ARP MODE label renders on page 2", s.cell(21, 16) == s.glyph(0x21), "no A")
+    # 'ARP MODE' is page-0 right column, bottom row (scan 110). 'A' (col21) is the
+    # Shift+A shortcut char (opposite-video when focused), so check 'R' at col 22.
+    rep.check("ARP MODE label renders on screen 1", s.cell(22, 110) == s.glyph(0x32, inv=True), "no R")
     s.set("curparam", 0); s.frame(6)
 
 
@@ -109,11 +110,11 @@ def arpmode_acoustic(s, rep):
 
 
 def tempo_adjust_fixed(s, rep):
-    """Regression: TEMPO (param 12) joystick adjust now works. param_lo/hi used
-    to omit TEMPO, so apply_adjust read off the end of the table and adjusting
-    TEMPO wrote stray RAM instead of changing it."""
+    """Regression: TEMPO (param 16, sequencer screen) joystick adjust works.
+    param_lo/hi used to omit TEMPO, so apply_adjust read off the end of the table
+    and adjusting TEMPO wrote stray RAM instead of changing it."""
     rep.section("regression: TEMPO joystick adjust (param_lo/hi off-by-one)")
-    s.set("curparam", 12); s.frame(6); s.set("tempo", 8); s.frame(2)
+    s.set("curparam", 16); s.frame(6); s.set("tempo", 8); s.frame(2)
     s.joy(0, "right"); s.frame(40); s.joy(0, "centre"); s.frame(2)
     hi = s.get("tempo")
     s.joy(0, "left"); s.frame(110); s.joy(0, "centre"); s.frame(2)

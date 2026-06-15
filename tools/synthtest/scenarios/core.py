@@ -6,7 +6,7 @@ is asserted over a *timeline* (the sequencer near-silence bug class), not a
 single frame.
 """
 from ..scenario import Timeline
-from ..harness import (PH_IDLE, PH_ATTACK, PH_SUSTAIN, PH_RELEASE, FB1)
+from ..harness import (PH_IDLE, PH_ATTACK, PH_SUSTAIN, PH_RELEASE, FB1, PARAM_VARS)
 
 
 def defaults_and_silence(s, rep):
@@ -162,10 +162,11 @@ def param_nav_and_clamp(s, rep):
     s.set("curparam", 0); s.frame(2)
     for _ in range(5):
         s.joy(0, "down"); s.frame(3); s.joy(0, "centre"); s.frame(3)
-    rep.check("DOWN x5 -> DETUNE (param 5)", s.get("curparam") == 5, s.get("curparam"))
+    rep.check("DOWN x5 -> LFO DEPTH (param 5)", s.get("curparam") == 5, s.get("curparam"))
     # clamp: RIGHT to max, LEFT to min, for a representative spread of params
-    for pidx, name, hi_exp in [(1, "VOLUME", 15), (3, "ATTACK", 15), (6, "SUSTAIN", 15),
-                               (9, "LFO RATE", 15), (11, "ARP", 15), (2, "OCTAVE", 4)]:
+    for pidx, name, hi_exp in [(1, "VOLUME", 15), (2, "OCTAVE", 4),
+                               (4, "LFO RATE", 15), (6, "ATTACK", 15), (8, "SUSTAIN", 15),
+                               (10, "ARPEGGIO", 15), (11, "ARP MODE", 3)]:
         s.set("curparam", pidx); s.frame(2)
         s.joy(0, "right"); s.frame(90); s.joy(0, "centre"); s.frame(2)
         hi = s.get_param(pidx)
@@ -176,14 +177,14 @@ def param_nav_and_clamp(s, rep):
 
 
 def two_page_nav(s, rep):
-    """Navigating past page-0 params shows page 2 (sequencer) and back."""
-    rep.section("UI: two-page panel navigation")
-    s.set("curparam", 12); s.frame(20)             # -> page 2 (TEMPO)
-    rep.check("nav to param 12 -> page 2", s.get("page") == 1, s.get("page"))
-    rep.check("page 2 shows TEMPO label", s.cell(1, 16) == s.glyph(0x34), "no T")
+    """Navigating past the screen-1 params shows the next screen and back."""
+    rep.section("UI: multi-page panel navigation")
+    s.set("curparam", 12); s.frame(20)             # -> page 1 (FX screen, DETUNE)
+    rep.check("nav to param 12 -> page 1", s.get("page") == 1, s.get("page"))
+    rep.check("FX screen shows DETUNE label", s.cell(1, 16) == s.glyph(0x24, inv=True), "no D")
     s.set("curparam", 0); s.frame(20)              # -> page 0 (WAVEFORM)
     rep.check("back to param 0 -> page 0", s.get("page") == 0, s.get("page"))
-    rep.check("page 0 redraws WAVEFORM label", s.cell(1, 16) == s.glyph(0x37), "no W")
+    rep.check("page 0 redraws WAVEFORM label", s.cell(1, 16) == s.glyph(0x37, inv=True), "no W")
     s.screenshot("23_page2.png")
 
 
@@ -233,8 +234,78 @@ def vu_meters(s, rep):
     s.reset_voices()
 
 
+def clock_toggle_in_place(s, rep):
+    """REGRESSION: the CLOCK toggle must draw its mode name in CLOCK's OWN value
+    area. It was hardcoded to the old right-column/scan-56 slot, which the panel
+    reorg gave to SUSTAIN -> the clock name overwrote SUSTAIN's value ("R08L").
+    Verify each mode name renders on CLOCK's row AND SUSTAIN's value cell stays
+    clean while CLOCK is displayed."""
+    rep.section("UI: CLOCK toggle renders in its own cell (not over SUSTAIN)")
+    psc = s.label_addr("p_scan"); pkn = s.label_addr("p_knobcx"); pnm = s.label_addr("p_numcol")
+    clk_scan = s.peek(psc + 3); clk_col = s.peek(pkn + 3) >> 3   # CLOCK = param 3
+    sus_scan = s.peek(psc + 8); sus_num = s.peek(pnm + 8)        # SUSTAIN = param 8
+
+    def read6(col, scan):
+        out = ""
+        for i in range(6):
+            cell = s.cell(col + i, scan); ch = "?"
+            for code in range(0x40):
+                if cell == s.glyph(code):
+                    ch = chr(0x20 + code) if code else " "; break
+            out += ch
+        return out
+
+    # clock=0/NORMAL (boot default) is where the bug showed (NORMAL -> "R08L" over
+    # SUSTAIN). draw_clk_toggle now reads its position from the tables, so if NORMAL
+    # renders in CLOCK's own cell, every mode does (same code path, different string).
+    s.set("clock15", 0); s.poke(0x0689, 0); s.set("curparam", 3); s.frame(10)
+    nm = read6(clk_col, clk_scan).rstrip()
+    lg, rg = s.cell(sus_num - 1, sus_scan), s.cell(sus_num + 2, sus_scan)
+    rep.check("CLOCK shows its mode name in CLOCK's own row", nm == "NORMAL", f"name={nm!r}")
+    rep.check("SUSTAIN value cell stays clean (no clock-name bleed)",
+              not any(lg) and not any(rg), f"left_dirty={any(lg)} right_dirty={any(rg)}")
+    s.set("curparam", 0); s.frame(8)
+
+
+def panel_value_cells_isolated(s, rep):
+    """GENERAL guard against one param's widget bleeding into another's value cell
+    (the class of bug the CLOCK toggle hit). Set every plain-knob param to a known
+    2-digit value and verify each value reads correctly with BLANK gutters on both
+    sides. Positions are read from the binary so this tracks any layout change."""
+    rep.section("UI: knob value cells are isolated (no cross-param bleed)")
+    special = {0, 2, 3, 15}        # WAVE icons, OCT widget, CLK toggle, PRESET name
+    pnm = s.label_addr("p_numcol"); psc = s.label_addr("p_scan")
+    knobs = [i for i in range(19) if i not in special]
+    saved = {i: s.get(PARAM_VARS[i]) for i in knobs}
+    for i in knobs:
+        s.set(PARAM_VARS[i], 3)    # 3 <= every param's max -> renders "03", never "OFF"
+    d0, d3 = s.glyph(0x10), s.glyph(0x13)
+    bad = []
+    for idx in knobs:
+        page = 0 if idx < 12 else (1 if idx < 16 else 2)
+        s.set("curparam", idx)
+        for _ in range(24):
+            s.frame(1)
+            if s.get("page") == page:
+                break
+        s.poke(0x06AA, 1); s.frame(4)              # force a clean panel redraw
+        nc = s.peek(pnm + idx); sc = s.peek(psc + idx)
+        lg, rg = s.cell(nc - 1, sc), s.cell(nc + 2, sc)
+        ok = s.cell(nc, sc) == d0 and s.cell(nc + 1, sc) == d3
+        if any(lg) or any(rg) or not ok:
+            bad.append(f"{PARAM_VARS[idx]}({idx}):" +
+                       ("L" if any(lg) else "") + ("R" if any(rg) else "") +
+                       ("" if ok else "val"))
+    for i, v in saved.items():
+        s.set(PARAM_VARS[i], v)
+    s.set("curparam", 0); s.frame(6)
+    rep.check("every knob value cell is clean with blank gutters", not bad, f"bad={bad}")
+
+
 SCENARIOS = [
     defaults_and_silence,
+    clock_toggle_in_place,
+    panel_value_cells_isolated,
     play_pitch_mapping,
     voice_allocation,
     drum_key_reachable,

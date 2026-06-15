@@ -1,7 +1,8 @@
-"""Presets — comprehensive coverage of the new PRESET parameter (index 17, page
-2). 4 patch slots hold the 17 sound params; selecting a slot with the PRESET
-knob LOADS it live, and pressing FIRE while PRESET is selected SAVES the current
-sound into the slot. The bank is seeded with 4 factory patches at boot.
+"""Presets — comprehensive coverage of the PRESET parameter (index 15, FX/PATCH
+screen / page 1). 4 patch slots hold all 18 sound params (everything except the
+PRESET selector itself); selecting a slot with the PRESET knob LOADS it live, and
+pressing FIRE while PRESET is selected SAVES the current sound into the slot. The
+bank is seeded with 4 factory patches at boot.
 
 NB: after a page change the panel takes a few frames to settle, so the checks
 allow short settle windows.
@@ -10,9 +11,11 @@ from .. import dsp
 
 PRESET = 0x06C5
 BANK = 0x0700
-NSAVE = 17
-# factory patches (param order: wave vol oct atk dec det sus rel clk lfor lfod
-# arp tempo arpm porta drum hpf) — must match preset_factory in synth.asm
+PRESET_IDX = 15         # PRESET param's index (skipped by save/load)
+NSAVE = 18              # saved params per slot = all 19 except PRESET
+# bank stores params in index order, skipping PRESET(15): detune(idx12) -> bank pos 12
+DETUNE_BANK = 12
+# factory patches (only the non-default params per slot) — must match preset_factory
 FACTORY = {
     0: dict(wave=1, volume=10, octave=2, sus=8, arp=0, porta_rate=0, hpf_cut=0),
     1: dict(wave=1, volume=12, octave=2, atk=6, sus=14, lfod=5, detune=6),
@@ -28,11 +31,14 @@ def _load_slot(s, slot):
 
 
 def preset_param(s, rep):
-    rep.section("presets: PRESET parameter (page 2)")
-    rep.check("PRESET defaults to 0", s.get_param(17) == 0, s.get_param(17))
-    s.set("curparam", 17); s.frame(8)
-    rep.check("nav to PRESET -> page 2", s.get("page") == 2, s.get("page"))
-    rep.check("PRESET label renders on page 2 (right col)", s.cell(21, 16) == s.glyph(0x30), "no P")
+    rep.section("presets: PRESET parameter (FX/PATCH screen, page 1)")
+    rep.check("PRESET defaults to 0", s.get_param(15) == 0, s.get_param(15))
+    s.set("curparam", 15); s.frame(8)
+    rep.check("nav to PRESET -> FX screen (page 1)", s.get("page") == 1, s.get("page"))
+    # PRESET is page-1 right column, row1 (col 21, scan 36). 'P' (col21) is not the
+    # shortcut char (Shift+S is), so it's plain focused-inverse.
+    rep.check("PRESET label renders on the FX screen",
+              s.cell(21, 36) == s.glyph(0x30, inv=True), "no P")
     s.set("curparam", 0); s.frame(8)
 
 
@@ -53,7 +59,8 @@ def preset_factory_distinct(s, rep):
     sigs = []
     for slot in range(4):
         _load_slot(s, slot)
-        sigs.append(tuple(s.get_param(i) for i in range(NSAVE)))  # full 17-param patch
+        # full saved patch = all params except the PRESET selector itself
+        sigs.append(tuple(s.get_param(i) for i in range(19) if i != PRESET_IDX))
     rep.check("4 factory patches are distinct", len(set(sigs)) == 4,
               f"{len(set(sigs))} unique of 4")
     s.poke(PRESET, 0)
@@ -64,11 +71,11 @@ def preset_save_fire(s, rep):
     selecting another slot and back restores the saved values."""
     rep.section("presets: FIRE saves the current sound to the slot")
     _load_slot(s, 0)                       # start from a known patch on slot 0
-    s.set("curparam", 17); s.frame(8)      # select PRESET (settle the page)
+    s.set("curparam", 15); s.frame(8)      # select PRESET (settle the page)
     # tweak a couple of params to a distinctive signature
     s.set("detune", 11); s.set("sus", 5); s.frame(2)
     s.joy(0, "centre", fire=True); s.frame(8); s.joy(0, "centre"); s.frame(3)
-    saved_det = s.peek(BANK + 5)           # detune is param index 5
+    saved_det = s.peek(BANK + DETUNE_BANK)  # detune (idx 12) -> bank position 12
     rep.check("FIRE wrote the slot (detune=11 in bank)", saved_det == 11, f"bank detune={saved_det}")
     # clobber, switch away and back -> the saved values return
     s.set("detune", 0); s.set("sus", 15)
