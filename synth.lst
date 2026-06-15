@@ -3305,7 +3305,7 @@ Source: synth.asm
   3302 				; index 0 rest, 1 note, 2 tie, 3 drum.  blit via blit_glyph (scrptr -> entry).
   3303 3CCA			seq_glyphs
   3304 3CCA 00 00 00 18 18 00 +         .byte $00,$00,$00,$18,$18,$00,$00,$00   ; 0 REST  - small centred dot
-  3305 3CD2 00 7E 7E 7E 7E 7E +         .byte $00,$7E,$7E,$7E,$7E,$7E,$7E,$00   ; 1 NOTE  - filled 6x6 block (margins)
+  3305 3CD2 00 18 14 10 10 70 +         .byte $00,$18,$14,$10,$10,$70,$70,$00   ; 1 NOTE  - eighth note (head+stem+flag)
   3306 3CDA 00 00 00 7E 7E 00 +         .byte $00,$00,$00,$7E,$7E,$00,$00,$00   ; 2 TIE   - centred horizontal bar
   3307 3CE2 00 18 3C 7E 7E 3C +         .byte $00,$18,$3C,$7E,$7E,$3C,$18,$00   ; 3 DRUM  - filled diamond
   3308
