@@ -212,6 +212,10 @@ prev_hint   = $06D1     ; last drawn hint-line id ($FF = force redraw)
 pl_inv      = $06D2     ; print_label base inverse: $FF = focused param (inverse video)
 hl_shift    = $06D3     ; 1 = the shortcut char is a SHIFT key (drawn opposite video)
 saved_flash = $06D4     ; >0 = show "SAVED" over the PRESET name for this many frames
+base8       = $06D5     ; 16-bit vibrato/detune scale = note AUDF16 >> 6
+acclo       = $06D6     ; add_scaled16 product (low)
+acchi       = $06D7     ; add_scaled16 product (high)
+scl_sgn     = $06D8     ; add_scaled16 saved signed offset
 
 NPARAM = 19             ; ...page2 16 HPF, 17 PRESET, 18 DRUMBEAT
 NSAVE  = 17             ; params 0..16 are saved in a preset (PRESET itself is not)
@@ -1372,30 +1376,28 @@ us_emit16
         sta nlo
         lda chrom16_hi,y
         sta nhi
-        lda lfo_offset          ; + vibrato (signed 16-bit)
-        bmi u16_lneg
-        clc
-        adc nlo
-        sta nlo
+        ; 16-bit notes use a big AUDF (hundreds..thousands), so the raw +-7 LFO /
+        ; +-9 detune offsets that are huge in 8-bit are inaudible here. Scale them
+        ; to the note: base8 = AUDF16 >> 6, then offset' = offset * base8 makes the
+        ; wobble a fixed % of pitch at any note (and can't wrap a high note).
         lda nhi
-        adc #0
-        sta nhi
-        jmp u16_det
-u16_lneg
-        clc
-        adc nlo
-        sta nlo
-        lda nhi
-        adc #$FF
-        sta nhi
-u16_det
-        clc                     ; + detune (positive)
+        asl
+        asl
+        sta base8               ; nhi << 2  (max ~208)
         lda nlo
-        adc dvoff,x
-        sta nlo
-        lda nhi
-        adc #0
-        sta nhi
+        lsr
+        lsr
+        lsr
+        lsr
+        lsr
+        lsr                     ; nlo >> 6  (0..3)
+        clc
+        adc base8
+        sta base8               ; base8 = AUDF16 >> 6
+        lda lfo_offset          ; vibrato, scaled to the note
+        jsr add_scaled16        ; (preserves X = voice index)
+        lda dvoff,x             ; detune, scaled to the note
+        jsr add_scaled16
         ldy wave_idx            ; AUDC for the audible (high) channel
         lda wave_base,y
         ora voice_level,x
@@ -1454,6 +1456,53 @@ wait_vbl
 wv_l
         cmp RTCLOK+2
         beq wv_l
+        rts
+
+; add_scaled16: nlo:nhi += (signed A) * base8, as a signed 16-bit add. Used by the
+; 16-bit output path to apply LFO vibrato and detune scaled to the note's pitch.
+; A = signed offset (small, +-0..15). Preserves X. Clobbers A/Y.
+add_scaled16
+        sta scl_sgn             ; remember the sign
+        bne as_go
+        rts                     ; offset 0 -> nothing
+as_go
+        bpl as_pos
+        eor #$FF                ; A = magnitude of a negative offset
+        clc
+        adc #1
+as_pos
+        tay                     ; Y = magnitude (loop count)
+        lda #0
+        sta acclo
+        sta acchi
+as_mul
+        clc                     ; acc += base8  (acc = base8 * magnitude)
+        lda acclo
+        adc base8
+        sta acclo
+        lda acchi
+        adc #0
+        sta acchi
+        dey
+        bne as_mul
+        lda scl_sgn
+        bmi as_sub
+        clc                     ; positive -> nlo:nhi += acc
+        lda nlo
+        adc acclo
+        sta nlo
+        lda nhi
+        adc acchi
+        sta nhi
+        rts
+as_sub
+        sec                     ; negative -> nlo:nhi -= acc
+        lda nlo
+        sbc acclo
+        sta nlo
+        lda nhi
+        sbc acchi
+        sta nhi
         rts
 
 ; ----------------------------------------------------------------------------

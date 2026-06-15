@@ -90,6 +90,7 @@ REGISTRY = (
        (quantitative.adsr_frame_timing, False),
        (quantitative.sustain_clamp, False),
        (quantitative.lfo_depth_monotonic, False),
+       (quantitative.lfo_vibrato_16bit, False),
        (quantitative.detune_beat_hz, True),
        (quantitative.waveform_harmonics, True)]
     + [(timing.seq_rhythm_from_audio, True),

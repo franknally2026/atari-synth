@@ -151,6 +151,53 @@ def lfo_depth_monotonic(s, rep):
               f"swing14={swings[14]} want ~{2*(14>>1)}")
 
 
+def _audf16(s, v):
+    """16-bit AUDF of voice v: lo on channel 2v+1, hi (audible) on channel 2v+2."""
+    return s.chan(2 * v + 2)[0] * 256 + s.chan(2 * v + 1)[0]
+
+
+def lfo_vibrato_16bit(s, rep):
+    """REGRESSION: LFO and DETUNE must be audible in 16-bit too. 16-bit notes use
+    a large AUDF, so the raw +-7 offset was inaudible (0% swing); the engine now
+    scales the offset to the note (offset * AUDF16>>6), giving a fixed-% vibrato
+    that also never wraps a high note."""
+    rep.section("quant: LFO vibrato + detune work in 16-bit (scaled to the note)")
+    s.set("clock15", 2); s.poke(0x0689, 2)          # stable 16-bit (vlimit=2, no clear)
+    s.frame(2)
+
+    def swing(depth):
+        with s.frozen("trigger_voices"):
+            s.set("wave", 1); s.set("volume", 12); s.set("detune", 0)
+            s.poke(LFO_LEVEL_U, 0); s.poke(LFO_OFFSET, 0)
+            s.set("lfod", depth); s.set("lfor", 14)
+            s.set("vnote", 24, 0); s.set("vlevel", 12, 0)
+            s.set("vphase", PH_SUSTAIN, 0); s.set("vcount", 8, 0); s.set("held", 0)
+            vals = [_audf16(s, 0) for _ in range(120) if not s.frame(1)]
+            return max(vals) - min(vals)
+
+    off, on = swing(0), swing(15)
+    rep.check("16-bit LFO off -> no vibrato", off <= 2, f"swing={off}")
+    rep.check("16-bit LFO on -> audible vibrato (was 0 before the scale fix)",
+              on >= 50, f"swing={on}")
+
+    # detune: voice 1's 16-bit AUDF must differ from voice 0's (a beat); off -> equal
+    def spread(det):
+        with s.frozen("trigger_voices"):
+            s.set("wave", 1); s.set("volume", 12); s.set("lfod", 0)
+            s.poke(LFO_LEVEL_U, 0); s.poke(LFO_OFFSET, 0); s.set("detune", det)
+            for i in range(2):
+                s.set("vnote", 24, i); s.set("vlevel", 12, i)
+                s.set("vphase", PH_SUSTAIN, i); s.set("vcount", 8, i)
+            s.set("held", 0); s.frame(4)
+            return abs(_audf16(s, 0) - _audf16(s, 1))
+
+    d0, d15 = spread(0), spread(15)
+    rep.check("16-bit detune 0 -> voices in unison", d0 == 0, f"spread={d0}")
+    rep.check("16-bit detune 15 -> voices spread apart (audible beat)", d15 >= 8,
+              f"spread={d15}")
+    s.set("clock15", 0); s.poke(0x0689, 0); s.frame(2)
+
+
 def detune_beat_hz(s, rep):
     """Two detuned voices beat at the frequency predicted by their actual AUDF
     difference (measured, not just 'a beat exists')."""
@@ -209,6 +256,7 @@ SCENARIOS = [
     adsr_frame_timing,
     sustain_clamp,
     lfo_depth_monotonic,
+    lfo_vibrato_16bit,
     detune_beat_hz,
     waveform_harmonics,
 ]
