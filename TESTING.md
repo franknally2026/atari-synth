@@ -14,7 +14,7 @@ There are three verification layers, run in this order:
 |---|---|---|---|---|
 | 1. Memory-map sanity | `tools/memcheck.py` | every build (wired into `build.sh`) | no | the binary can't corrupt itself at runtime |
 | 2. Behavioural harness (legacy) | `tools/verify_synth.py` | on demand | yes (headless) | 103 register/RAM/UI checks across 26 sections |
-| 3. Acoustic + timeline framework | `tools/synthtest/` | on demand / before commit | yes (headless) | ~104 scenarios: real PCM sound analysis + frame-by-frame trajectories |
+| 3. Acoustic + timeline framework | `tools/synthtest/` | on demand / before commit | yes (headless) | ~110 scenarios: real PCM sound analysis + frame-by-frame trajectories |
 
 Plus one utility:
 
@@ -120,7 +120,11 @@ Coverage (section numbers as printed):
 **Status:** kept green, but new feature tests go into `tools/synthtest/`
 (layer 3), which migrated these checks onto a reusable framework and added the
 two things this file can't do: whole-trajectory assertions and real audio
-analysis.
+analysis. Note this harness predates the 3-page UI reorg (and the
+GLIDE/RHYTHM/ARPEGGIO renames): it drives the engine by RAM address and console
+input, so it stays valid, but its "2-page panel switch" check (section 23)
+reflects the older 2-page layout — the authoritative page/param-order coverage
+now lives in layer 3's `core.py` and the per-feature modules.
 
 ---
 
@@ -230,7 +234,9 @@ A scenario that raises is recorded as a failure, not a crash of the run.
 ### Scenario catalogue (what is actually tested)
 
 Registered in `scenarios/__init__.py` as `(callable, needs_audio)` — ~110
-scenarios, several hundred individual checks. By module:
+scenarios, several hundred individual checks. Param/page coverage tracks the
+current 3-page layout (Page 1 Voice, Page 2 FX/Patch, Page 3 Sequencer) and the
+GLIDE/RHYTHM/ARPEGGIO names. By module:
 
 **`bridge.py` — the AltirraBridge contract this framework depends on:**
 `AUDIO_STATE` schema (top-level flags, 4 channels, all expected per-channel
@@ -247,8 +253,10 @@ allocation incl. wrap; the `'1'` drum key is reachable via a *real* keypress;
 4-voice polyphony; ADSR over a timeline (attack→peak→sustain hold, monotonic
 release to idle); the founding regression — a sequencer step must sustain, not
 collapse; GR.8 UI sanity (dlist install, SDMCTL, dynamic redraw); param
-navigation order + clamp for a representative spread; two-page panel
-navigation + label redraw; WAVEFORM/CLOCK switch glyphs; VU meters.
+navigation order + clamp for a representative spread; multi-page panel
+navigation + label redraw; the CLOCK toggle and per-param value cells draw in
+their own slots (no cross-param bleed — the "R08L" regression net);
+WAVEFORM/CLOCK switch glyphs; VU meters.
 
 **`acoustic.py` — "does it actually sound right" (PCM):** silence really is
 silent; NORMAL-clock pitch is engine-faithful; displayed label == heard note
@@ -277,30 +285,33 @@ audibly played back with multiple pitches (PCM).
 (MINOR ≠ UP; OCT shows both octave tones in the spectrum); the TEMPO
 joystick-adjust regression (param_lo/hi off-by-one used to write stray RAM).
 
-**`portamento.py`:** param default/clamp/nav/label; AUDF ramps monotonically
-old→new through intermediate steps; **acoustic flagship** — the pitch audibly
-*glides* through ≥4 intermediate notes and rises toward the target; higher
-PORTA = slower glide (frames-to-target); PORTA 0 = instant, polyphonic.
+**`portamento.py`:** the GLIDE param (page 2, FX/Patch) — default/clamp/nav/label;
+AUDF ramps monotonically old→new through intermediate steps; **acoustic
+flagship** — the pitch audibly *glides* through ≥4 intermediate notes and rises
+toward the target; higher GLIDE = slower glide (frames-to-target); GLIDE 0 =
+instant, polyphonic.
 
-**`drum.py`:** param default/clamp/nav/label; `$FD` sequencer step fires a
-channel-4 hit; the `'1'` key fires a live hit (and does nothing with DRUM
-off); drum steps record into the pattern and fire on playback (drum lane);
-DRUMBEAT param + free-running auto-beat (more frequent at higher values, off
-at 0); the hit decays monotonically from ~15 to silence at the fixed noise
+**`drum.py`:** param default/clamp/nav/label (DRUM and RHYTHM live on page 3,
+the Sequencer page); `$FD` sequencer step fires a channel-4 hit; the `'1'` key
+fires a live hit (and does nothing with DRUM off); drum steps record into the
+pattern and fire on playback (drum lane); RHYTHM param + free-running auto-beat
+(more frequent at higher values, off at 0); the hit decays monotonically from
+~15 to silence at the fixed noise
 pitch; DRUM 0 silences a ringing hit; the hit is acoustically a decaying
 broadband noise burst (with register fallback if the tap glitches); higher
 DRUM rings longer; the drum coexists with melodic voices (chord tone still in
 the spectrum while ch4 rings).
 
-**`hpfilter.py`:** param on the third page (default/clamp/label); HPF>0 sets
-AUDCTL bit 2 with channel 3 as the *silent* cutoff clock at `(16-HPF)*4`;
+**`hpfilter.py`:** the HP FILTER param on page 2, the FX/Patch page
+(default/clamp/label); HPF>0 sets AUDCTL bit 2 with channel 3 as the *silent*
+cutoff clock at `(16-HPF)*4`;
 **acoustic flagship** — the low fundamental disappears from the spectrum and
 the centroid rises; higher HPF = brighter; cleanly disabled in 16-bit mode
 (channel 3 is a joined pair there).
 
 **`presets.py`:** PRESET param; selecting each slot live-loads its factory
 patch (values verified against `synth.asm`'s factory bank); the 4 factory
-patches are distinct 17-param signatures; FIRE saves the current sound into
+patches are distinct 18-param signatures; FIRE saves the current sound into
 the slot and survives a switch-away-and-back; presets are acoustically
 different (INIT pure vs LEAD square+HP flatness gap).
 
@@ -332,13 +343,13 @@ identity (SQUARE odd-dominant, SQUARE≡PURE, BUZZ/NOISE poly distortions).
 inter-onset interval measured **from the rendered audio** matches
 `(16-tempo)*2+2` frames per step at two tempos (and in the right ratio); the
 exact frame count is pinned deterministically at tempo 0/8/15; arp steps every
-`16-arp_rate` frames exactly; DRUMBEAT auto-hits every `(16-DRUMBEAT)` tempo
+`16-arp_rate` frames exactly; the RHYTHM auto-beat hits every `(16-RHYTHM)` tempo
 beats exactly.
 
 **`workflow.py` — end-to-end user flows with checkpoints:** record a melody →
 play it back → exact pitches re-trigger; one pattern mixing melody + a drum
-step plays both; full 17-param preset round-trip (save, perturb everything,
-reload — all restore; unsaved DRUMBEAT keeps its perturbed value); every
+step plays both; full 18-param preset round-trip (save, perturb everything,
+reload — all 18 saved params restore; the PRESET selector itself is not stored); every
 factory preset renders an audible sustained sound (regression net); **capture
 determinism** — the same patch captured twice gives the same pitch/RMS/centroid
 within documented tolerances, so quantitative checks aren't chasing tap noise;

@@ -184,7 +184,9 @@ def two_page_nav(s, rep):
     rep.check("FX screen shows DETUNE label", s.cell(1, 16) == s.glyph(0x24, inv=True), "no D")
     s.set("curparam", 0); s.frame(20)              # -> page 0 (WAVEFORM)
     rep.check("back to param 0 -> page 0", s.get("page") == 0, s.get("page"))
-    rep.check("page 0 redraws WAVEFORM label", s.cell(1, 16) == s.glyph(0x37, inv=True), "no W")
+    # 'W' (col1) is the Shift+W shortcut char (opposite-video when focused), so check
+    # the non-shortcut 'A' at col2 of "WAVEFORM" as a clean focused-inverse glyph.
+    rep.check("page 0 redraws WAVEFORM label", s.cell(2, 16) == s.glyph(0x21, inv=True), "no A")
     s.screenshot("23_page2.png")
 
 

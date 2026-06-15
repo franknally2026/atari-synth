@@ -35,10 +35,10 @@ def preset_param(s, rep):
     rep.check("PRESET defaults to 0", s.get_param(15) == 0, s.get_param(15))
     s.set("curparam", 15); s.frame(8)
     rep.check("nav to PRESET -> FX screen (page 1)", s.get("page") == 1, s.get("page"))
-    # PRESET is page-1 right column, row1 (col 21, scan 36). 'P' (col21) is not the
-    # shortcut char (Shift+S is), so it's plain focused-inverse.
+    # PRESET is page-1 right column, row1 (col 21, scan 36). 'P' (col21) is now the
+    # Shift+P shortcut char (opposite-video when focused), so check 'R' at col 22.
     rep.check("PRESET label renders on the FX screen",
-              s.cell(21, 36) == s.glyph(0x30, inv=True), "no P")
+              s.cell(22, 36) == s.glyph(0x32, inv=True), "no R")
     s.set("curparam", 0); s.frame(8)
 
 

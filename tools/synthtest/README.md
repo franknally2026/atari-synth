@@ -44,18 +44,18 @@ grouped PASS/FAIL summary, exits non-zero on any failure. WAVs land in
 | `harness.py` | `Synth`: launch/boot/teardown, pokes/peeks, `play()`, `frozen()`, register/level `timeline()`, PCM `capture()` |
 | `scenario.py` | `Timeline`, `Reporter`, `assert_*` acoustic/timeline helpers, combo-matrix generators |
 | `scenarios/bridge.py` | AltirraBridge contract: `AUDIO_STATE` schema + idle + clock labels + `freq_hz/period_cycles` self-consistency, 8-bit engine fidelity from reported Hz (no PCM), and the `JOY`-burst-then-`KEY` regression for ilmenit/AltirraSDL#72 |
-| `scenarios/core.py` | engine + UI behaviour (timeline-based): defaults, play, polyphony, ADSR, GR.8 UI, param nav/clamp, 2-page nav, selector/toggle glyphs, VU meters |
+| `scenarios/core.py` | engine + UI behaviour (timeline-based): defaults, play, polyphony, ADSR, GR.8 UI, param nav/clamp, multi-page nav, selector/toggle glyphs, CLOCK toggle + value cells draw in-place (no cross-param bleed — "R08L" regression net), VU meters |
 | `scenarios/acoustic.py` | real-sound checks: pitch, label==pitch, octave/semitone tuning, all 3 clock modes, OCTAVE knob, VOLUME, ADSR timing, LFO rate, arpeggiator, chords, timbre, vibrato, detune |
 | `scenarios/sequencer.py` | transport, multi-step playback, step-entry + real-time record, ties, loop length, PCM playback |
 | `scenarios/arpmodes.py` | ARP modes (UP/DOWN/MINOR/OCT) patterns + acoustic; TEMPO-adjust regression |
-| `scenarios/portamento.py` | portamento glide: AUDF ramp, audible pitch slide, rate scaling, off=instant |
-| `scenarios/drum.py` | drum voice: live '1'-key hit + drum-lane recording + DRUMBEAT auto-beat + $FD seq trigger, channel-4 decay, noise timbre, decay scaling, coexists with melody |
-| `scenarios/hpfilter.py` | high-pass filter: AUDCTL bit2 + ch3 cutoff clock, low-fundamental removal, cutoff scaling, 16-bit disable |
+| `scenarios/portamento.py` | the GLIDE param (page 2, FX/Patch): AUDF ramp, audible pitch slide, rate scaling, off=instant |
+| `scenarios/drum.py` | drum voice (DRUM + RHYTHM on page 3, the Sequencer page): live '1'-key hit + drum-lane recording + RHYTHM auto-beat + $FD seq trigger, channel-4 decay, noise timbre, decay scaling, coexists with melody |
+| `scenarios/hpfilter.py` | high-pass filter (HP FILTER on page 2, FX/Patch): AUDCTL bit2 + ch3 cutoff clock, low-fundamental removal, cutoff scaling, 16-bit disable |
 | `scenarios/presets.py` | patch presets: load on slot select, fire-to-save, factory bank, distinct patches, audibly different |
 | `scenarios/stress.py` | unusual/widest scenarios: note-range extremes + clamp, LFO AUDF 8-bit wraparound, rapid clock-mode thrashing, conflicting effects (porta+arp, drum+HP, seq+arp, porta in 16-bit), mega-stack, degenerate sequencer patterns, extreme ADSR, octave-change-while-ringing, rapid retrigger, and the silence-after-chaos integrity guard |
 | `scenarios/quantitative.py` | *exact* measurements & property sweeps: full-range 16-bit tuning (<5c), octave-doubling across the keyboard, loudness monotonic over all 16 levels, ADSR steps every (rate+1) frames, sustain=min(sus,vol) tracking, LFO depth scaling, detune beat frequency = AUDF-spread Hz, waveform harmonic identity (odd_even, SQUARE≡PURE) |
 | `scenarios/timing.py` | rhythm from the rendered audio (inter-onset interval = tempo) + exact per-frame step counts (seq (16-tempo)*2+2, arp 16-rate, drum-beat period) |
-| `scenarios/workflow.py` | multi-stage / end-to-end: record→play→verify, melody+drum in one pattern, full 17-param preset round-trip, factory golden (audible + brightness ordering), capture determinism, and a full user session (build→save→record→play→load→reload) with audio checkpoints |
+| `scenarios/workflow.py` | multi-stage / end-to-end: record→play→verify, melody+drum in one pattern, full 18-param preset round-trip, factory golden (audible + brightness ordering), capture determinism, and a full user session (build→save→record→play→load→reload) with audio checkpoints |
 | `scenarios/combos.py` | curated presets + pairwise matrix + stacked acoustic combos + held-note no-collapse |
 
 ## Adding a test
@@ -75,6 +75,13 @@ with s.frozen("trigger_voices"):
     clip = s.capture("my_tone", frames=30)   # ~0.6 s of PCM
     assert_pitch_hz(rep, clip, "my_tone", expect_hz=261.6)
 ```
+
+Use this `frozen` + direct-poke form **only** for steady captures where you need
+a frozen voice. To exercise the *real* trigger path (octave, arp, glide), prefer
+`s.held_key(semitone)` instead — it freezes `read_keyboard` and sets `note_idx`,
+so the engine behaves exactly as for a live key. Poking frozen voice state
+directly is fragile late in long runs (an emulator artifact), so reach for
+`held_key` whenever a real keypress is what you actually mean.
 
 ## The emulator side
 

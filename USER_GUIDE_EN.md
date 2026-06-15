@@ -36,7 +36,8 @@ keyboard.
 ## 1. Starting up
 
 Load `synth.xex` on a **PAL** Atari 8-bit (or `./build.sh run` to launch the
-emulator). You'll need a **joystick in port 1** for the control panel.
+emulator). A **joystick in port 1** drives the control panel — or use the
+**arrow keys** and letter shortcuts instead, so a keyboard alone is enough.
 
 When it boots you'll see the control panel across the top of the screen and a
 piano keyboard drawn along the bottom. That's it — you're ready to play.
@@ -46,23 +47,26 @@ piano keyboard drawn along the bottom. That's it — you're ready to play.
 ## 2. What you see on screen
 
 - **The panel (top):** rows of **knobs** and switches — these are your sound
-  controls. One control at a time has a **`>` marker** next to it; that's the one
-  the joystick will change.
+  controls. One control at a time is **highlighted** (its label drawn in inverse
+  video); that's the one the joystick (or arrow keys) will change.
 - **The note name (top-right):** shows the note you're currently playing, e.g.
   `C 4`.
 - **VU meters:** little bars that light up to show each of the four voices
   playing.
+- **A hint line** just above the keyboard shows the handy keys for what you're
+  doing (e.g. `TAB=NEXT PAGE  OPTION=HOLD`).
 - **The piano keyboard (bottom):** the key you press lights up.
 
-The panel has **three pages**. You don't pick a page directly — as you scroll
-the selection up and down past the end of a page, it flips to the next page
-automatically.
+The panel has **three pages**, grouped by what they do. You can flip pages with
+**Tab**, or just keep scrolling the selection up/down past the end of a page and
+it moves to the next page automatically.
 
-- **Page 1** — the main sound controls (waveform, volume, octave, envelope,
-  detune, clock, LFO, arpeggiator).
-- **Page 2** — the sequencer (tempo, arp mode, portamento, drum) plus the step
-  grid.
-- **Page 3** — the filter and presets.
+- **Page 1 — Voice:** the instrument itself — waveform, volume, octave, clock,
+  LFO (vibrato), the envelope (attack/decay/sustain/release), and both
+  arpeggiator controls.
+- **Page 2 — FX / Patch:** detune, the high-pass filter, glide, and presets.
+- **Page 3 — Sequencer:** tempo, drum, rhythm, and the 16-step grid where you
+  build beats.
 
 ---
 
@@ -95,18 +99,26 @@ keeps ringing until you let OPTION go.
 
 Everything on the panel is changed the same way:
 
-1. **Push the joystick Up or Down** to move the `>` marker to the control you
+1. **Push the joystick Up or Down** to move the highlight to the control you
    want. (Keep pushing the same way to scroll through all the controls; it wraps
    around, and the page flips automatically as you go.)
 2. **Push Left or Right** to turn that control down or up. Hold it and it
    auto-repeats.
 
 That's the whole interface. Play a note while you tweak a knob to hear the change
-live. Try it now: move the marker to **VOLUME** and push Left/Right — the note
-gets quieter and louder.
+live. Try it now: select **VOLUME** and push Left/Right — the note gets quieter
+and louder.
 
-> Throughout this guide, "**select X**" means *push Up/Down until the `>` marker
-> is next to X*, and "**turn X up/down**" means *push Right/Left*.
+**No joystick? Use the keyboard.** The **arrow keys mirror the joystick**
+(Up/Down select, Left/Right adjust). **Tab** flips to the next page. And every
+control has a one-key shortcut — its **underlined letter** jumps straight to it
+(e.g. `V` → VOLUME, `D` → DECAY, `G` → GLIDE). A few use **Shift+letter** (their
+letter is drawn inverse instead of underlined), e.g. `Shift+W` → WAVEFORM,
+`Shift+T` → TEMPO.
+
+> Throughout this guide, "**select X**" means *move the highlight to X* (joystick
+> Up/Down, the arrow keys, or its letter shortcut), and "**turn X up/down**" means
+> *push Right/Left* (or Left/Right arrow).
 
 ---
 
@@ -176,28 +188,28 @@ Now the keyboard is tuned to concert pitch and stays in tune up high. (Trade-off
 
 **Portamento** makes each new note *slide* from the previous one.
 
-1. Select **PORTA** (it's on page 2 — scroll Down past the page-1 controls).
+1. Select **GLIDE** (on page 2, the FX / Patch page — Tab once, or `G`).
 2. Turn it up to **6–10**.
-3. Play a note, then another — the pitch glides between them. (With portamento
-   on, the synth plays one note at a time, like a classic mono lead.)
-4. Turn PORTA to **0** for normal, instant notes.
+3. Play a note, then another — the pitch glides between them. (With glide on, the
+   synth plays one note at a time, like a classic mono lead.)
+4. Turn GLIDE to **0** for normal, instant notes.
 
 ### 5.6 Arpeggios
 
 Hold one key and let the synth play a repeating chord pattern.
 
-1. Select **ARP** (page 1), turn it up to about **8**.
+1. Select **ARPEGGIO** (page 1, the Voice page — shortcut `A`), turn it up to **8**.
 2. **Hold** a key — you'll hear a 4-note arpeggio built from that note. Higher
-   ARP = faster.
-3. Select **ARP MODE** (page 2) and try the patterns: **UP**, **DOWN**, **MINOR**,
-   **OCT** (octave bounce).
-4. Turn ARP to **0** to play normally again.
+   ARPEGGIO = faster.
+3. Select **ARP MODE** (right next to it on page 1 — `Shift+A`) and try the
+   patterns: **UP**, **DOWN**, **MINOR**, **OCT** (octave bounce).
+4. Turn ARPEGGIO to **0** to play normally again.
 
 ### 5.7 Brighten up (high-pass filter)
 
 The **HP FILTER** removes low frequencies to thin out and brighten the sound.
 
-1. Select **HP FILTER** (page 3 — scroll Down past portamento/drum).
+1. Select **HP FILTER** (page 2, the FX / Patch page — shortcut `H`).
 2. Turn it up — the sound gets progressively thinner and brighter.
 3. Turn it to **0** to switch the filter off.
 
@@ -207,20 +219,20 @@ The **HP FILTER** removes low frequencies to thin out and brighten the sound.
 
 There's a drum voice. First **enable it**, then trigger it.
 
-1. Select **DRUM** (page 2), turn it up to about **8**. This switches the drum on
-   and sets how long each hit rings. (On its own, nothing happens yet — you need
-   to *trigger* it.)
+1. Select **DRUM** (page 3, the Sequencer page — `Shift+D`), turn it up to **8**.
+   This switches the drum on and sets how long each hit rings. (On its own,
+   nothing happens yet — you need to *trigger* it.)
 2. **Tap the `1` key** — you get a drum hit each time. With DRUM turned up the
    hits ring longer; turned low they're tight and short.
 
 **Want an automatic beat?**
-3. Select **DRUMBEAT** (page 3) and turn it up. Now the drum pulses on its own,
-   in time with the **TEMPO** control. Higher DRUMBEAT = more frequent hits.
-   Turn DRUMBEAT to **0** to stop the auto-beat.
+3. Select **RHYTHM** (also on page 3 — `Shift+H`) and turn it up. Now the drum
+   pulses on its own, in time with the **TEMPO** control. Higher RHYTHM = more
+   frequent hits. Turn RHYTHM to **0** to stop the auto-beat.
 
-> If you turn DRUM (or DRUMBEAT) up and hear nothing: remember **DRUM must be
+> If you turn DRUM (or RHYTHM) up and hear nothing: remember **DRUM must be
 > above 0** to enable the drum at all, and you still need a trigger — tap `1`, or
-> turn DRUMBEAT up, or sequence it (next section).
+> turn RHYTHM up, or sequence it (next section).
 
 ### 5.9 Record a pattern (the sequencer)
 
@@ -229,7 +241,9 @@ The sequencer records a 16-step loop. The console keys drive it:
 - **START** = play / stop
 - **SELECT** = record
 
-Scroll to **page 2** (select TEMPO/ARP MODE/PORTA/DRUM) to see the step grid.
+Go to **page 3, the Sequencer page** (press Tab twice, or select TEMPO/DRUM/RHYTHM)
+to see the step grid. Each step shows a glyph: **♪** note, **`X`** drum, **`-`**
+tie, **`·`** rest, with a **↓** marking the step that's playing.
 
 **Easiest way — play it in (real-time record):**
 1. Press **SELECT** once. This clears the pattern and starts recording in time.
@@ -252,7 +266,7 @@ build it up in layers.
 Once you've recorded a melody, lay drums into the same pattern:
 
 1. With the sequencer recording (real-time, from 5.9), make sure **DRUM** is
-   turned up (page 2).
+   turned up (it's right there on the Sequencer page).
 2. **Tap the `1` key on the beats you want a drum.** Those become drum hits in
    the pattern.
 3. Stop recording (**SELECT**). Play it back (**START**) — melody and drums play
@@ -264,15 +278,15 @@ There are **4 preset slots**, pre-loaded with starter sounds (INIT, PAD, LEAD,
 ARP).
 
 **Load a preset:**
-1. Select **PRESET** (page 3).
+1. Select **PRESET** (page 2, the FX / Patch page — `Shift+P`).
 2. Turn it Left/Right to pick a slot (0–3) — the sound changes the moment you
    land on a slot. Try them all.
 
 **Save your own sound into a slot:**
 1. Dial in a sound you like (any of the controls above).
 2. Select **PRESET** and pick the slot you want to overwrite.
-3. **Press the joystick fire button** — your current sound is saved into that
-   slot.
+3. **Press the joystick fire button** (or **Return**) — your current sound is
+   saved into that slot.
 
 Now you can switch away and come back to it any time by selecting that slot.
 
@@ -280,35 +294,42 @@ Now you can switch away and come back to it any time by selecting that slot.
 
 ## 6. Controls cheat sheet
 
-**Keyboard**
+**Keyboard — play**
 - `Q W E R T Y U I O P` — white notes (C D E F G A B C D E)
 - `2 3 5 6 7 9 0` — black notes (sharps)
 - `1` — drum hit (needs DRUM > 0)
 
+**Keyboard — navigate (works without a joystick)**
+- Arrow keys — Up/Down select a control, Left/Right adjust it (mirror the joystick)
+- **Tab** — jump to the next page
+- **Return** — save to the selected preset slot (when PRESET is selected)
+- A control's **underlined letter** jumps straight to it (Shift+letter for the
+  inverse-marked ones), e.g. `V`→VOLUME, `C`→CLOCK, `A`→ARPEGGIO, `H`→HP FILTER,
+  `Shift+W`→WAVEFORM, `Shift+T`→TEMPO
+
 **Joystick (port 1)**
-- Up / Down — move the `>` marker (select a control; pages flip automatically)
-- Left / Right — turn the selected control down / up
-- Fire — save the current sound to the selected preset slot (when PRESET is
-  selected)
+- Up / Down — select a control (the highlight moves; pages flip automatically)
+- Left / Right — turn the selected control down / up (auto-repeats when held)
+- Fire — save the current sound to the selected preset slot (when PRESET is selected)
 
 **Console keys**
 - START — sequencer play / stop
 - SELECT — sequencer record (real-time; press START while armed for step entry)
 - OPTION — sustain pedal (hold to keep notes ringing)
 
-**The three panel pages** (reached by scrolling Up/Down)
-- Page 1: WAVEFORM, VOLUME, OCTAVE, ATTACK, DECAY, DETUNE, SUSTAIN, RELEASE,
-  CLOCK, LFO RATE, LFO DEPTH, ARP
-- Page 2: TEMPO, ARP MODE, PORTA, DRUM (+ the step grid)
-- Page 3: HP FILTER, PRESET, DRUMBEAT
+**The three panel pages** (Tab to flip, or scroll Up/Down)
+- Page 1 — Voice: WAVEFORM, VOLUME, OCTAVE, CLOCK, LFO RATE, LFO DEPTH, ATTACK,
+  DECAY, SUSTAIN, RELEASE, ARPEGGIO, ARP MODE
+- Page 2 — FX / Patch: DETUNE, HP FILTER, GLIDE, PRESET
+- Page 3 — Sequencer: TEMPO, DRUM, RHYTHM (+ the step grid)
 
 ---
 
 ## 7. Troubleshooting / FAQ
 
-**I turned a knob (DRUM / DRUMBEAT) but hear nothing.**
+**I turned a knob (DRUM / RHYTHM) but hear nothing.**
 The drum needs **DRUM above 0** to be enabled *and* a trigger: tap key `1`, turn
-**DRUMBEAT** up for an auto-beat, or sequence it. DRUM alone just sets how the hit
+**RHYTHM** up for an auto-beat, or sequence it. DRUM alone just sets how the hit
 sounds.
 
 **I can't play a chord by holding several keys.**
@@ -326,7 +347,8 @@ that's normal.
 
 **I can't find a control.**
 Keep pushing Up or Down — the selection scrolls through *all* controls across all
-three pages and wraps around. Watch the `>` marker.
+three pages and wraps around. Watch the highlighted (inverse) label — or just
+press the control's letter shortcut to jump straight to it.
 
 **Changing the OCTAVE didn't change a note that's already playing.**
 Octave only affects the *next* note you play; notes already ringing keep their
@@ -343,7 +365,7 @@ Make sure **DRUM > 0** first, then tap `1` while recording.
   what it does in real time.
 - **Start from a preset.** Load a slot you like (5.11), then tweak from there.
 - **For a clean lead:** 16-BIT clock + a little LFO DEPTH; add HP FILTER to
-  brighten, or PORTA for slides.
+  brighten, or GLIDE for slides.
 - **For a pad:** slow ATTACK and RELEASE, high SUSTAIN, a touch of DETUNE, held
   with OPTION.
 - **Build a groove:** record a short melody (5.9), overdub a drum lane (5.10),

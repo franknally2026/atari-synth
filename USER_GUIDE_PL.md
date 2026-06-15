@@ -36,7 +36,9 @@ klawiaturze i wykonuj kolejne kroki.
 ## 1. Uruchamianie
 
 Wczytaj `synth.xex` na Atari 8-bit w wersji **PAL** (albo `./build.sh run`, żeby
-uruchomić emulator). Do panelu sterowania potrzebny będzie **joystick w porcie 1**.
+uruchomić emulator). Panelem sterowania kieruje **joystick w porcie 1** — albo
+zamiast niego użyj **klawiszy strzałek** i skrótów literowych, więc wystarczy sama
+klawiatura.
 
 Po uruchomieniu zobaczysz panel sterowania u góry ekranu i narysowaną klawiaturę
 pianina na dole. To wszystko — możesz grać.
@@ -46,22 +48,24 @@ pianina na dole. To wszystko — możesz grać.
 ## 2. Co widać na ekranie
 
 - **Panel (góra):** rzędy **gałek** i przełączników — to są regulatory brzmienia.
-  Tylko przy jednym regulatorze naraz świeci się **znacznik `>`**; to właśnie nim
-  steruje joystick.
+  Jeden regulator naraz jest **podświetlony** (jego etykieta narysowana w negatywie);
+  to właśnie nim steruje joystick (albo klawisze strzałek).
 - **Nazwa dźwięku (prawy górny róg):** pokazuje aktualnie grany dźwięk, np. `C 4`.
 - **Wskaźniki VU:** paseczki, które zapalają się, pokazując, który z czterech
   głosów gra.
+- **Linia podpowiedzi** tuż nad klawiaturą pokazuje przydatne klawisze dla tego, co
+  właśnie robisz (np. `TAB=NEXT PAGE  OPTION=HOLD`).
 - **Klawiatura pianina (dół):** naciśnięty klawisz się podświetla.
 
-Panel ma **trzy strony**. Strony nie wybiera się bezpośrednio — gdy przesuwasz
-zaznaczenie poza koniec strony (w górę lub w dół), automatycznie przeskakuje ono
-na następną.
+Panel ma **trzy strony**, pogrupowane według tego, co robią. Strony przełączasz
+klawiszem **Tab**, albo po prostu przewijasz zaznaczenie w górę/dół poza koniec
+strony, a ono samo przechodzi na następną.
 
-- **Strona 1** — główne regulatory brzmienia (fala, głośność, oktawa, obwiednia,
-  detune, zegar, LFO, arpeggiator).
-- **Strona 2** — sekwencer (tempo, tryb arpeggia, portamento, perkusja) plus
-  siatka kroków.
-- **Strona 3** — filtr i presety.
+- **Strona 1 — Voice (głos):** sam instrument — fala, głośność, oktawa, zegar, LFO
+  (vibrato), obwiednia (attack/decay/sustain/release) i oba regulatory arpeggiatora.
+- **Strona 2 — FX / Patch:** detune, filtr górnoprzepustowy, glissando i presety.
+- **Strona 3 — Sequencer:** tempo, perkusja, rytm i 16-krokowa siatka, na której
+  budujesz bity.
 
 ---
 
@@ -94,18 +98,26 @@ każdy zagrany dźwięk wybrzmiewa, dopóki nie puścisz OPTION.
 
 Wszystko na panelu zmienia się tak samo:
 
-1. **Wychyl joystick w górę lub w dół**, żeby przesunąć znacznik `>` na regulator,
+1. **Wychyl joystick w górę lub w dół**, żeby przesunąć podświetlenie na regulator,
    który chcesz zmienić. (Wychylaj dalej w tę samą stronę, by przewijać przez
    wszystkie regulatory; lista zawija się, a strona przeskakuje automatycznie.)
 2. **Wychyl w lewo lub w prawo**, żeby ten regulator zmniejszyć lub zwiększyć.
    Przytrzymaj — działa autopowtarzanie.
 
 To cały interfejs. Graj dźwięk podczas kręcenia gałką, żeby słyszeć zmianę na
-żywo. Spróbuj teraz: przesuń znacznik na **VOLUME** i wychylaj w lewo/prawo — dźwięk
+żywo. Spróbuj teraz: wybierz **VOLUME** i wychylaj w lewo/prawo — dźwięk
 robi się cichszy i głośniejszy.
 
-> W całym przewodniku „**wybierz X**” oznacza *wychylaj w górę/dół, aż znacznik `>`
-> będzie przy X*, a „**zwiększ/zmniejsz X**” oznacza *wychylaj w prawo/lewo*.
+**Bez joysticka? Użyj klawiatury.** **Klawisze strzałek odwzorowują joystick**
+(góra/dół wybierają, lewo/prawo regulują). **Tab** przeskakuje na następną stronę.
+A każdy regulator ma jednoklawiszowy skrót — jego **podkreślona litera** od razu na
+niego przeskakuje (np. `V` → VOLUME, `D` → DECAY, `G` → GLIDE). Kilka używa
+**Shift+litera** (ich litera jest narysowana w negatywie zamiast podkreślona), np.
+`Shift+W` → WAVEFORM, `Shift+T` → TEMPO.
+
+> W całym przewodniku „**wybierz X**” oznacza *przesuń podświetlenie na X* (joystick
+> w górę/dół, klawisze strzałek albo skrót literowy), a „**zwiększ/zmniejsz X**”
+> oznacza *wychyl w prawo/lewo* (albo strzałka w prawo/lewo).
 
 ---
 
@@ -176,29 +188,29 @@ domyślne.
 
 **Portamento** sprawia, że każdy nowy dźwięk *zsuwa się* z poprzedniego.
 
-1. Wybierz **PORTA** (jest na stronie 2 — przewiń w dół poza regulatory strony 1).
+1. Wybierz **GLIDE** (na stronie 2, FX / Patch — Tab raz, albo `G`).
 2. Zwiększ do **6–10**.
 3. Zagraj dźwięk, potem kolejny — wysokość płynnie się przesuwa. (Przy włączonym
-   portamento syntezator gra jeden dźwięk naraz, jak klasyczne mono-solo.)
-4. Ustaw PORTA na **0**, by wrócić do zwykłych, natychmiastowych dźwięków.
+   glissandzie syntezator gra jeden dźwięk naraz, jak klasyczne mono-solo.)
+4. Ustaw GLIDE na **0**, by wrócić do zwykłych, natychmiastowych dźwięków.
 
 ### 5.6 Arpeggia
 
 Przytrzymaj jeden klawisz i pozwól syntezatorowi grać powtarzający się wzór
 akordu.
 
-1. Wybierz **ARP** (strona 1) i zwiększ do około **8**.
+1. Wybierz **ARPEGGIO** (strona 1, Voice — skrót `A`) i zwiększ do około **8**.
 2. **Przytrzymaj** klawisz — usłyszysz 4-dźwiękowe arpeggio zbudowane na tym
-   dźwięku. Wyższe ARP = szybciej.
-3. Wybierz **ARP MODE** (strona 2) i wypróbuj wzory: **UP**, **DOWN**, **MINOR**,
-   **OCT** (skok o oktawę).
-4. Ustaw ARP na **0**, by grać normalnie.
+   dźwięku. Wyższe ARPEGGIO = szybciej.
+3. Wybierz **ARP MODE** (tuż obok na stronie 1 — `Shift+A`) i wypróbuj wzory:
+   **UP**, **DOWN**, **MINOR**, **OCT** (skok o oktawę).
+4. Ustaw ARPEGGIO na **0**, by grać normalnie.
 
 ### 5.7 Rozjaśnij brzmienie (filtr górnoprzepustowy)
 
 **HP FILTER** usuwa niskie częstotliwości, ścieniając i rozjaśniając brzmienie.
 
-1. Wybierz **HP FILTER** (strona 3 — przewiń w dół poza portamento/perkusję).
+1. Wybierz **HP FILTER** (strona 2, FX / Patch — skrót `H`).
 2. Zwiększaj — brzmienie staje się coraz cieńsze i jaśniejsze.
 3. Ustaw na **0**, by wyłączyć filtr.
 
@@ -208,21 +220,21 @@ akordu.
 
 Jest osobny głos perkusyjny. Najpierw go **włącz**, potem **wyzwól**.
 
-1. Wybierz **DRUM** (strona 2) i zwiększ do około **8**. To włącza perkusję i
-   ustawia, jak długo wybrzmiewa każde uderzenie. (Samo w sobie nic jeszcze nie
-   robi — trzeba je *wyzwolić*.)
+1. Wybierz **DRUM** (strona 3, Sequencer — `Shift+D`) i zwiększ do około **8**. To
+   włącza perkusję i ustawia, jak długo wybrzmiewa każde uderzenie. (Samo w sobie
+   nic jeszcze nie robi — trzeba je *wyzwolić*.)
 2. **Naciskaj klawisz `1`** — przy każdym naciśnięciu dostajesz uderzenie
    perkusji. Przy wyżej ustawionym DRUM uderzenia wybrzmiewają dłużej; nisko —
    są krótkie i suche.
 
 **Chcesz automatyczny rytm?**
-3. Wybierz **DRUMBEAT** (strona 3) i zwiększ. Teraz perkusja pulsuje sama, w
-   tempie regulatora **TEMPO**. Wyższy DRUMBEAT = częstsze uderzenia. Ustaw
-   DRUMBEAT na **0**, by zatrzymać automatyczny rytm.
+3. Wybierz **RHYTHM** (też na stronie 3 — `Shift+H`) i zwiększ. Teraz perkusja
+   pulsuje sama, w tempie regulatora **TEMPO**. Wyższy RHYTHM = częstsze uderzenia.
+   Ustaw RHYTHM na **0**, by zatrzymać automatyczny rytm.
 
-> Jeśli zwiększysz DRUM (albo DRUMBEAT) i nic nie słyszysz: pamiętaj, że **DRUM
+> Jeśli zwiększysz DRUM (albo RHYTHM) i nic nie słyszysz: pamiętaj, że **DRUM
 > musi być powyżej 0**, żeby w ogóle włączyć perkusję, i nadal potrzebujesz
-> wyzwalacza — naciśnij `1`, albo zwiększ DRUMBEAT, albo wpisz to do sekwencera
+> wyzwalacza — naciśnij `1`, albo zwiększ RHYTHM, albo wpisz to do sekwencera
 > (następna sekcja).
 
 ### 5.9 Nagraj sekwencję (sekwencer)
@@ -232,8 +244,10 @@ Sekwencer nagrywa 16-krokową pętlę. Sterują nim klawisze konsoli:
 - **START** = odtwarzanie / stop
 - **SELECT** = nagrywanie
 
-Przewiń na **stronę 2** (wybierz TEMPO/ARP MODE/PORTA/DRUM), żeby zobaczyć siatkę
-kroków.
+Przejdź na **stronę 3, Sequencer** (naciśnij Tab dwa razy albo wybierz
+TEMPO/DRUM/RHYTHM), żeby zobaczyć siatkę kroków. Każdy krok pokazuje glif: **♪**
+dźwięk, **`X`** perkusja, **`-`** przedłużenie (tie), **`·`** pauza, a **↓**
+oznacza aktualnie grany krok.
 
 **Najprostszy sposób — zagraj na żywo (nagrywanie w czasie rzeczywistym):**
 1. Naciśnij raz **SELECT**. To czyści sekwencję i zaczyna nagrywanie w tempie.
@@ -257,7 +271,7 @@ Granie kolejnych dźwięków podczas nagrywania **dogrywa** je do sekwencji
 Gdy masz już nagraną melodię, dograj perkusję do tej samej sekwencji:
 
 1. Przy nagrywającym sekwencerze (w czasie rzeczywistym, z 5.9) upewnij się, że
-   **DRUM** jest zwiększony (strona 2).
+   **DRUM** jest zwiększony (jest tuż obok, na stronie Sequencer).
 2. **Naciskaj klawisz `1` na tych uderzeniach, na których chcesz mieć
    perkusję.** Staną się uderzeniami perkusji w sekwencji.
 3. Zatrzymaj nagrywanie (**SELECT**). Odtwórz (**START**) — melodia i perkusja
@@ -269,15 +283,15 @@ Są **4 sloty presetów**, wstępnie wypełnione brzmieniami startowymi (INIT, P
 LEAD, ARP).
 
 **Wczytaj preset:**
-1. Wybierz **PRESET** (strona 3).
+1. Wybierz **PRESET** (strona 2, FX / Patch — `Shift+P`).
 2. Kręć w lewo/prawo, by wybrać slot (0–3) — brzmienie zmienia się w chwili, gdy
    trafisz na slot. Wypróbuj wszystkie.
 
 **Zapisz własne brzmienie do slotu:**
 1. Ustaw brzmienie, które Ci się podoba (dowolnymi regulatorami powyżej).
 2. Wybierz **PRESET** i wskaż slot, który chcesz nadpisać.
-3. **Naciśnij przycisk fire (ogień) na joysticku** — bieżące brzmienie zostaje
-   zapisane w tym slocie.
+3. **Naciśnij przycisk fire (ogień) na joysticku** (albo **Return**) — bieżące
+   brzmienie zostaje zapisane w tym slocie.
 
 Teraz możesz w każdej chwili do niego wrócić, wybierając ten slot.
 
@@ -285,15 +299,25 @@ Teraz możesz w każdej chwili do niego wrócić, wybierając ten slot.
 
 ## 6. Ściąga ze sterowaniem
 
-**Klawiatura**
+**Klawiatura — granie**
 - `Q W E R T Y U I O P` — białe dźwięki (C D E F G A B C D E)
 - `2 3 5 6 7 9 0` — czarne dźwięki (krzyżyki)
 - `1` — uderzenie perkusji (wymaga DRUM > 0)
 
+**Klawiatura — nawigacja (działa bez joysticka)**
+- Klawisze strzałek — góra/dół wybierają regulator, lewo/prawo regulują
+  (odwzorowują joystick)
+- **Tab** — przeskocz na następną stronę
+- **Return** — zapisz do wybranego slotu presetu (gdy zaznaczony jest PRESET)
+- **Podkreślona litera** regulatora od razu na niego przeskakuje (Shift+litera dla
+  zaznaczonych w negatywie), np. `V`→VOLUME, `C`→CLOCK, `A`→ARPEGGIO, `H`→HP FILTER,
+  `Shift+W`→WAVEFORM, `Shift+T`→TEMPO
+
 **Joystick (port 1)**
-- Góra / Dół — przesuń znacznik `>` (wybierz regulator; strony przeskakują
+- Góra / Dół — wybierz regulator (podświetlenie się przesuwa; strony przeskakują
   automatycznie)
-- Lewo / Prawo — zmniejsz / zwiększ wybrany regulator
+- Lewo / Prawo — zmniejsz / zwiększ wybrany regulator (autopowtarzanie przy
+  przytrzymaniu)
 - Fire (ogień) — zapisz bieżące brzmienie do wybranego slotu presetu (gdy
   zaznaczony jest PRESET)
 
@@ -303,19 +327,19 @@ Teraz możesz w każdej chwili do niego wrócić, wybierając ten slot.
   START, by wpisywać krokowo)
 - OPTION — pedał sustain (przytrzymaj, by dźwięki wybrzmiewały)
 
-**Trzy strony panelu** (dostępne przez przewijanie w górę/dół)
-- Strona 1: WAVEFORM, VOLUME, OCTAVE, ATTACK, DECAY, DETUNE, SUSTAIN, RELEASE,
-  CLOCK, LFO RATE, LFO DEPTH, ARP
-- Strona 2: TEMPO, ARP MODE, PORTA, DRUM (+ siatka kroków)
-- Strona 3: HP FILTER, PRESET, DRUMBEAT
+**Trzy strony panelu** (Tab przełącza, albo przewijaj w górę/dół)
+- Strona 1 — Voice: WAVEFORM, VOLUME, OCTAVE, CLOCK, LFO RATE, LFO DEPTH, ATTACK,
+  DECAY, SUSTAIN, RELEASE, ARPEGGIO, ARP MODE
+- Strona 2 — FX / Patch: DETUNE, HP FILTER, GLIDE, PRESET
+- Strona 3 — Sequencer: TEMPO, DRUM, RHYTHM (+ siatka kroków)
 
 ---
 
 ## 7. Rozwiązywanie problemów / FAQ
 
-**Pokręciłem gałką (DRUM / DRUMBEAT), ale nic nie słyszę.**
+**Pokręciłem gałką (DRUM / RHYTHM), ale nic nie słyszę.**
 Perkusja wymaga **DRUM powyżej 0**, żeby była włączona, *oraz* wyzwalacza:
-naciśnij klawisz `1`, zwiększ **DRUMBEAT**, by mieć automatyczny rytm, albo wpisz
+naciśnij klawisz `1`, zwiększ **RHYTHM**, by mieć automatyczny rytm, albo wpisz
 ją do sekwencera. Sam DRUM ustala tylko, jak brzmi uderzenie.
 
 **Nie mogę zagrać akordu, trzymając kilka klawiszy.**
@@ -334,7 +358,9 @@ krótkie przerwy między dźwiękami mogą brzmieć szarpiąco; to normalne.
 
 **Nie mogę znaleźć regulatora.**
 Wychylaj dalej w górę albo w dół — zaznaczenie przewija przez *wszystkie* regulatory
-na wszystkich trzech stronach i zawija się. Patrz na znacznik `>`.
+na wszystkich trzech stronach i zawija się. Patrz na podświetloną (w negatywie)
+etykietę — albo po prostu naciśnij skrót literowy regulatora, by od razu na niego
+przeskoczyć.
 
 **Zmiana OCTAVE nie zmieniła dźwięku, który już gra.**
 Oktawa wpływa tylko na *następny* zagrany dźwięk; dźwięki już wybrzmiewające
@@ -352,7 +378,7 @@ Najpierw upewnij się, że **DRUM > 0**, a potem naciskaj `1` podczas nagrywania
 - **Zacznij od presetu.** Wczytaj slot, który Ci się podoba (5.11), a potem
   modyfikuj od niego.
 - **Na czyste solo:** zegar 16-BIT + odrobina LFO DEPTH; dodaj HP FILTER, by
-  rozjaśnić, albo PORTA dla glissand.
+  rozjaśnić, albo GLIDE dla glissand.
 - **Na pad:** wolny ATTACK i RELEASE, wysoki SUSTAIN, odrobina DETUNE,
   przytrzymane przez OPTION.
 - **Zbuduj groove:** nagraj krótką melodię (5.9), dograj ścieżkę perkusji (5.10),

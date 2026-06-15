@@ -54,16 +54,29 @@ panel.
 |---|---|
 | **Letter/number keys** | Play notes (see [Playing notes](#playing-notes)) |
 | **Key `1`** | Trigger a **drum** hit (when `DRUM` > 0) |
-| **Joystick Up / Down** | Select the previous / next panel parameter (the `>` marker moves; wraps; changes page automatically) |
-| **Joystick Left / Right** | Decrease / increase the selected parameter (auto-repeats when held) |
-| **Joystick Fire** | While the `PRESET` parameter is selected: **save** the current sound into the selected slot |
+| **Joystick Up / Down** *(or arrow keys)* | Select the previous / next panel parameter (the focused label goes inverse-video; wraps; changes page automatically; auto-repeats when held) |
+| **Joystick Left / Right** *(or arrow keys)* | Decrease / increase the selected parameter (auto-repeats when held) |
+| **Joystick Fire** *(or **Return**)* | While the `PRESET` parameter is selected: **save** the current sound into the selected slot |
+| **Tab** | Jump to the next page (0 → 1 → 2 → 0) |
+| **Letter shortcut** | Jump straight to a parameter by its underlined letter (Shift+letter for the inverse-marked ones) — see [Shortcuts](#parameter-shortcuts) |
 | **START** (console) | Sequencer **play / stop** |
 | **SELECT** (console) | Sequencer **record** arm (real-time record; see [Sequencer](#step-sequencer)) |
 | **OPTION** (console) | **Sustain pedal** (hold to keep notes ringing) |
 
 The joystick is read from the OS shadow (`STICK0`/`STRIG0`), so use the joystick
-in **port 1**. The console keys are read directly from `CONSOL`, independent of
-the keyboard matrix, so they work while a note key is held.
+in **port 1**. The **arrow keys mirror the joystick** (Up/Down navigate,
+Left/Right adjust) for laptop play with no joystick. The console keys are read
+directly from `CONSOL`, independent of the keyboard matrix, so they work while a
+note key is held.
+
+#### Parameter shortcuts
+
+Each parameter's label has one **underlined letter** — press it to jump the
+selection straight to that parameter (across pages). Where the natural first
+letter is a piano key (W, O, R, P, T) or already taken, the shortcut is
+**Shift+letter** and the letter is drawn inverse instead of underlined. Examples:
+`V`→VOLUME, `C`→CLOCK, `A`→ARPEGGIO, `D`→DECAY, `G`→GLIDE, `H`→HP FILTER;
+`Shift+W`→WAVEFORM, `Shift+R`→RELEASE, `Shift+T`→TEMPO, `Shift+D`→DRUM.
 
 ---
 
@@ -106,13 +119,16 @@ pair); NORMAL and 15 kHz modes are 4-voice.
 
 ## The control panel
 
-Parameters live on **three pages**. You don't switch pages directly — navigating
-Up/Down past the end of a page moves to the next page automatically (the page
-shown always follows the selected parameter). The `>` marker shows the selection.
+Parameters live on **three pages**, grouped by role. You don't switch pages
+directly — navigating Up/Down past the end of a page moves to the next page
+automatically (the page shown always follows the selected parameter), or press
+**Tab** to jump straight to the next page. The selected parameter's label is
+shown in **inverse video** (the focus highlight).
 
-- **Page 0 — oscillator / envelope / fx** (params 0–11): two columns of six.
-- **Page 1 — sequencer** (params 12–15) plus the 16-step grid and transport.
-- **Page 2 — filter / presets** (params 16–18).
+- **Page 0 — Voice** (params 0–11): oscillator, envelope, vibrato, arpeggiator.
+- **Page 1 — FX / Patch** (params 12–15): detune, filter, glide, preset.
+- **Page 2 — Sequencer / Rhythm** (params 16–18): tempo, drum, rhythm, plus the
+  16-step grid and transport.
 
 ### Full parameter reference
 
@@ -121,22 +137,26 @@ shown always follows the selected parameter). The `>` marker shows the selection
 | 0 | `WAVEFORM` | SQUARE / PURE / BUZZ / NOISE | 0 | Oscillator timbre (POKEY distortion) |
 | 1 | `VOLUME` | 0–15 | 0 | Envelope peak / master level |
 | 2 | `OCTAVE` | −2 … +2 | 0 | Transpose the keyboard by octaves |
-| 3 | `ATTACK` | 0–15 | 0 | Envelope attack time (0 = instant, 15 = slow) |
-| 4 | `DECAY` | 0–15 | 0 | Decay time from peak down to sustain |
-| 5 | `DETUNE` | 0–15 (0 = off) | 0 | Spread the voices' tuning (fat / chorus) |
-| 6 | `SUSTAIN` | 0–15 | 0 | Held-note level (clamped to VOLUME) |
-| 7 | `RELEASE` | 0–15 | 0 | Release time after the key lifts |
-| 8 | `CLOCK` | NORMAL / 15 KHZ / 16-BIT | 0 | Oscillator clock / range mode |
-| 9 | `LFO RATE` | 0–15 | 0 | Vibrato speed (higher = faster) |
-| 10 | `LFO DEPTH` | 0–15 (0 = off) | 0 | Vibrato amount (pitch wobble) |
-| 11 | `ARP` | 0–15 (0 = off) | 0 | Hold-to-arpeggiate speed |
-| 12 | `TEMPO` | 0–15 | 1 | Sequencer / drum-beat tempo (higher = faster) |
-| 13 | `ARP MODE` | UP / DOWN / MINOR / OCT (0–3) | 1 | Arpeggio pattern |
-| 14 | `PORTA` | 0–15 (0 = off) | 1 | Portamento (pitch glide) time |
-| 15 | `DRUM` | 0–15 (0 = off) | 1 | Drum decay / enable |
-| 16 | `HP FILTER` | 0–15 (0 = off) | 2 | High-pass filter cutoff |
-| 17 | `PRESET` | 0–3 | 2 | Patch slot (select = load; Fire = save) |
-| 18 | `DRUMBEAT` | 0–15 (0 = off) | 2 | Auto drum-machine rate |
+| 3 | `CLOCK` | NORMAL / 15 KHZ / 16-BIT | 0 | Oscillator clock / range mode |
+| 4 | `LFO RATE` | 0–15 | 0 | Vibrato speed (higher = faster) |
+| 5 | `LFO DEPTH` | 0–15 (0 = off) | 0 | Vibrato amount (pitch wobble) |
+| 6 | `ATTACK` | 0–15 | 0 | Envelope attack time (0 = instant, 15 = slow) |
+| 7 | `DECAY` | 0–15 | 0 | Decay time from peak down to sustain |
+| 8 | `SUSTAIN` | 0–15 | 0 | Held-note level (clamped to VOLUME) |
+| 9 | `RELEASE` | 0–15 | 0 | Release time after the key lifts |
+| 10 | `ARPEGGIO` | 0–15 (0 = off) | 0 | Hold-to-arpeggiate speed |
+| 11 | `ARP MODE` | UP / DOWN / MINOR / OCT (0–3) | 0 | Arpeggio pattern |
+| 12 | `DETUNE` | 0–15 (0 = off) | 1 | Spread the voices' tuning (fat / chorus) |
+| 13 | `HP FILTER` | 0–15 (0 = off) | 1 | High-pass filter cutoff |
+| 14 | `GLIDE` | 0–15 (0 = off) | 1 | Portamento (pitch glide) time |
+| 15 | `PRESET` | 0–3 | 1 | Patch slot (select = load; Fire/Return = save) |
+| 16 | `TEMPO` | 0–15 | 2 | Sequencer / rhythm tempo (higher = faster) |
+| 17 | `DRUM` | 0–15 (0 = off) | 2 | Drum decay / enable |
+| 18 | `RHYTHM` | 0–15 (0 = off) | 2 | Auto drum-machine rate |
+
+Both arpeggiator controls (`ARPEGGIO`, `ARP MODE`) live on the Voice page; all
+the beat controls (`TEMPO`, `DRUM`, `RHYTHM`) live on the Sequencer page with the
+step grid, since that's where you build rhythms.
 
 `ATTACK`/`DECAY`/`RELEASE` are **frames-per-level-step minus one**: the envelope
 moves one level (of 16) every `value + 1` frames, so 0 is fastest (1 frame/step)
@@ -197,20 +217,23 @@ A triangle LFO adds a small ± pitch offset to every sounding voice each frame:
   `4 × (DEPTH/2) × (16 − RATE)` frames, so deep + slow vibrato can be very slow
   (well under 1 Hz) and shallow + fast is a quick shimmer.
 
-The depth is in raw `AUDF` units, so the *musical* depth (in cents) is larger at
-high notes than low notes (POKEY's pitch is `clock / (2 × (divider+1))`).
+In 8-bit modes the depth is in raw `AUDF` units, so the *musical* depth (in cents)
+is larger at high notes than low notes (POKEY's pitch is `clock / (2 × (divider+1))`).
+In **16-bit** mode the offset is scaled to the note's own (much larger) divider, so
+LFO and DETUNE stay audible there too — a fixed percentage of pitch at any note.
 
-### Portamento (`PORTA`) — pitch glide
+### Glide / portamento (`GLIDE`)
 
-With `PORTA` > 0 the synth becomes **monophonic** and a new note **glides** from
-the previously-played pitch to the new one instead of jumping. `PORTA` sets the
+With `GLIDE` > 0 the synth becomes **monophonic** and a new note **glides** from
+the previously-played pitch to the new one instead of jumping. `GLIDE` sets the
 glide time (higher = slower glide). 0 = off (normal polyphonic, instant pitch).
-Great for lead lines and slides. (8-bit clock modes only; ignored in 16-bit.)
+Great for lead lines and slides. (8-bit clock modes only; struck through and
+ignored in 16-bit, where the channel pairs leave no spare voice.)
 
-### Arpeggiator (`ARP`, `ARP MODE`)
+### Arpeggiator (`ARPEGGIO`, `ARP MODE`)
 
-Hold a key with `ARP` > 0 and the synth cycles a 4-note chord pattern built from
-the held note, one step every `16 − ARP` frames (so higher `ARP` = faster).
+Hold a key with `ARPEGGIO` > 0 and the synth cycles a 4-note chord pattern built
+from the held note, one step every `16 − ARPEGGIO` frames (so higher = faster).
 
 `ARP MODE` selects the pattern (intervals from the held root):
 
@@ -221,8 +244,8 @@ the held note, one step every `16 − ARP` frames (so higher `ARP` = faster).
 | **MINOR** | root, +3, +7, +12 | minor arpeggio ascending |
 | **OCT** | root, +12, root, +12 | octave bounce |
 
-Set `ARP = 0` to play notes directly. (Like the rest, it's hold-to-arpeggiate,
-since the keyboard reports one key.)
+Set `ARPEGGIO = 0` to play notes directly. (Like the rest, it's
+hold-to-arpeggiate, since the keyboard reports one key.)
 
 ### Clock / range modes (`CLOCK`)
 
@@ -250,16 +273,17 @@ Trade-offs: it **filters voice 0 only**, and it **consumes channel 3** (voice 2
 goes silent while the filter is engaged). It's disabled in 16-bit mode (channel 3
 is part of a pair there).
 
-### Drum voice (`DRUM`, `DRUMBEAT`)
+### Drum voice (`DRUM`, `RHYTHM`)
 
 A noise-percussion hit on channel 4, separate from the melodic voices. `DRUM`
-enables it and sets the **decay length** (0 = off; higher = longer ring). Once
+enables it and sets the **decay length** (0 = off; higher = longer ring). Both
+drum controls live on the **Sequencer page** with the step grid. Once
 `DRUM` > 0, fire it **three ways**:
 
 1. **Live** — press key **`1`**. Each press is an instant drum hit; the `DRUM`
    knob changes how long it rings.
-2. **Auto drum-machine** — turn up **`DRUMBEAT`** (with `DRUM` > 0). The drum
-   pulses automatically, synced to `TEMPO`, every `16 − DRUMBEAT` beats (higher =
+2. **Auto drum-machine** — turn up **`RHYTHM`** (with `DRUM` > 0). The drum
+   pulses automatically, synced to `TEMPO`, every `16 − RHYTHM` beats (higher =
    more frequent). 0 = off. This is the "turn a knob and immediately hear a beat"
    control.
 3. **Sequenced** — record drums into the [sequencer](#step-sequencer) (see *drum
@@ -277,8 +301,10 @@ note key is down (where a second *key* couldn't be detected).
 
 ### Step sequencer
 
-A 16-step pattern sequencer on **page 1** (navigate to `TEMPO`/`ARP MODE`/`PORTA`
-/`DRUM` to see the step grid). Steps hold a note, a rest, a tie, or a drum.
+A 16-step pattern sequencer on the **Sequencer page** (page 2 — navigate to
+`TEMPO`/`DRUM`/`RHYTHM`, or press Tab, to see the step grid). Steps hold a note, a
+rest, a tie, or a drum. Each step is drawn with its own glyph: **♪** note,
+**`X`** drum, **`-`** tie, **`·`** rest, and a **↓** head marks the active step.
 
 **Transport (console keys):**
 
@@ -318,10 +344,11 @@ Four patch slots, seeded with factory patches (INIT / PAD / LEAD / ARP) at boot.
 - **Load** — selecting a slot with the `PRESET` knob loads it live (all the sound
   parameters change to that patch).
 - **Save** — while `PRESET` is the selected parameter, press the **joystick fire
-  button** to save the current sound into the selected slot.
+  button** (or **Return**) to save the current sound into the selected slot.
 
-Presets store the 17 sound parameters (WAVEFORM through HP FILTER). The `PRESET`
-selector itself and `DRUMBEAT` are not stored.
+Presets store **all 18 sound parameters** (everything except the `PRESET` selector
+itself) — including `TEMPO`, `DRUM` and `RHYTHM`. A slot's name (INIT / PAD / LEAD
+/ ARP) is shown in place of a value, and a brief `SAVED` flash confirms a save.
 
 ### On-screen readouts
 
@@ -341,13 +368,13 @@ selector itself and `DRUMBEAT` are not stored.
   little LFO DEPTH for vibrato.
 - **Fat / chorus** — DETUNE 8–12 and play notes in quick succession (or arpeggiate)
   so several voices ring and beat.
-- **Glide lead** — PORTA 6–10; play legato lines and hear the pitch slide.
+- **Glide lead** — GLIDE 6–10; play legato lines and hear the pitch slide.
 - **Pad** — WAVEFORM PURE, slow ATTACK (6+) and RELEASE (8+), SUSTAIN high, a slow
   LFO (low RATE, mid DEPTH), some DETUNE; hold with OPTION.
 - **Bright lead** — 16-BIT clock for clean pitch, HP FILTER 6–10 to thin the lows.
-- **Drum beat** — DRUM 6–10, then DRUMBEAT 8–15 for an auto pulse, or tap key `1`,
+- **Drum beat** — DRUM 6–10, then RHYTHM 8–15 for an auto pulse, or tap key `1`,
   or record a drum lane in the sequencer alongside a melody.
-- **Arp riff** — hold a key, ARP 6–10, try the ARP MODE patterns (UP/DOWN/MINOR/OCT).
+- **Arp riff** — hold a key, ARPEGGIO 6–10, try the ARP MODE patterns (UP/DOWN/MINOR/OCT).
 
 ---
 
@@ -356,8 +383,9 @@ selector itself and `DRUMBEAT` are not stored.
 ### Frame loop (PAL, 50 Hz)
 
 Once per video frame the main loop runs, in order: read keyboard → read console →
-trigger voices → drum-key → input (panel) → preset tick → LFO tick → arp tick →
-sequencer tick → drum-beat tick → **update sound** → drum tick → update display.
+read nav-keys (arrows / Tab / Return / letter shortcuts) → trigger voices →
+drum-key → input (panel) → preset tick → LFO tick → arp tick → sequencer tick →
+drum-beat tick → **update sound** → drum tick → update display.
 `update_sound` is where the envelopes advance and the POKEY registers get
 written; the drum overrides channel 4 last. One frame = 20 ms, which is the unit
 of all envelope and sequencer timing.
@@ -411,7 +439,7 @@ OPTION).
 
 ### Memory map (high level)
 
-- Code + tables: `$2000`–~`$3300`
+- Code + tables: `$2000`–~`$3970`
 - Display list: `$3C00`
 - Framebuffer: `$4000`–`$5FFF`
 - Line-address table: `$6000`–`$617F`
@@ -432,11 +460,14 @@ build on segment overlaps or a display list crossing a 1 KB boundary.
   resolve a true semitone up high. 16-bit mode is in tune across the whole range.
 - **POKEY "NOISE" is a periodic poly pattern, not white noise** (semi-tonal).
 - **16-bit mode is 2-voice** (channel pairs); NORMAL/15 kHz are 4-voice.
-- **A deep LFO on very high notes can glitch** — the 8-bit `AUDF` wraps when the
-  offset pushes it past 0/255, briefly jumping the pitch.
+- **A deep LFO on very high notes can glitch in 8-bit modes** — the 8-bit `AUDF`
+  wraps when the offset pushes it past 0/255, briefly jumping the pitch. (16-bit
+  scales the offset to the note, so it doesn't wrap there.)
 - **HP filter uses channel 3** (voice 2 goes silent while it's on) and **only
   filters voice 0**; disabled in 16-bit.
-- **Drum and portamento are disabled/ignored in 16-bit mode.**
+- **`DRUM`, `RHYTHM`, `GLIDE` and `HP FILTER` are disabled in 16-bit mode** (the
+  channel pairing leaves no spare channels) — they're struck through on screen.
+  `LFO` and `DETUNE` still work in 16-bit (offset scaled to the note).
 - **No true held chords** from the keyboard (scanned matrix reports one key) —
   use succession + sustain pedal, or the arpeggiator/sequencer.
 - Tuned for **PAL**; on NTSC the pitch is ~1% sharp (regenerate the tables from
@@ -475,7 +506,8 @@ See **`tools/synthtest/README.md`** for the full framework documentation.
 
 **Adding a parameter** (recipe): extend `NPARAM`; add an entry to every parallel
 table (`param_lo/hi/max/maxp1` and the `p_*` descriptor tables — keep index order
-== visual order); add a `txt_` label; allocate a work variable (new ones go at
-`$06B5+` to stay clear of the growing `prev_disp` block); default it in `init`;
+== visual order); add a `txt_` label; allocate a work variable (new ones go after
+the existing page-6 block, ~`$06DB+`, clear of the `prev_disp` array); default it
+in `init`;
 implement the engine tick; then add coverage in `tools/synthtest`. `build.sh`'s
 memcheck guards the memory layout as the variable block grows.
