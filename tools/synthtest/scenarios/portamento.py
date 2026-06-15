@@ -1,6 +1,7 @@
-"""Portamento (pitch glide) — comprehensive coverage of the new PORTA parameter
-(param 14, page 2). Portamento is monophonic: with PORTA > 0 a new note slides
-from the previously-played pitch on voice 0, one AUDF step every PORTA frames.
+"""Portamento (pitch glide) — comprehensive coverage of the GLIDE parameter
+(param 14, on the FX/Patch screen / page 1; named PORTA pre-reorg). Glide is
+monophonic: with GLIDE > 0 a new note slides from the previously-played pitch on
+voice 0, one AUDF step every GLIDE frames.
 
 This is the flagship acoustic test: we RECORD the transition and confirm the
 pitch actually slides through intermediate frequencies, not jumps.

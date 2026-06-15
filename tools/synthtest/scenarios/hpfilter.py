@@ -1,5 +1,5 @@
-"""High-pass filter — comprehensive coverage of the new HPF parameter (index
-16, on a NEW third page). POKEY's hardware high-pass: AUDCTL bit 2 high-passes
+"""High-pass filter — comprehensive coverage of the HPF parameter (index
+13, on the FX/Patch screen / page 1). POKEY's hardware high-pass: AUDCTL bit 2 high-passes
 channel 1, clocked by channel 3. With HPF > 0 the synth sets bit 2 and turns
 channel 3 into the (silent) cutoff clock (AUDF3 = (16-HPF)*4), so voice 0's tone
 loses its low end. 8-bit clock modes only (channel 3 is paired in 16-bit).
