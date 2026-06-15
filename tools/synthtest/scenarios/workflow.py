@@ -118,6 +118,16 @@ def preset_roundtrip_all_params(s, rep):
               "ok" if not bad else f"mismatch {bad}")
     rep.check("PRESET selector itself is not stored (stays slot 0)",
               s.get_param(15) == 0, s.get_param(15))
+    # Hygiene: this test SAVED a synthetic patch over factory slot 0 in the bank
+    # and left every live param perturbed. Restore the factory INIT patch into
+    # slot 0 and reset the live state so downstream scenarios (golden_fingerprints,
+    # full_user_session) see a clean synth. (preset_factory slot 0 = INIT.)
+    init = {0: 1, 1: 10, 2: 2, 3: 0, 4: 8, 5: 0, 6: 0, 7: 2, 8: 8, 9: 3,
+            10: 0, 11: 0, 12: 0, 13: 0, 14: 0, 16: 8, 17: 0, 18: 0}
+    for idx, v in init.items():
+        s.set(PARAM_VARS[idx], v)
+    s.set("curparam", 15); s.frame(4)
+    s.joy(0, "centre", fire=True); s.frame(8); s.joy(0, "centre"); s.frame(3)  # re-save INIT
     s.set("curparam", 0); s.poke(PRESET, 0); s.frame(6)
 
 
@@ -178,12 +188,25 @@ def full_user_session(s, rep):
     The acoustic round-trip A≈D proves save->switch->reload preserves the sound,
     not just the RAM bytes."""
     rep.section("workflow: full user session with audio checkpoints")
+    # Start from a clean slate: stop any running sequence and idle every voice so
+    # leftover notes/drums from a prior scenario don't bleed into the A capture
+    # (an inflated A RMS would fail the A~=D loudness check for no real reason).
+    s.set("seq_play", 0); s.set("seq_rec", 0)
+    for i in range(4):
+        s.set("vlevel", 0, i); s.set("vphase", 0, i)
+    s.set("held", 0xFF); s.frame(2)
     # A: build a patch and capture it
     s.set("clock15", 0); s.poke(0x0689, 0)
-    # a clean unmodulated PURE patch at a low octave -> rock-solid pitch + RMS,
+    # A clean, unmodulated PURE patch at a low octave -> rock-solid pitch + RMS,
     # so the save->reload round-trip can be compared acoustically without noise.
-    # (idx: 0 wave, 1 vol, 2 oct, 6 sus, 7 rel, 14 porta=0, 10 lfod=0, 5 det=0, 11 arp=0, 16 hpf=0)
-    for idx, v in {0: 1, 1: 13, 2: 0, 6: 12, 7: 4, 14: 0, 10: 0, 5: 0, 11: 0, 16: 0}.items():
+    # Fully specify EVERY saved param (skip 15 PRESET) so this stage is immune to
+    # whatever a prior scenario left behind (e.g. a leaked detune smears the
+    # capture and the A!=D comparison fails for reasons unrelated to presets).
+    # New 3-page index order: 0 wave 1 vol 2 oct 3 clk 4 lfor 5 lfod | 6 atk 7 dec
+    # 8 sus 9 rel 10 arp 11 arpm | 12 det 13 hpf 14 glide | 16 tempo 17 drum 18 rhythm
+    clean = {0: 1, 1: 13, 2: 0, 3: 0, 4: 8, 5: 0, 6: 0, 7: 2, 8: 12, 9: 4,
+             10: 0, 11: 0, 12: 0, 13: 0, 14: 0, 16: 8, 17: 0, 18: 0}
+    for idx, v in clean.items():
         s.set(PARAM_VARS[idx], v)
     s.poke(0x0665, 0); s.poke(0x0668, 0); s.frame(2)
     with s.held_key(0):
