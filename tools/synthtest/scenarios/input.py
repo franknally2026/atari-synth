@@ -71,35 +71,38 @@ def arrow_keys_navigate(s, rep):
 
 def letter_shortcuts(s, rep):
     rep.section("input: plain letter-shortcut keys jump to a param (#4)")
-    # New layout: the 11 screen-1 params with a free in-label letter + DETUNE get a
-    # PLAIN letter shortcut. (key, expected param):
-    jumps = [("M", 0), ("V", 1), ("A", 2), ("C", 3), ("F", 4), ("H", 5),
-             ("K", 6), ("D", 7), ("S", 8), ("L", 9), ("G", 10), ("N", 12)]
+    # First-letter scheme: plain shortcuts are the first (non-piano) letter of the
+    # name. (key, expected param):
+    jumps = [("V", 1), ("C", 3), ("L", 4), ("K", 6), ("D", 7), ("S", 8),
+             ("A", 10), ("N", 12), ("H", 13), ("G", 14)]
     for key, exp in jumps:
         s.poke(CUR, 15)                      # start on PRESET (not a plain-shortcut target)
         got = _tap(s, CUR, lambda k=key: s.key(k))
         rep.check(f"'{key}' jumps to param {exp}", got == exp, f"cur_param={got}")
-    # cross-page: 'G' from the sequencer screen jumps to ARPEGGIO (param 10, page 0)
+    # cross-page: 'A' from the sequencer screen jumps to ARPEGGIO (param 10, page 0)
     s.poke(CUR, 16); s.frame(4)
-    got = _tap(s, CUR, lambda: s.key("G"))
-    rep.check("'G' from the sequencer screen jumps to ARPEGGIO (cross-page)",
+    got = _tap(s, CUR, lambda: s.key("A"))
+    rep.check("'A' from the sequencer screen jumps to ARPEGGIO (cross-page)",
               got == 10 and s.peek(PAGE) == 0, f"cur_param={got} page={s.peek(PAGE)}")
 
 
 def shift_letter_shortcuts(s, rep):
-    rep.section("input: Shift+letter shortcuts (screen 2/3 params) (#4 shift plane)")
-    # Shift sets KBCODE bit7, a distinct key. (letter, expected param):
-    #   ^A ARP MODE(11)  ^F HP FILTER(13)  ^G GLIDE(14)  ^S PRESET(15)
-    #   ^M TEMPO(16)  ^D DRUM(17)  ^H RHYTHM(18)
-    jumps = [("A", 11), ("F", 13), ("G", 14), ("S", 15), ("M", 16), ("D", 17), ("H", 18)]
+    rep.section("input: Shift+letter shortcuts (first-letter via Shift) (#4 shift plane)")
+    # Shift sets KBCODE bit7, a distinct key. First-letter shortcuts that need Shift
+    # (piano-key first letters W/O/R/P/T, or a letter taken plain). (letter, param):
+    #   ^W WAVEFORM(0)  ^O OCTAVE(2)  ^L LFO DEPTH(5)  ^R RELEASE(9)  ^A ARP MODE(11)
+    #   ^P PRESET(15)  ^T TEMPO(16)  ^D DRUM(17)  ^H RHYTHM(18)
+    jumps = [("W", 0), ("O", 2), ("L", 5), ("R", 9), ("A", 11),
+             ("P", 15), ("T", 16), ("D", 17), ("H", 18)]
     for key, exp in jumps:
-        s.poke(CUR, 0)                       # start on WAVEFORM (a PLAIN-shortcut param)
+        s.poke(CUR, 1)                       # start on VOLUME (a PLAIN-shortcut param)
         got = _tap(s, CUR, lambda k=key: s.a.key(k, shift=True))
         rep.check(f"Shift+'{key}' jumps to param {exp}", got == exp, f"cur_param={got}")
-    # plain and shift of the same letter are different keys: plain M -> WAVEFORM(0)
-    s.poke(CUR, 16)
-    got = _tap(s, CUR, lambda: s.key("M"))
-    rep.check("plain 'M' still jumps to WAVEFORM (0), not TEMPO", got == 0, f"cur_param={got}")
+    # plain and shift of the same letter are different keys: plain A -> ARPEGGIO(10),
+    # Shift+A -> ARP MODE(11)
+    s.poke(CUR, 11)
+    got = _tap(s, CUR, lambda: s.key("A"))
+    rep.check("plain 'A' jumps to ARPEGGIO (10), not ARP MODE", got == 10, f"cur_param={got}")
 
 
 def inert_strike_16bit(s, rep):

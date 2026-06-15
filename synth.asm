@@ -3270,28 +3270,21 @@ p_lblptr_hi
         .byte >txt_wave,>txt_vol,>txt_oct,>txt_clk,>txt_lfor,>txt_lfod
         .byte >txt_atk,>txt_dec,>txt_sus,>txt_rel,>txt_arp,>txt_arpm
         .byte >txt_det,>txt_hpf,>txt_porta,>txt_preset, >txt_tempo,>txt_drum,>txt_dbeat
-; Which char index in each label is the shortcut key (underlined). Renaming ARP
-; -> ARPEGGIO introduces a free 'G', which frees up enough letters to give EVERY
-; page-0 param a unique in-label letter, plus DRUMBEAT(B). Pages 1-2 (except
-; DRUMBEAT) have no spare free letter -> $FF (reach them via Tab + arrows).
-;   WAVE M=7  VOL V=0  OCT A=3  ATK K=5  DEC D=0  DET N=4
-;   SUS  S=0  REL L=2  CLK C=0  LFOR F=1 LFOD H=8  ARPEGGIO G=4   DRUMBEAT B=4
-;   page 0 + DRUMBEAT use PLAIN letters; the 5 page-1/2 params below use SHIFT+letter
-;   TEMPO M=2  ARP MODE D=6  PORTA A=4  HP FILTER H=0  PRESET S=3   (DRUM: none)
-; char index of each label's shortcut letter (underlined). New layout: page-0
-; params keep plain letters; DETUNE keeps plain N; the rest use SHIFT+letter.
-;   WAVE M7 VOL V0 OCT A3 CLK C0 LFOR F1 LFOD H8 ATK K5 DEC D0 SUS S0 REL L2
-;   ARPEGGIO G4   ARP MODE ^A0   DETUNE N4   HP FILTER ^F3   GLIDE ^G0
-;   PRESET ^S3    TEMPO ^M2   DRUM ^D0   RHYTHM ^H1
+; Char index of each label's shortcut letter (underlined). FIRST-LETTER scheme
+; (2026-06-15): shortcut = first letter of the name where possible; piano-key first
+; letters (W O R P T) need SHIFT; screen-1 params win letter collisions.
+;   WAVE ^W0  VOL V0  OCT ^O0  CLK C0  LFOR L0  LFOD ^L0  ATK K5  DEC D0  SUS S0
+;   REL ^R0  ARPEGGIO A0  ARP MODE ^A0  DETUNE N4  HP FILTER H0  GLIDE G0
+;   PRESET ^P0  TEMPO ^T0  DRUM ^D0  RHYTHM ^H1
 p_hl
-        .byte 7,0,3,0,1,8
-        .byte 5,0,0,2,4,0
-        .byte 4,3,0,3, 2,0,1
+        .byte 0,0,0,0,0,0
+        .byte 5,0,0,0,0,0
+        .byte 4,0,0,0, 0,0,1
 ; 1 = this param's shortcut is a SHIFT+letter (drawn opposite video to its label)
 p_hl_shift
-        .byte 0,0,0,0,0,0
-        .byte 0,0,0,0,0,1
-        .byte 0,1,1,1, 1,1,1
+        .byte 1,0,1,0,0,1
+        .byte 0,0,0,1,0,1
+        .byte 0,0,0,1, 1,1,1
 ; 1 = inert in 16-BIT clock mode (channels 3/4 are paired): HP FILTER(13), GLIDE(14),
 ; DRUM(17), RHYTHM(18). Struck through when clock15 = 2 so users don't twiddle dead ones.
 p_inert16
@@ -3302,15 +3295,15 @@ p_inert16
 ; underlined in the label; KBCODEs are the bridge/hardware values. Shift+letter
 ; entries have bit7 ($80) set (Shift sets KBCODE bit7).
 shortcut_kc
-        .byte $25,$10,$3F,$12,$38,$39,$05,$3A,$3E,$00,$3D,$23
-;             M   V   A   C   F   H   K   D   S   L   G   N    (plain)
-        .byte $BF,$B8,$BD,$BE,$A5,$BA,$B9
-;             ^A  ^F  ^G  ^S  ^M  ^D  ^H                      (shift)
+        .byte $10,$12,$00,$05,$3A,$3E,$3F,$23,$39,$3D
+;             V   C   L   K   D   S   A   N   H   G              (plain)
+        .byte $AE,$88,$80,$A8,$BF,$8A,$AD,$BA,$B9
+;             ^W  ^O  ^L  ^R  ^A  ^P  ^T  ^D  ^H                (shift)
 shortcut_param
-        .byte 0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 12
-;             WAV VOL OCT CLK LFR LFD ATK DEC SUS REL ARP DET
-        .byte 11, 13, 14, 15, 16, 17, 18
-;             ARM HPF GLI PRE TMP DRM RHY
+        .byte 1,  3,  4,  6,  7,  8,  10, 12, 13, 14
+;             VOL CLK LFR ATK DEC SUS ARP DET HPF GLI
+        .byte 0,  2,  5,  9,  11, 15, 16, 17, 18
+;             WAV OCT LFD REL ARM PRE TMP DRM RHY
 ; effect params that render value 0 as "OFF": LFO DEPTH(5) ARPEGGIO(10) DETUNE(12)
 ;                                             HP FILTER(13) GLIDE(14) DRUM(17)
 p_zoff

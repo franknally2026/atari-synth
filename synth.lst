@@ -3273,173 +3273,166 @@ Source: synth.asm
   3270 37F7 3C 3D 3D 3D 3D 3D	        .byte >txt_wave,>txt_vol,>txt_oct,>txt_clk,>txt_lfor,>txt_lfod
   3271 37FD 3D 3D 3D 3D 3D 3D	        .byte >txt_atk,>txt_dec,>txt_sus,>txt_rel,>txt_arp,>txt_arpm
   3272 3803 3D 3D 3D 3D 3D 3D +         .byte >txt_det,>txt_hpf,>txt_porta,>txt_preset, >txt_tempo,>txt_drum,>txt_dbeat
-  3273 				; Which char index in each label is the shortcut key (underlined). Renaming ARP
-  3274 				; -> ARPEGGIO introduces a free 'G', which frees up enough letters to give EVERY
-  3275 				; page-0 param a unique in-label letter, plus DRUMBEAT(B). Pages 1-2 (except
-  3276 				; DRUMBEAT) have no spare free letter -> $FF (reach them via Tab + arrows).
-  3277 				;   WAVE M=7  VOL V=0  OCT A=3  ATK K=5  DEC D=0  DET N=4
-  3278 				;   SUS  S=0  REL L=2  CLK C=0  LFOR F=1 LFOD H=8  ARPEGGIO G=4   DRUMBEAT B=4
-  3279 				;   page 0 + DRUMBEAT use PLAIN letters; the 5 page-1/2 params below use SHIFT+letter
-  3280 				;   TEMPO M=2  ARP MODE D=6  PORTA A=4  HP FILTER H=0  PRESET S=3   (DRUM: none)
-  3281 				; char index of each label's shortcut letter (underlined). New layout: page-0
-  3282 				; params keep plain letters; DETUNE keeps plain N; the rest use SHIFT+letter.
-  3283 				;   WAVE M7 VOL V0 OCT A3 CLK C0 LFOR F1 LFOD H8 ATK K5 DEC D0 SUS S0 REL L2
-  3284 				;   ARPEGGIO G4   ARP MODE ^A0   DETUNE N4   HP FILTER ^F3   GLIDE ^G0
-  3285 				;   PRESET ^S3    TEMPO ^M2   DRUM ^D0   RHYTHM ^H1
-  3286 380A			p_hl
-  3287 380A 07 00 03 00 01 08	        .byte 7,0,3,0,1,8
-  3288 3810 05 00 00 02 04 00	        .byte 5,0,0,2,4,0
-  3289 3816 04 03 00 03 02 00 +         .byte 4,3,0,3, 2,0,1
-  3290 				; 1 = this param's shortcut is a SHIFT+letter (drawn opposite video to its label)
-  3291 381D			p_hl_shift
-  3292 381D 00 00 00 00 00 00	        .byte 0,0,0,0,0,0
-  3293 3823 00 00 00 00 00 01	        .byte 0,0,0,0,0,1
-  3294 3829 00 01 01 01 01 01 +         .byte 0,1,1,1, 1,1,1
-  3295 				; 1 = inert in 16-BIT clock mode (channels 3/4 are paired): HP FILTER(13), GLIDE(14),
-  3296 				; DRUM(17), RHYTHM(18). Struck through when clock15 = 2 so users don't twiddle dead ones.
-  3297 3830			p_inert16
-  3298 3830 00 00 00 00 00 00	        .byte 0,0,0,0,0,0
-  3299 3836 00 00 00 00 00 00	        .byte 0,0,0,0,0,0
-  3300 383C 00 01 01 00 00 01 +         .byte 0,1,1,0, 0,1,1
-  3301 				; shortcut key -> param jump (read_navkeys). Letter is a FREE key (not piano)
-  3302 				; underlined in the label; KBCODEs are the bridge/hardware values. Shift+letter
-  3303 				; entries have bit7 ($80) set (Shift sets KBCODE bit7).
-  3304 3843			shortcut_kc
-  3305 3843 25 10 3F 12 38 39 +         .byte $25,$10,$3F,$12,$38,$39,$05,$3A,$3E,$00,$3D,$23
-  3306 				;             M   V   A   C   F   H   K   D   S   L   G   N    (plain)
-  3307 384F BF B8 BD BE A5 BA +         .byte $BF,$B8,$BD,$BE,$A5,$BA,$B9
-  3308 				;             ^A  ^F  ^G  ^S  ^M  ^D  ^H                      (shift)
-  3309 3856			shortcut_param
-  3310 3856 00 01 02 03 04 05 +         .byte 0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 12
-  3311 				;             WAV VOL OCT CLK LFR LFD ATK DEC SUS REL ARP DET
-  3312 3862 0B 0D 0E 0F 10 11 +         .byte 11, 13, 14, 15, 16, 17, 18
-  3313 				;             ARM HPF GLI PRE TMP DRM RHY
-  3314 				; effect params that render value 0 as "OFF": LFO DEPTH(5) ARPEGGIO(10) DETUNE(12)
-  3315 				;                                             HP FILTER(13) GLIDE(14) DRUM(17)
-  3316 3869			p_zoff
-  3317 3869 00 00 00 00 00 01	        .byte 0,0,0,0,0,1
-  3318 386F 00 00 00 00 01 00	        .byte 0,0,0,0,1,0
-  3319 3875 01 01 01 00 00 01 +         .byte 1,1,1,0, 0,1,0
-  3320
-  3321 				; knob geometry
-  3322 387C			bitmask_tab
-  3323 387C 80 40 20 10 08 04 +         .byte $80,$40,$20,$10,$08,$04,$02,$01
-  3324 3884			hw_tab                          ; half-width per |dy| 0..6
-  3325 3884 06 06 06 05 04 03 +         .byte 6,6,6,5,4,3,0
-  3326 				; pointer rim offsets (16 directions, clockwise from up), signed
-  3327 388B			kn_ex
-  3328 388B 00 02 04 05 05 05 +         .byte 0,2,4,5,5,5,4,2,0,$FE,$FC,$FB,$FB,$FB,$FC,$FE
-  3329 389B			kn_ey
-  3330 389B FB FB FC FE 00 02 +         .byte $FB,$FB,$FC,$FE,0,2,4,5,5,5,4,2,0,$FE,$FC,$FB
-  3331 38AB			kn_mx
-  3332 38AB 00 01 02 03 03 03 +         .byte 0,1,2,3,3,3,2,1,0,$FF,$FE,$FD,$FD,$FD,$FE,$FF
-  3333 38BB			kn_my
-  3334 38BB FD FD FE FF 00 01 +         .byte $FD,$FD,$FE,$FF,0,1,2,3,3,3,2,1,0,$FF,$FE,$FD
-  3335 38CB			oct_knob16                      ; octave 0..4 -> knob position
-  3336 38CB 00 04 08 0C 0F	        .byte 0,4,8,12,15
-  3337
-  3338 				; keyboard layout
-  3339 38D0			blackx_lo
-  3340 38D0 20 3E 7A 98 B6 F2 +         .byte 32,62,122,152,182,242,16
-  3341 38D7			blackx_hi
-  3342 38D7 00 00 00 00 00 00 +         .byte 0,0,0,0,0,0,1
-  3343 38DE			white_lblcol
-  3344 38DE 02 06 0A 0D 11 15 +         .byte 2,6,10,13,17,21,25,28,32,36
-  3345 38E8			white_lblch                     ; Q W E R T Y U I O P (screen codes)
-  3346 38E8 31 37 25 32 34 39 +         .byte $31,$37,$25,$32,$34,$39,$35,$29,$2F,$30
-  3347 38F2			black_lblcol                    ; byte col centering each number on its 16px black key
-  3348 38F2 04 08 10 13 17 1F +         .byte 4,8,16,19,23,31,34
-  3349 38F9			black_lblch                     ; 2 3 5 6 7 9 0 (screen codes)
-  3350 38F9 12 13 15 16 17 19 +         .byte $12,$13,$15,$16,$17,$19,$10
-  3351 				; active-key indicator centre x per semitone 0..16
-  3352 3900			key_xind_lo
-  3353 3900 18 28 36 46 54 72 +         .byte 24,40,54,70,84,114,130,144,160,174,190,204,234,250,8,24,38
-  3354 3911			key_xind_hi
-  3355 3911 00 00 00 00 00 00 +         .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1
-  3356
-  3357 				; waveform icons (16x8, 2 bytes/row) for the WAVEFORM selector
-  3358 3922			icon_sq                         ; square / pulse
-  3359 3922 F8 3F 08 20 08 20 +         .byte $F8,$3F,$08,$20,$08,$20,$08,$20,$08,$20,$08,$20,$08,$20,$0F,$E0
-  3360 3932			icon_tri                        ; triangle (PURE)
-  3361 3932 01 80 02 40 04 20 +         .byte $01,$80,$02,$40,$04,$20,$08,$10,$10,$08,$20,$04,$40,$02,$80,$01
-  3362 3942			icon_saw                        ; sawtooth (BUZZ)
-  3363 3942 01 01 03 03 05 05 +         .byte $01,$01,$03,$03,$05,$05,$09,$09,$11,$11,$21,$21,$41,$41,$81,$81
-  3364 3952			icon_noise                      ; scattered dots (NOISE)
-  3365 3952 20 40 00 04 04 00 +         .byte $20,$40,$00,$04,$04,$00,$80,$10,$01,$01,$10,$00,$00,$82,$42,$08
-  3366 3962			icon_col
-  3367 3962 0A 0C 0E 10		        .byte 10,12,14,16       ; dest byte column of each icon
-  3368 3966			icon_ptr_lo
-  3369 3966 22 32 42 52		        .byte <icon_sq,<icon_tri,<icon_saw,<icon_noise
-  3370 396A			icon_ptr_hi
-  3371 396A 39 39 39 39		        .byte >icon_sq,>icon_tri,>icon_saw,>icon_noise
-  3372
-  3373 				; ----- display list: GR.8 (ANTIC mode $0F), 192 lines, two LMS regions ------
-  3374 				; Fixed 1KB-aligned home, clear of linetab ($3000) and the framebuffer ($4000+),
-  3375 				; and within one 1KB block (ANTIC's DL counter is 10-bit).
-  3376 396E			        org $3C00
-  3377 3C00			dlist
-  3378 3C00-3E29> 70 70 70	        .byte $70,$70,$70       ; 24 blank lines
-  3379 3C03 4F			        .byte $4F               ; LMS + mode F  (scanline 0 = title row)
-  3380 3C04 00 40		        .word FB1
-  3381 3C06 0F 0F 0F 0F 0F 0F +         :101 .byte $0F          ; 101 more lines (102 total from FB1)
-  3382 3C6B 4F			        .byte $4F               ; scanline 102: LMS FB2
-  3383 3C6C 00 50		        .word FB2
-  3384 3C6E 0F 0F 0F 0F 0F 0F +         :89 .byte $0F           ; 89 more lines (90 total from FB2)
-  3385 3CC7 41			        .byte $41               ; JVB
-  3386 3CC8 00 3C		        .word dlist
-  3387
-  3388 				; ----- custom step-cell glyphs (8 bytes each, MSB = leftmost pixel) ----------
-  3389 				; index 0 rest, 1 note, 2 tie, 3 drum.  blit via blit_glyph (scrptr -> entry).
-  3390 3CCA			seq_glyphs
-  3391 3CCA 00 00 00 18 18 00 +         .byte $00,$00,$00,$18,$18,$00,$00,$00   ; 0 REST  - small centred dot
-  3392 3CD2 00 18 14 10 10 70 +         .byte $00,$18,$14,$10,$10,$70,$70,$00   ; 1 NOTE  - eighth note (head+stem+flag)
-  3393 3CDA 00 00 00 7E 7E 00 +         .byte $00,$00,$00,$7E,$7E,$00,$00,$00   ; 2 TIE   - centred horizontal bar
-  3394 3CE2 00 42 24 18 18 24 +         .byte $00,$42,$24,$18,$18,$24,$42,$00   ; 3 DRUM  - X (percussion hit)
-  3395
-  3396 				; ----- text labels (screen codes, $FF-terminated) ---------------------------
-  3397 3CEA 21 34 21 32 29 00 + txt_title  .byte "ATARI POKEY SYNTH",$FF
-  3398 3CFC 37 21 36 25 26 2F + txt_wave   .byte "WAVEFORM",$FF
-  3399 3D05 36 2F 2C 35 2D 25 + txt_vol    .byte "VOLUME",$FF
-  3400 3D0C 2F 23 34 21 36 25 + txt_oct    .byte "OCTAVE",$FF
-  3401 3D13 21 34 34 21 23 2B + txt_atk    .byte "ATTACK",$FF
-  3402 3D1A 24 25 23 21 39 FF	txt_dec    .byte "DECAY",$FF
-  3403 3D20 33 35 33 34 21 29 + txt_sus    .byte "SUSTAIN",$FF
-  3404 3D28 32 25 2C 25 21 33 + txt_rel    .byte "RELEASE",$FF
-  3405 3D30 23 2C 2F 23 2B FF	txt_clk    .byte "CLOCK",$FF
-  3406 3D36 2E 2F 34 25 FF	txt_note   .byte "NOTE",$FF
-  3407 3D3B 2E 2F 32 2D FF	txt_norm   .byte "NORM",$FF
-  3408 3D40 11 15 2B FF		txt_15k    .byte "15K",$FF
-  3409 3D44 2C 26 2F 00 32 21 + txt_lfor   .byte "LFO RATE",$FF
-  3410 3D4D 2C 26 2F 00 24 25 + txt_lfod   .byte "LFO DEPTH",$FF
-  3411 3D57 24 25 34 35 2E 25 + txt_det    .byte "DETUNE",$FF
-  3412 3D5E 21 32 30 25 27 27 + txt_arp    .byte "ARPEGGIO",$FF
-  3413 3D67 34 25 2D 30 2F FF	txt_tempo  .byte "TEMPO",$FF
-  3414 3D6D 21 32 30 00 2D 2F + txt_arpm   .byte "ARP MODE",$FF
-  3415 3D76 27 2C 29 24 25 FF	txt_porta  .byte "GLIDE",$FF
-  3416 3D7C 24 32 35 2D FF	txt_drum   .byte "DRUM",$FF
-  3417 3D81 28 30 00 26 29 2C + txt_hpf    .byte "HP FILTER",$FF
-  3418 3D8B 30 32 25 33 25 34 + txt_preset .byte "PRESET",$FF
-  3419 3D92 32 28 39 34 28 2D + txt_dbeat  .byte "RHYTHM",$FF
-  3420 3D99 30 2C 21 39 FF	txt_play   .byte "PLAY",$FF
-  3421 3D9E 33 34 2F 30 FF	txt_stop   .byte "STOP",$FF
-  3422 3DA3 32 25 23 2F 32 24 + txt_rec    .byte "RECORD",$FF
-  3423 3DAA 00 00 00 00 00 00 + txt_blk3   .byte "      ",$FF      ; 6 spaces -> clears the "RECORD" badge
-  3424
-  3425 				; context hint strings (drawn on the HINTSCAN row); hint_col centres each
-  3426 3DB1 34 21 22 1D 2E 25 + hint_d0    .byte "TAB=NEXT PAGE   OPTION=HOLD",$FF   ; default (27 chars)
-  3427 3DCD 33 34 21 32 34 1D + hint_d1    .byte "START=PLAY   SELECT=RECORD",$FF    ; sequencer page (26 chars)
-  3428 3DE8 32 25 34 35 32 2E + hint_d2    .byte "RETURN=SAVE PRESET",$FF            ; PRESET selected (18 chars)
-  3429 3DFB B1 CD E8		hint_lo    .byte <hint_d0,<hint_d1,<hint_d2
-  3430 3DFE 3D 3D 3D		hint_hi    .byte >hint_d0,>hint_d1,>hint_d2
-  3431 3E01 06 07 0B		hint_col   .byte 6,7,11                        ; centre col per hint = (40-len)/2
-  3432
-  3433 				; PRESET slot names (5 cells, space-padded so they overwrite cleanly) + SAVED flash
-  3434 3E04 33 21 36 25 24 FF	txt_saved  .byte "SAVED",$FF
-  3435 3E0A 29 2E 29 34 00 FF	pn_init    .byte "INIT ",$FF
-  3436 3E10 30 21 24 00 00 FF	pn_pad     .byte "PAD  ",$FF
-  3437 3E16 2C 25 21 24 00 FF	pn_lead    .byte "LEAD ",$FF
-  3438 3E1C 21 32 30 00 00 FF	pn_arp     .byte "ARP  ",$FF
-  3439 3E22 0A 10 16 1C		preset_name_lo .byte <pn_init,<pn_pad,<pn_lead,<pn_arp
-  3440 3E26 3E 3E 3E 3E		preset_name_hi .byte >pn_init,>pn_pad,>pn_lead,>pn_arp
-  3441
-  3442 02E0-02E1> 00 20		        run main
+  3273 				; Char index of each label's shortcut letter (underlined). FIRST-LETTER scheme
+  3274 				; (2026-06-15): shortcut = first letter of the name where possible; piano-key first
+  3275 				; letters (W O R P T) need SHIFT; screen-1 params win letter collisions.
+  3276 				;   WAVE ^W0  VOL V0  OCT ^O0  CLK C0  LFOR L0  LFOD ^L0  ATK K5  DEC D0  SUS S0
+  3277 				;   REL ^R0  ARPEGGIO A0  ARP MODE ^A0  DETUNE N4  HP FILTER H0  GLIDE G0
+  3278 				;   PRESET ^P0  TEMPO ^T0  DRUM ^D0  RHYTHM ^H1
+  3279 380A			p_hl
+  3280 380A 00 00 00 00 00 00	        .byte 0,0,0,0,0,0
+  3281 3810 05 00 00 00 00 00	        .byte 5,0,0,0,0,0
+  3282 3816 04 00 00 00 00 00 +         .byte 4,0,0,0, 0,0,1
+  3283 				; 1 = this param's shortcut is a SHIFT+letter (drawn opposite video to its label)
+  3284 381D			p_hl_shift
+  3285 381D 01 00 01 00 00 01	        .byte 1,0,1,0,0,1
+  3286 3823 00 00 00 01 00 01	        .byte 0,0,0,1,0,1
+  3287 3829 00 00 00 01 01 01 +         .byte 0,0,0,1, 1,1,1
+  3288 				; 1 = inert in 16-BIT clock mode (channels 3/4 are paired): HP FILTER(13), GLIDE(14),
+  3289 				; DRUM(17), RHYTHM(18). Struck through when clock15 = 2 so users don't twiddle dead ones.
+  3290 3830			p_inert16
+  3291 3830 00 00 00 00 00 00	        .byte 0,0,0,0,0,0
+  3292 3836 00 00 00 00 00 00	        .byte 0,0,0,0,0,0
+  3293 383C 00 01 01 00 00 01 +         .byte 0,1,1,0, 0,1,1
+  3294 				; shortcut key -> param jump (read_navkeys). Letter is a FREE key (not piano)
+  3295 				; underlined in the label; KBCODEs are the bridge/hardware values. Shift+letter
+  3296 				; entries have bit7 ($80) set (Shift sets KBCODE bit7).
+  3297 3843			shortcut_kc
+  3298 3843 10 12 00 05 3A 3E +         .byte $10,$12,$00,$05,$3A,$3E,$3F,$23,$39,$3D
+  3299 				;             V   C   L   K   D   S   A   N   H   G              (plain)
+  3300 384D AE 88 80 A8 BF 8A +         .byte $AE,$88,$80,$A8,$BF,$8A,$AD,$BA,$B9
+  3301 				;             ^W  ^O  ^L  ^R  ^A  ^P  ^T  ^D  ^H                (shift)
+  3302 3856			shortcut_param
+  3303 3856 01 03 04 06 07 08 +         .byte 1,  3,  4,  6,  7,  8,  10, 12, 13, 14
+  3304 				;             VOL CLK LFR ATK DEC SUS ARP DET HPF GLI
+  3305 3860 00 02 05 09 0B 0F +         .byte 0,  2,  5,  9,  11, 15, 16, 17, 18
+  3306 				;             WAV OCT LFD REL ARM PRE TMP DRM RHY
+  3307 				; effect params that render value 0 as "OFF": LFO DEPTH(5) ARPEGGIO(10) DETUNE(12)
+  3308 				;                                             HP FILTER(13) GLIDE(14) DRUM(17)
+  3309 3869			p_zoff
+  3310 3869 00 00 00 00 00 01	        .byte 0,0,0,0,0,1
+  3311 386F 00 00 00 00 01 00	        .byte 0,0,0,0,1,0
+  3312 3875 01 01 01 00 00 01 +         .byte 1,1,1,0, 0,1,0
+  3313
+  3314 				; knob geometry
+  3315 387C			bitmask_tab
+  3316 387C 80 40 20 10 08 04 +         .byte $80,$40,$20,$10,$08,$04,$02,$01
+  3317 3884			hw_tab                          ; half-width per |dy| 0..6
+  3318 3884 06 06 06 05 04 03 +         .byte 6,6,6,5,4,3,0
+  3319 				; pointer rim offsets (16 directions, clockwise from up), signed
+  3320 388B			kn_ex
+  3321 388B 00 02 04 05 05 05 +         .byte 0,2,4,5,5,5,4,2,0,$FE,$FC,$FB,$FB,$FB,$FC,$FE
+  3322 389B			kn_ey
+  3323 389B FB FB FC FE 00 02 +         .byte $FB,$FB,$FC,$FE,0,2,4,5,5,5,4,2,0,$FE,$FC,$FB
+  3324 38AB			kn_mx
+  3325 38AB 00 01 02 03 03 03 +         .byte 0,1,2,3,3,3,2,1,0,$FF,$FE,$FD,$FD,$FD,$FE,$FF
+  3326 38BB			kn_my
+  3327 38BB FD FD FE FF 00 01 +         .byte $FD,$FD,$FE,$FF,0,1,2,3,3,3,2,1,0,$FF,$FE,$FD
+  3328 38CB			oct_knob16                      ; octave 0..4 -> knob position
+  3329 38CB 00 04 08 0C 0F	        .byte 0,4,8,12,15
+  3330
+  3331 				; keyboard layout
+  3332 38D0			blackx_lo
+  3333 38D0 20 3E 7A 98 B6 F2 +         .byte 32,62,122,152,182,242,16
+  3334 38D7			blackx_hi
+  3335 38D7 00 00 00 00 00 00 +         .byte 0,0,0,0,0,0,1
+  3336 38DE			white_lblcol
+  3337 38DE 02 06 0A 0D 11 15 +         .byte 2,6,10,13,17,21,25,28,32,36
+  3338 38E8			white_lblch                     ; Q W E R T Y U I O P (screen codes)
+  3339 38E8 31 37 25 32 34 39 +         .byte $31,$37,$25,$32,$34,$39,$35,$29,$2F,$30
+  3340 38F2			black_lblcol                    ; byte col centering each number on its 16px black key
+  3341 38F2 04 08 10 13 17 1F +         .byte 4,8,16,19,23,31,34
+  3342 38F9			black_lblch                     ; 2 3 5 6 7 9 0 (screen codes)
+  3343 38F9 12 13 15 16 17 19 +         .byte $12,$13,$15,$16,$17,$19,$10
+  3344 				; active-key indicator centre x per semitone 0..16
+  3345 3900			key_xind_lo
+  3346 3900 18 28 36 46 54 72 +         .byte 24,40,54,70,84,114,130,144,160,174,190,204,234,250,8,24,38
+  3347 3911			key_xind_hi
+  3348 3911 00 00 00 00 00 00 +         .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1
+  3349
+  3350 				; waveform icons (16x8, 2 bytes/row) for the WAVEFORM selector
+  3351 3922			icon_sq                         ; square / pulse
+  3352 3922 F8 3F 08 20 08 20 +         .byte $F8,$3F,$08,$20,$08,$20,$08,$20,$08,$20,$08,$20,$08,$20,$0F,$E0
+  3353 3932			icon_tri                        ; triangle (PURE)
+  3354 3932 01 80 02 40 04 20 +         .byte $01,$80,$02,$40,$04,$20,$08,$10,$10,$08,$20,$04,$40,$02,$80,$01
+  3355 3942			icon_saw                        ; sawtooth (BUZZ)
+  3356 3942 01 01 03 03 05 05 +         .byte $01,$01,$03,$03,$05,$05,$09,$09,$11,$11,$21,$21,$41,$41,$81,$81
+  3357 3952			icon_noise                      ; scattered dots (NOISE)
+  3358 3952 20 40 00 04 04 00 +         .byte $20,$40,$00,$04,$04,$00,$80,$10,$01,$01,$10,$00,$00,$82,$42,$08
+  3359 3962			icon_col
+  3360 3962 0A 0C 0E 10		        .byte 10,12,14,16       ; dest byte column of each icon
+  3361 3966			icon_ptr_lo
+  3362 3966 22 32 42 52		        .byte <icon_sq,<icon_tri,<icon_saw,<icon_noise
+  3363 396A			icon_ptr_hi
+  3364 396A 39 39 39 39		        .byte >icon_sq,>icon_tri,>icon_saw,>icon_noise
+  3365
+  3366 				; ----- display list: GR.8 (ANTIC mode $0F), 192 lines, two LMS regions ------
+  3367 				; Fixed 1KB-aligned home, clear of linetab ($3000) and the framebuffer ($4000+),
+  3368 				; and within one 1KB block (ANTIC's DL counter is 10-bit).
+  3369 396E			        org $3C00
+  3370 3C00			dlist
+  3371 3C00-3E29> 70 70 70	        .byte $70,$70,$70       ; 24 blank lines
+  3372 3C03 4F			        .byte $4F               ; LMS + mode F  (scanline 0 = title row)
+  3373 3C04 00 40		        .word FB1
+  3374 3C06 0F 0F 0F 0F 0F 0F +         :101 .byte $0F          ; 101 more lines (102 total from FB1)
+  3375 3C6B 4F			        .byte $4F               ; scanline 102: LMS FB2
+  3376 3C6C 00 50		        .word FB2
+  3377 3C6E 0F 0F 0F 0F 0F 0F +         :89 .byte $0F           ; 89 more lines (90 total from FB2)
+  3378 3CC7 41			        .byte $41               ; JVB
+  3379 3CC8 00 3C		        .word dlist
+  3380
+  3381 				; ----- custom step-cell glyphs (8 bytes each, MSB = leftmost pixel) ----------
+  3382 				; index 0 rest, 1 note, 2 tie, 3 drum.  blit via blit_glyph (scrptr -> entry).
+  3383 3CCA			seq_glyphs
+  3384 3CCA 00 00 00 18 18 00 +         .byte $00,$00,$00,$18,$18,$00,$00,$00   ; 0 REST  - small centred dot
+  3385 3CD2 00 18 14 10 10 70 +         .byte $00,$18,$14,$10,$10,$70,$70,$00   ; 1 NOTE  - eighth note (head+stem+flag)
+  3386 3CDA 00 00 00 7E 7E 00 +         .byte $00,$00,$00,$7E,$7E,$00,$00,$00   ; 2 TIE   - centred horizontal bar
+  3387 3CE2 00 42 24 18 18 24 +         .byte $00,$42,$24,$18,$18,$24,$42,$00   ; 3 DRUM  - X (percussion hit)
+  3388
+  3389 				; ----- text labels (screen codes, $FF-terminated) ---------------------------
+  3390 3CEA 21 34 21 32 29 00 + txt_title  .byte "ATARI POKEY SYNTH",$FF
+  3391 3CFC 37 21 36 25 26 2F + txt_wave   .byte "WAVEFORM",$FF
+  3392 3D05 36 2F 2C 35 2D 25 + txt_vol    .byte "VOLUME",$FF
+  3393 3D0C 2F 23 34 21 36 25 + txt_oct    .byte "OCTAVE",$FF
+  3394 3D13 21 34 34 21 23 2B + txt_atk    .byte "ATTACK",$FF
+  3395 3D1A 24 25 23 21 39 FF	txt_dec    .byte "DECAY",$FF
+  3396 3D20 33 35 33 34 21 29 + txt_sus    .byte "SUSTAIN",$FF
+  3397 3D28 32 25 2C 25 21 33 + txt_rel    .byte "RELEASE",$FF
+  3398 3D30 23 2C 2F 23 2B FF	txt_clk    .byte "CLOCK",$FF
+  3399 3D36 2E 2F 34 25 FF	txt_note   .byte "NOTE",$FF
+  3400 3D3B 2E 2F 32 2D FF	txt_norm   .byte "NORM",$FF
+  3401 3D40 11 15 2B FF		txt_15k    .byte "15K",$FF
+  3402 3D44 2C 26 2F 00 32 21 + txt_lfor   .byte "LFO RATE",$FF
+  3403 3D4D 2C 26 2F 00 24 25 + txt_lfod   .byte "LFO DEPTH",$FF
+  3404 3D57 24 25 34 35 2E 25 + txt_det    .byte "DETUNE",$FF
+  3405 3D5E 21 32 30 25 27 27 + txt_arp    .byte "ARPEGGIO",$FF
+  3406 3D67 34 25 2D 30 2F FF	txt_tempo  .byte "TEMPO",$FF
+  3407 3D6D 21 32 30 00 2D 2F + txt_arpm   .byte "ARP MODE",$FF
+  3408 3D76 27 2C 29 24 25 FF	txt_porta  .byte "GLIDE",$FF
+  3409 3D7C 24 32 35 2D FF	txt_drum   .byte "DRUM",$FF
+  3410 3D81 28 30 00 26 29 2C + txt_hpf    .byte "HP FILTER",$FF
+  3411 3D8B 30 32 25 33 25 34 + txt_preset .byte "PRESET",$FF
+  3412 3D92 32 28 39 34 28 2D + txt_dbeat  .byte "RHYTHM",$FF
+  3413 3D99 30 2C 21 39 FF	txt_play   .byte "PLAY",$FF
+  3414 3D9E 33 34 2F 30 FF	txt_stop   .byte "STOP",$FF
+  3415 3DA3 32 25 23 2F 32 24 + txt_rec    .byte "RECORD",$FF
+  3416 3DAA 00 00 00 00 00 00 + txt_blk3   .byte "      ",$FF      ; 6 spaces -> clears the "RECORD" badge
+  3417
+  3418 				; context hint strings (drawn on the HINTSCAN row); hint_col centres each
+  3419 3DB1 34 21 22 1D 2E 25 + hint_d0    .byte "TAB=NEXT PAGE   OPTION=HOLD",$FF   ; default (27 chars)
+  3420 3DCD 33 34 21 32 34 1D + hint_d1    .byte "START=PLAY   SELECT=RECORD",$FF    ; sequencer page (26 chars)
+  3421 3DE8 32 25 34 35 32 2E + hint_d2    .byte "RETURN=SAVE PRESET",$FF            ; PRESET selected (18 chars)
+  3422 3DFB B1 CD E8		hint_lo    .byte <hint_d0,<hint_d1,<hint_d2
+  3423 3DFE 3D 3D 3D		hint_hi    .byte >hint_d0,>hint_d1,>hint_d2
+  3424 3E01 06 07 0B		hint_col   .byte 6,7,11                        ; centre col per hint = (40-len)/2
+  3425
+  3426 				; PRESET slot names (5 cells, space-padded so they overwrite cleanly) + SAVED flash
+  3427 3E04 33 21 36 25 24 FF	txt_saved  .byte "SAVED",$FF
+  3428 3E0A 29 2E 29 34 00 FF	pn_init    .byte "INIT ",$FF
+  3429 3E10 30 21 24 00 00 FF	pn_pad     .byte "PAD  ",$FF
+  3430 3E16 2C 25 21 24 00 FF	pn_lead    .byte "LEAD ",$FF
+  3431 3E1C 21 32 30 00 00 FF	pn_arp     .byte "ARP  ",$FF
+  3432 3E22 0A 10 16 1C		preset_name_lo .byte <pn_init,<pn_pad,<pn_lead,<pn_arp
+  3433 3E26 3E 3E 3E 3E		preset_name_hi .byte >pn_init,>pn_pad,>pn_lead,>pn_arp
+  3434
+  3435 02E0-02E1> 00 20		        run main

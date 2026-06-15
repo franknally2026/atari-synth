@@ -46,8 +46,8 @@ def porta_param(s, rep):
     s.joy(0, "left"); s.frame(130); s.joy(0, "centre"); s.frame(2)
     lo = s.get_param(14)
     rep.check("GLIDE clamps 15 / 0", hi == 15 and lo == 0, f"hi={hi} lo={lo}")
-    # 'GLIDE' on the FX screen, row1 left (col 1, scan 36). 'G' (col1) is the Shift+G
-    # shortcut char (opposite-video when focused), so check 'L' at col 2 instead.
+    # 'GLIDE' on the FX screen, row1 left (col 1, scan 36). 'G' (col1) is the plain
+    # shortcut (underlined), so check the non-shortcut 'L' at col 2 as clean inverse.
     rep.check("GLIDE label renders on the FX screen",
               s.cell(2, 36) == s.glyph(0x2C, inv=True), "no L")
     s.set("curparam", 0); s.frame(6)

@@ -26,8 +26,8 @@ def hpf_param(s, rep):
     rep.check("HPF defaults to 0 (off)", s.get_param(13) == 0, s.get_param(13))
     s.set("curparam", 13); s.frame(8)
     rep.check("nav to HPF -> FX screen (page 1)", s.get("page") == 1, s.get("page"))
-    # HP FILTER is page-1 right column (col 21, scan 16). Check the 'P' at col 22;
-    # the shortcut is now Shift+F (col 24), so 'H'/'P' are plain focused-inverse.
+    # HP FILTER is page-1 right column (col 21, scan 16). 'H' (col21) is the plain
+    # shortcut (underlined), so check the non-shortcut 'P' at col 22 as clean inverse.
     rep.check("HP FILTER label renders on the FX screen",
               s.cell(22, 16) == s.glyph(0x30, inv=True), "no P")
     s.joy(0, "right"); s.frame(100); s.joy(0, "centre"); s.frame(2)
