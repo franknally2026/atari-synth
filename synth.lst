@@ -256,7 +256,7 @@ Source: synth.asm
    253 				        org $2000
    254
    255 				main
-   256 FFFF> 2000-38FB> A9 01	        lda #1
+   256 FFFF> 2000-38FE> A9 01	        lda #1
    257 2002 8D F0 02		        sta CRSINH
    258 2005 A9 FF		        lda #$FF
    259 2007 8D DB 02		        sta NOCLIK
@@ -427,7 +427,7 @@ Source: synth.asm
    424 217F 20 FC 25		        jsr drum_key_tick       ; '1' key -> live drum hit (edge)
    425 2182 20 01 24		        jsr update_input
    426 2185 20 44 26		        jsr preset_tick         ; PRESET knob -> load; fire on PRESET -> save
-   427 2188 20 0D 33		        jsr saved_flash_tick    ; tick the "SAVED" flash on the PRESET cell
+   427 2188 20 10 33		        jsr saved_flash_tick    ; tick the "SAVED" flash on the PRESET cell
    428 218B 20 49 29		        jsr lfo_tick
    429 218E 20 45 25		        jsr arp_tick
    430 2191 20 0A 23		        jsr seq_tick
@@ -448,7 +448,7 @@ Source: synth.asm
    445 21AD 29 3F		        and #$3F
    446 21AF A2 10		        ldx #NUMKEYS-1
    447 21B1			rk_search
-   448 21B1 DD 92 36		        cmp key_scan,x
+   448 21B1 DD 95 36		        cmp key_scan,x
    449 21B4 F0 13		        beq rk_found
    450 21B6 CA			        dex
    451 21B7 10 F8		        bpl rk_search
@@ -557,7 +557,7 @@ Source: synth.asm
    554 				        ; the 6 params whose letter is UNIQUE have an entry (see shortcut_kc).
    555 2268 A2 11		        ldx #NSHORT-1
    556 226A			rn_short_l
-   557 226A DD D3 37		        cmp shortcut_kc,x
+   557 226A DD D6 37		        cmp shortcut_kc,x
    558 226D F0 06		        beq rn_short_hit
    559 226F CA			        dex
    560 2270 10 F8		        bpl rn_short_l
@@ -565,7 +565,7 @@ Source: synth.asm
    562 2275			rn_short_hit
    563 2275 CD CF 06		        cmp nav_prev            ; A = this key = shortcut_kc[x]; held -> no re-jump
    564 2278 F0 06		        beq rn_seen
-   565 227A BD E5 37		        lda shortcut_param,x    ; jump (cur_param drives the page too)
+   565 227A BD E8 37		        lda shortcut_param,x    ; jump (cur_param drives the page too)
    566 227D 8D 00 06		        sta cur_param
    567 2280			rn_seen
    568 2280 AD 09 D2		        lda KBCODE              ; remember this frame's key for next-frame edge detect
@@ -739,7 +739,7 @@ Source: synth.asm
    736 23AA F0 0D		        beq sq_nostep           ; step's. Same -> skip the clock trigger, keep monitoring.
    737 23AC			sq_pn_go
    738 23AC AC 03 06		        ldy octave
-   739 23AF B9 C5 35		        lda octave_base,y
+   739 23AF B9 C8 35		        lda octave_base,y
    740 23B2 18			        clc
    741 23B3 6D 0C 06		        adc tmpA
    742 23B6 20 E9 24		        jsr trigger_note
@@ -850,18 +850,18 @@ Source: synth.asm
    847
    848 2490			apply_adjust
    849 2490 AE 00 06		        ldx cur_param
-   850 2493 BD A3 36		        lda param_lo,x
+   850 2493 BD A6 36		        lda param_lo,x
    851 2496 85 CF		        sta adjptr
-   852 2498 BD B6 36		        lda param_hi,x
+   852 2498 BD B9 36		        lda param_hi,x
    853 249B 85 D0		        sta adjptr+1
    854 249D A0 00		        ldy #0
    855 249F B1 CF		        lda (adjptr),y
    856 24A1 18			        clc
    857 24A2 6D 0B 06		        adc delta
    858 24A5 30 0B		        bmi aa_lo
-   859 24A7 DD DC 36		        cmp param_maxp1,x
+   859 24A7 DD DF 36		        cmp param_maxp1,x
    860 24AA 90 08		        bcc aa_store
-   861 24AC BD C9 36		        lda param_max,x
+   861 24AC BD CC 36		        lda param_max,x
    862 24AF 4C B4 24		        jmp aa_store
    863 24B2			aa_lo
    864 24B2 A9 00		        lda #0
@@ -893,7 +893,7 @@ Source: synth.asm
    890 24D6 F0 FA		        beq tv_done
    891 24D8 8D 1E 06		        sta prev_held
    892 24DB AC 03 06		        ldy octave              ; abs note = octave base + semitone
-   893 24DE B9 C5 35		        lda octave_base,y
+   893 24DE B9 C8 35		        lda octave_base,y
    894 24E1 18			        clc
    895 24E2 6D 07 06		        adc note_idx
    896 24E5 20 E9 24		        jsr trigger_note
@@ -912,7 +912,7 @@ Source: synth.asm
    909 24F9 BD 20 06		        lda voice_phase,x
    910 24FC D0 2A		        bne tn_setnote          ; voice 0 already sounding -> glide from it
    911 24FE AC 0C 06		        ldy tmpA                ; voice 0 idle -> snap glide origin to target
-   912 2501 B9 84 35		        lda chromatic,y         ; (so the first note doesn't swoop in)
+   912 2501 B9 87 35		        lda chromatic,y         ; (so the first note doesn't swoop in)
    913 2504 8D B8 06		        sta porta_cur
    914 2507 4C 28 25		        jmp tn_setnote
    915 250A			tn_alloc
@@ -977,7 +977,7 @@ Source: synth.asm
    974 2572			at_rok
    975 2572 8D 86 06		        sta arp_timer
    976 2575 AC 03 06		        ldy octave              ; base = octave base + held semitone
-   977 2578 B9 C5 35		        lda octave_base,y
+   977 2578 B9 C8 35		        lda octave_base,y
    978 257B 18			        clc
    979 257C 6D 07 06		        adc note_idx
    980 257F 8D 0C 06		        sta tmpA
@@ -1151,9 +1151,9 @@ Source: synth.asm
   1148 2696 20 7D 26		        jsr preset_offset
   1149 2699 A2 00		        ldx #0
   1150 269B			ps_loop
-  1151 269B BD A3 36		        lda param_lo,x
+  1151 269B BD A6 36		        lda param_lo,x
   1152 269E 85 CD		        sta srcptr
-  1153 26A0 BD B6 36		        lda param_hi,x
+  1153 26A0 BD B9 36		        lda param_hi,x
   1154 26A3 85 CE		        sta srcptr+1
   1155 26A5 A0 00		        ldy #0
   1156 26A7 B1 CD		        lda (srcptr),y          ; current param value
@@ -1168,9 +1168,9 @@ Source: synth.asm
   1165 26B8 20 7D 26		        jsr preset_offset
   1166 26BB A2 00		        ldx #0
   1167 26BD			pl_loop
-  1168 26BD BD A3 36		        lda param_lo,x
+  1168 26BD BD A6 36		        lda param_lo,x
   1169 26C0 85 CD		        sta srcptr
-  1170 26C2 BD B6 36		        lda param_hi,x
+  1170 26C2 BD B9 36		        lda param_hi,x
   1171 26C5 85 CE		        sta srcptr+1
   1172 26C7 AC 0D 06		        ldy tmp2
   1173 26CA B9 00 07		        lda preset_bank,y       ; saved value
@@ -1319,7 +1319,7 @@ Source: synth.asm
   1316 2825 4C 05 29		        jmp us_next
   1317 2828			us_emit8
   1318 2828 BC 10 06		        ldy voice_note,x
-  1319 282B B9 84 35		        lda chromatic,y         ; target AUDF for this note
+  1319 282B B9 87 35		        lda chromatic,y         ; target AUDF for this note
   1320 282E 8D 0C 06		        sta tmpA
   1321 2831 AD B6 06		        lda porta_rate          ; --- portamento glide ---
   1322 2834 F0 1B		        beq us_pt_snap          ; off -> snap to target
@@ -1345,7 +1345,7 @@ Source: synth.asm
   1342 285F 7D C1 06		        adc dvoff,x
   1343 2862 8D 1C 06		        sta vfreq
   1344 2865 AC 01 06		        ldy wave_idx
-  1345 2868 B9 CA 35		        lda wave_base,y
+  1345 2868 B9 CD 35		        lda wave_base,y
   1346 286B 1D 14 06		        ora voice_level,x
   1347 286E 8D 1D 06		        sta vctl
   1348 2871 8A			        txa
@@ -1371,9 +1371,9 @@ Source: synth.asm
   1368 2894 4C 05 29		        jmp us_next
   1369 2897			us_emit16
   1370 2897 BC 10 06		        ldy voice_note,x        ; N = chrom16[note]
-  1371 289A B9 10 36		        lda chrom16_lo,y
+  1371 289A B9 13 36		        lda chrom16_lo,y
   1372 289D 8D 8A 06		        sta nlo
-  1373 28A0 B9 51 36		        lda chrom16_hi,y
+  1373 28A0 B9 54 36		        lda chrom16_hi,y
   1374 28A3 8D 8B 06		        sta nhi
   1375 28A6 AD 68 06		        lda lfo_offset          ; + vibrato (signed 16-bit)
   1376 28A9 30 12		        bmi u16_lneg
@@ -1400,7 +1400,7 @@ Source: synth.asm
   1397 28D9 69 00		        adc #0
   1398 28DB 8D 8B 06		        sta nhi
   1399 28DE AC 01 06		        ldy wave_idx            ; AUDC for the audible (high) channel
-  1400 28E1 B9 CA 35		        lda wave_base,y
+  1400 28E1 B9 CD 35		        lda wave_base,y
   1401 28E4 1D 14 06		        ora voice_level,x
   1402 28E7 8D 1D 06		        sta vctl
   1403 28EA 8A			        txa
@@ -1640,7 +1640,7 @@ Source: synth.asm
   1637 2A6C AD 40 06		        lda xlo
   1638 2A6F 29 07		        and #7
   1639 2A71 AA			        tax
-  1640 2A72 BD 0A 38		        lda bitmask_tab,x
+  1640 2A72 BD 0D 38		        lda bitmask_tab,x
   1641 2A75 AC 61 06		        ldy pmode
   1642 2A78 D0 07		        bne pl_clear
   1643 2A7A A0 00		        ldy #0
@@ -1772,1572 +1772,1587 @@ Source: synth.asm
   1769 2B7D 18			        clc
   1770 2B7E 69 E0		        adc #>ROMFONT
   1771 2B80 85 CC		        sta scrptr+1
-  1772 2B82 A2 00		        ldx #0
-  1773 2B84			bc_l
-  1774 2B84 8A			        txa
-  1775 2B85 18			        clc
-  1776 2B86 6D 4A 06		        adc bc_scan
-  1777 2B89 A8			        tay
-  1778 2B8A B9 00 60		        lda linetab_lo,y
-  1779 2B8D 18			        clc
-  1780 2B8E 6D 49 06		        adc bc_col
-  1781 2B91 85 CF		        sta adjptr
-  1782 2B93 B9 C0 60		        lda linetab_hi,y
-  1783 2B96 69 00		        adc #0
-  1784 2B98 85 D0		        sta adjptr+1
-  1785 2B9A 8A			        txa
-  1786 2B9B A8			        tay
-  1787 2B9C B1 CB		        lda (scrptr),y
-  1788 2B9E 4D 4B 06		        eor bc_inv
-  1789 2BA1 AC 62 06		        ldy bc_mode
-  1790 2BA4 F0 0B		        beq bc_set
-  1791 2BA6 49 FF		        eor #$FF                ; clear mode: dest AND (NOT glyph)
-  1792 2BA8 A0 00		        ldy #0
-  1793 2BAA 31 CF		        and (adjptr),y
-  1794 2BAC 91 CF		        sta (adjptr),y
-  1795 2BAE 4C B5 2B		        jmp bc_step
-  1796 2BB1			bc_set
-  1797 2BB1 A0 00		        ldy #0
-  1798 2BB3 91 CF		        sta (adjptr),y
-  1799 2BB5			bc_step
-  1800 2BB5 E8			        inx
-  1801 2BB6 E0 08		        cpx #8
-  1802 2BB8 D0 CA		        bne bc_l
-  1803 2BBA 60			        rts
-  1804
-  1805 				; print $FF-terminated screen-code string srcptr at bc_col,bc_scan
-  1806 2BBB			print_strz
-  1807 2BBB A9 00		        lda #0
-  1808 2BBD 8D 4C 06		        sta psi
-  1809 2BC0			ps_l
-  1810 2BC0 AC 4C 06		        ldy psi
-  1811 2BC3 B1 CD		        lda (srcptr),y
-  1812 2BC5 C9 FF		        cmp #$FF
-  1813 2BC7 F0 0F		        beq ps_done
-  1814 2BC9 8D 48 06		        sta bc_code
-  1815 2BCC 20 58 2B		        jsr blit_char
-  1816 2BCF EE 49 06		        inc bc_col
-  1817 2BD2 EE 4C 06		        inc psi
-  1818 2BD5 4C C0 2B		        jmp ps_l
-  1819 2BD8			ps_done
-  1820 2BD8 60			        rts
-  1821
-  1822 				; print pcnt screen-code bytes from srcptr at bc_col,bc_scan
-  1823 2BD9			print_n
-  1824 2BD9 A9 00		        lda #0
-  1825 2BDB 8D 4C 06		        sta psi
-  1826 2BDE			pn_l
-  1827 2BDE AC 4C 06		        ldy psi
-  1828 2BE1 B1 CD		        lda (srcptr),y
-  1829 2BE3 8D 48 06		        sta bc_code
-  1830 2BE6 20 58 2B		        jsr blit_char
-  1831 2BE9 EE 49 06		        inc bc_col
-  1832 2BEC EE 4C 06		        inc psi
-  1833 2BEF AD 4C 06		        lda psi
-  1834 2BF2 CD 4D 06		        cmp pcnt
-  1835 2BF5 D0 E7		        bne pn_l
-  1836 2BF7 60			        rts
-  1837
-  1838 				; draw A (0..99) as two digits at bc_col,bc_scan (advances bc_col by 2)
-  1839 2BF8			num2
-  1840 2BF8 A2 00		        ldx #0
-  1841 2BFA			n2_l
-  1842 2BFA C9 0A		        cmp #10
-  1843 2BFC 90 07		        bcc n2_done
-  1844 2BFE 38			        sec
-  1845 2BFF E9 0A		        sbc #10
-  1846 2C01 E8			        inx
-  1847 2C02 4C FA 2B		        jmp n2_l
-  1848 2C05			n2_done
-  1849 2C05 48			        pha
-  1850 2C06 8A			        txa
-  1851 2C07 18			        clc
-  1852 2C08 69 10		        adc #$10
-  1853 2C0A 8D 48 06		        sta bc_code
-  1854 2C0D 20 58 2B		        jsr blit_char
-  1855 2C10 EE 49 06		        inc bc_col
-  1856 2C13 68			        pla
-  1857 2C14 18			        clc
-  1858 2C15 69 10		        adc #$10
-  1859 2C17 8D 48 06		        sta bc_code
-  1860 2C1A 20 58 2B		        jsr blit_char
-  1861 2C1D EE 49 06		        inc bc_col
-  1862 2C20 60			        rts
-  1863
-  1864 				; ============================================================================
-  1865 				;  KNOB  (ring + pointer; centre kcx,kcy, position kfrm 0..15)
-  1866 				; ============================================================================
-  1867 2C21			draw_knob
-  1868 2C21 20 CB 2C		        jsr clr_knob_box
-  1869 2C24 A9 00		        lda #0
-  1870 2C26 8D 61 06		        sta pmode
-  1871 2C29 8D 41 06		        sta xhi
-  1872 2C2C A2 00		        ldx #0
-  1873 2C2E			dkc
-  1874 2C2E 8E 45 06		        stx s_dy
-  1875 2C31 BD 12 38		        lda hw_tab,x
-  1876 2C34 8D 43 06		        sta s0                  ; half-width for this row
-  1877 2C37 AD 4F 06		        lda kcy                 ; upper row cy-dy
-  1878 2C3A 38			        sec
-  1879 2C3B ED 45 06		        sbc s_dy
-  1880 2C3E 8D 42 06		        sta py
-  1881 2C41 AD 4E 06		        lda kcx
-  1882 2C44 38			        sec
-  1883 2C45 ED 43 06		        sbc s0
-  1884 2C48 8D 40 06		        sta xlo
-  1885 2C4B 20 42 2A		        jsr plot
-  1886 2C4E AD 4E 06		        lda kcx
-  1887 2C51 18			        clc
-  1888 2C52 6D 43 06		        adc s0
-  1889 2C55 8D 40 06		        sta xlo
-  1890 2C58 20 42 2A		        jsr plot
-  1891 2C5B AD 4F 06		        lda kcy                 ; lower row cy+dy
-  1892 2C5E 18			        clc
-  1893 2C5F 6D 45 06		        adc s_dy
-  1894 2C62 8D 42 06		        sta py
-  1895 2C65 AD 4E 06		        lda kcx
-  1896 2C68 38			        sec
-  1897 2C69 ED 43 06		        sbc s0
-  1898 2C6C 8D 40 06		        sta xlo
-  1899 2C6F 20 42 2A		        jsr plot
-  1900 2C72 AD 4E 06		        lda kcx
-  1901 2C75 18			        clc
-  1902 2C76 6D 43 06		        adc s0
-  1903 2C79 8D 40 06		        sta xlo
-  1904 2C7C 20 42 2A		        jsr plot
-  1905 2C7F AE 45 06		        ldx s_dy
-  1906 2C82 E8			        inx
-  1907 2C83 E0 07		        cpx #7
-  1908 2C85 D0 A7		        bne dkc
-  1909 2C87 AE 50 06		        ldx kfrm                ; pointer: rim, mid, centre
-  1910 2C8A AD 4E 06		        lda kcx
-  1911 2C8D 18			        clc
-  1912 2C8E 7D 19 38		        adc kn_ex,x
-  1913 2C91 8D 40 06		        sta xlo
-  1914 2C94 AD 4F 06		        lda kcy
-  1915 2C97 18			        clc
-  1916 2C98 7D 29 38		        adc kn_ey,x
-  1917 2C9B 8D 42 06		        sta py
-  1918 2C9E 20 42 2A		        jsr plot
-  1919 2CA1 AE 50 06		        ldx kfrm
-  1920 2CA4 AD 4E 06		        lda kcx
-  1921 2CA7 18			        clc
-  1922 2CA8 7D 39 38		        adc kn_mx,x
-  1923 2CAB 8D 40 06		        sta xlo
-  1924 2CAE AD 4F 06		        lda kcy
-  1925 2CB1 18			        clc
-  1926 2CB2 7D 49 38		        adc kn_my,x
-  1927 2CB5 8D 42 06		        sta py
-  1928 2CB8 20 42 2A		        jsr plot
-  1929 2CBB AD 4E 06		        lda kcx
-  1930 2CBE 8D 40 06		        sta xlo
-  1931 2CC1 AD 4F 06		        lda kcy
-  1932 2CC4 8D 42 06		        sta py
-  1933 2CC7 20 42 2A		        jsr plot
-  1934 2CCA 60			        rts
-  1935
-  1936 				; clear a 3-byte x 14-row box around the knob centre (erase before redraw)
-  1937 2CCB			clr_knob_box
-  1938 2CCB AD 4E 06		        lda kcx
-  1939 2CCE 4A			        lsr
-  1940 2CCF 4A			        lsr
-  1941 2CD0 4A			        lsr
-  1942 2CD1 38			        sec
-  1943 2CD2 E9 01		        sbc #1
-  1944 2CD4 8D 43 06		        sta s0                  ; start byte column
-  1945 2CD7 AD 4F 06		        lda kcy
-  1946 2CDA 38			        sec
-  1947 2CDB E9 07		        sbc #7
-  1948 2CDD 8D 44 06		        sta s1                  ; top scan line
-  1949 2CE0 A2 0E		        ldx #14
-  1950 2CE2			ckb_row
-  1951 2CE2 AC 44 06		        ldy s1
-  1952 2CE5 B9 00 60		        lda linetab_lo,y
-  1953 2CE8 18			        clc
-  1954 2CE9 6D 43 06		        adc s0
-  1955 2CEC 85 CB		        sta scrptr
-  1956 2CEE B9 C0 60		        lda linetab_hi,y
-  1957 2CF1 69 00		        adc #0
-  1958 2CF3 85 CC		        sta scrptr+1
-  1959 2CF5 A9 00		        lda #0
-  1960 2CF7 A0 00		        ldy #0
-  1961 2CF9 91 CB		        sta (scrptr),y
-  1962 2CFB A0 01		        ldy #1
-  1963 2CFD 91 CB		        sta (scrptr),y
-  1964 2CFF A0 02		        ldy #2
-  1965 2D01 91 CB		        sta (scrptr),y
-  1966 2D03 EE 44 06		        inc s1
-  1967 2D06 CA			        dex
-  1968 2D07 D0 D9		        bne ckb_row
-  1969 2D09 60			        rts
-  1970
-  1971 				; ============================================================================
-  1972 				;  STATIC LAYOUT  (drawn once)
-  1973 				; ============================================================================
-  1974 2D0A			draw_static_gfx
-  1975 2D0A A9 00		        lda #0
-  1976 2D0C 8D 4B 06		        sta bc_inv
-  1977 2D0F 8D 62 06		        sta bc_mode
-  1978 				        ; title
-  1979 2D12 A9 CA		        lda #<txt_title
-  1980 2D14 85 CD		        sta srcptr
-  1981 2D16 A9 3C		        lda #>txt_title
-  1982 2D18 85 CE		        sta srcptr+1
-  1983 2D1A A9 0B		        lda #11
-  1984 2D1C 8D 49 06		        sta bc_col
-  1985 2D1F A9 00		        lda #0
-  1986 2D21 8D 4A 06		        sta bc_scan
-  1987 2D24 20 BB 2B		        jsr print_strz
-  1988 				        ; (parameter labels are drawn per-page by update_display on page change)
-  1989 				        ; NOTE label (top-right, on the title line)
-  1990 2D27 A9 16		        lda #<txt_note
-  1991 2D29 85 CD		        sta srcptr
-  1992 2D2B A9 3D		        lda #>txt_note
-  1993 2D2D 85 CE		        sta srcptr+1
-  1994 2D2F A9 1E		        lda #30
-  1995 2D31 8D 49 06		        sta bc_col
-  1996 2D34 A9 00		        lda #0
-  1997 2D36 8D 4A 06		        sta bc_scan
-  1998 2D39 20 BB 2B		        jsr print_strz
-  1999 2D3C 20 40 2D		        jsr draw_keyboard
-  2000 2D3F 60			        rts
-  2001
-  2002 2D40			draw_keyboard
-  2003 				        ; white keys: 10 FILLED rectangles, 28x56, pitch 30, from x=10
-  2004 2D40 A9 00		        lda #0
-  2005 2D42 8D 61 06		        sta pmode
-  2006 2D45 A9 0A		        lda #10
-  2007 2D47 8D 56 06		        sta wxl
-  2008 2D4A A9 00		        lda #0
-  2009 2D4C 8D 57 06		        sta wxh
-  2010 2D4F A2 00		        ldx #0
-  2011 2D51			dkw
-  2012 2D51 8E 46 06		        stx s_kc
-  2013 2D54 AD 56 06		        lda wxl
-  2014 2D57 8D 40 06		        sta xlo
-  2015 2D5A AD 57 06		        lda wxh
-  2016 2D5D 8D 41 06		        sta xhi
-  2017 2D60 A9 84		        lda #KBTOP
-  2018 2D62 8D 42 06		        sta py
-  2019 2D65 A9 1C		        lda #28
-  2020 2D67 8D 51 06		        sta rw
-  2021 2D6A A9 38		        lda #56
-  2022 2D6C 8D 52 06		        sta rh
-  2023 2D6F 20 2C 2B		        jsr fillrect
-  2024 2D72 18			        clc
-  2025 2D73 AD 56 06		        lda wxl
-  2026 2D76 69 1E		        adc #30
-  2027 2D78 8D 56 06		        sta wxl
-  2028 2D7B AD 57 06		        lda wxh
-  2029 2D7E 69 00		        adc #0
-  2030 2D80 8D 57 06		        sta wxh
-  2031 2D83 AE 46 06		        ldx s_kc
-  2032 2D86 E8			        inx
-  2033 2D87 E0 0A		        cpx #10
-  2034 2D89 D0 C6		        bne dkw
-  2035 				        ; black keys: CLEAR 7 rectangles, 16x34 (black notches at the top)
-  2036 2D8B A9 FF		        lda #$FF
-  2037 2D8D 8D 61 06		        sta pmode
-  2038 2D90 A2 00		        ldx #0
-  2039 2D92			dkb
-  2040 2D92 8E 46 06		        stx s_kc
-  2041 2D95 BD 5E 38		        lda blackx_lo,x
-  2042 2D98 8D 40 06		        sta xlo
-  2043 2D9B BD 65 38		        lda blackx_hi,x
-  2044 2D9E 8D 41 06		        sta xhi
-  2045 2DA1 A9 84		        lda #KBTOP
-  2046 2DA3 8D 42 06		        sta py
-  2047 2DA6 A9 10		        lda #16
-  2048 2DA8 8D 51 06		        sta rw
-  2049 2DAB A9 22		        lda #34
-  2050 2DAD 8D 52 06		        sta rh
-  2051 2DB0 20 2C 2B		        jsr fillrect
-  2052 2DB3 AE 46 06		        ldx s_kc
-  2053 2DB6 E8			        inx
-  2054 2DB7 E0 07		        cpx #7
-  2055 2DB9 D0 D7		        bne dkb
-  2056 2DBB A9 00		        lda #0
-  2057 2DBD 8D 61 06		        sta pmode
-  2058 2DC0 8D 4B 06		        sta bc_inv
-  2059 				        ; white-key letters ON the keys (black on white)
-  2060 2DC3 A9 FF		        lda #$FF
-  2061 2DC5 8D 62 06		        sta bc_mode
-  2062 2DC8 A2 00		        ldx #0
-  2063 2DCA			dwl
-  2064 2DCA 8E 46 06		        stx s_kc
-  2065 2DCD BD 6C 38		        lda white_lblcol,x
-  2066 2DD0 8D 49 06		        sta bc_col
-  2067 2DD3 A9 A8		        lda #KBTOP+36
-  2068 2DD5 8D 4A 06		        sta bc_scan
-  2069 2DD8 BD 76 38		        lda white_lblch,x
-  2070 2DDB 8D 48 06		        sta bc_code
-  2071 2DDE 20 58 2B		        jsr blit_char
-  2072 2DE1 AE 46 06		        ldx s_kc
-  2073 2DE4 E8			        inx
-  2074 2DE5 E0 0A		        cpx #10
-  2075 2DE7 D0 E1		        bne dwl
-  2076 				        ; black-key numbers ON the black keys (white on black)
-  2077 2DE9 A9 00		        lda #0
-  2078 2DEB 8D 62 06		        sta bc_mode
-  2079 2DEE A2 00		        ldx #0
-  2080 2DF0			dbl
-  2081 2DF0 8E 46 06		        stx s_kc
-  2082 2DF3 BD 80 38		        lda black_lblcol,x
-  2083 2DF6 8D 49 06		        sta bc_col
-  2084 2DF9 A9 88		        lda #KBTOP+4
-  2085 2DFB 8D 4A 06		        sta bc_scan
-  2086 2DFE BD 87 38		        lda black_lblch,x
-  2087 2E01 8D 48 06		        sta bc_code
-  2088 2E04 20 58 2B		        jsr blit_char
-  2089 2E07 AE 46 06		        ldx s_kc
-  2090 2E0A E8			        inx
-  2091 2E0B E0 07		        cpx #7
-  2092 2E0D D0 E1		        bne dbl
-  2093 2E0F 60			        rts
-  2094
-  2095 				; ============================================================================
-  2096 				;  PER-FRAME DISPLAY
-  2097 				; ============================================================================
-  2098 				; redraw only the widgets whose value changed this frame (no per-frame
-  2099 				; clear/redraw -> no flicker, low cost).
-  2100 2E10			update_display
-  2101 2E10 A9 00		        lda #0
-  2102 2E12 8D 4B 06		        sta bc_inv
-  2103 2E15 8D 62 06		        sta bc_mode
-  2104 				        ; page ranges: 0 = 0..11 (osc/env/fx), 1 = 12..15 + sequencer grid,
-  2105 				        ; 2 = 16..NPARAM-1 (filter etc.)
-  2106 2E18 AD 00 06		        lda cur_param
-  2107 2E1B C9 0C		        cmp #PER_PAGE
-  2108 2E1D 90 28		        bcc ud_pg0
-  2109 2E1F C9 10		        cmp #PG2BASE
-  2110 2E21 90 12		        bcc ud_pg1
-  2111 2E23 A9 10		        lda #PG2BASE            ; page 2
-  2112 2E25 8D 8F 06		        sta pg_base
-  2113 2E28 A9 13		        lda #NPARAM
-  2114 2E2A 8D 90 06		        sta pg_end
-  2115 2E2D A9 02		        lda #2
-  2116 2E2F 8D 8D 06		        sta page
-  2117 2E32 4C 54 2E		        jmp ud_pgset
-  2118 2E35			ud_pg1
-  2119 2E35 A9 0C		        lda #PER_PAGE           ; page 1 (sequencer)
-  2120 2E37 8D 8F 06		        sta pg_base
-  2121 2E3A A9 10		        lda #PG2BASE
-  2122 2E3C 8D 90 06		        sta pg_end
-  2123 2E3F A9 01		        lda #1
-  2124 2E41 8D 8D 06		        sta page
-  2125 2E44 4C 54 2E		        jmp ud_pgset
-  2126 2E47			ud_pg0
-  2127 2E47 A9 00		        lda #0
-  2128 2E49 8D 8F 06		        sta pg_base
-  2129 2E4C 8D 8D 06		        sta page
-  2130 2E4F A9 0C		        lda #PER_PAGE
-  2131 2E51 8D 90 06		        sta pg_end
-  2132 2E54			ud_pgset
-  2133 				        ; page change -> clear panel, redraw labels, force value + marker redraw
-  2134 2E54 AD 8D 06		        lda page
-  2135 2E57 CD 8E 06		        cmp prev_page
-  2136 2E5A F0 37		        beq ud_pgsame
-  2137 2E5C 8D 8E 06		        sta prev_page
-  2138 2E5F 20 8E 30		        jsr clear_panel
-  2139 2E62 20 B4 30		        jsr draw_page_labels
-  2140 2E65 AE 8F 06		        ldx pg_base
-  2141 2E68 A9 FF		        lda #$FF
-  2142 2E6A			ud_rst
-  2143 2E6A 9D 70 06		        sta prev_disp,x
-  2144 2E6D E8			        inx
-  2145 2E6E EC 90 06		        cpx pg_end
-  2146 2E71 D0 F7		        bne ud_rst
-  2147 2E73 AD 00 06		        lda cur_param           ; labels already drawn (focused) above -> sync
-  2148 2E76 8D 58 06		        sta prev_param          ; prev_param so ud_pgsame doesn't redraw them again
-  2149 2E79 A9 FF		        lda #$FF
-  2150 2E7B 8D A7 06		        sta prev_spos           ; force sequencer grid/transport redraw on page 2
-  2151 2E7E 8D A8 06		        sta prev_splay
-  2152 2E81 8D A9 06		        sta prev_srec
-  2153 2E84 A9 01		        lda #1
-  2154 2E86 8D AA 06		        sta seq_dirty
-  2155 2E89 A2 03		        ldx #3                  ; clear_panel wiped the VU bars -> redraw from 0
-  2156 2E8B A9 00		        lda #0
-  2157 2E8D			ud_pgvm
-  2158 2E8D 9D AD 06		        sta prev_vmeter,x
-  2159 2E90 CA			        dex
-  2160 2E91 10 FA		        bpl ud_pgvm
-  2161 2E93			ud_pgsame
-  2162 				        ; focus highlight: when the selection moves, redraw the page's labels so the
-  2163 				        ; newly-selected one is inverse and the old one reverts to normal (replaces
-  2164 				        ; the old '>' marker). draw_page_labels applies pl_inv per param.
-  2165 2E93 AD 00 06		        lda cur_param
-  2166 2E96 CD 58 06		        cmp prev_param
-  2167 2E99 F0 06		        beq ud_nomk
-  2168 2E9B 8D 58 06		        sta prev_param
-  2169 2E9E 20 B4 30		        jsr draw_page_labels
-  2170 2EA1			ud_nomk
-  2171 				        ; per-parameter value redraw on change (current page only)
-  2172 2EA1 AE 8F 06		        ldx pg_base
-  2173 2EA4			ud_pl
-  2174 2EA4 8E 46 06		        stx s_kc
-  2175 2EA7 BD 4E 37		        lda p_vaddr_lo,x
-  2176 2EAA 85 CD		        sta srcptr
-  2177 2EAC BD 61 37		        lda p_vaddr_hi,x
-  2178 2EAF 85 CE		        sta srcptr+1
-  2179 2EB1 A0 00		        ldy #0
-  2180 2EB3 B1 CD		        lda (srcptr),y          ; current value
-  2181 2EB5 DD 70 06		        cmp prev_disp,x
-  2182 2EB8 F0 06		        beq ud_pn
-  2183 2EBA 9D 70 06		        sta prev_disp,x
-  2184 2EBD 20 9F 31		        jsr draw_param
-  2185 2EC0			ud_pn
-  2186 2EC0 AE 46 06		        ldx s_kc
-  2187 2EC3 E8			        inx
-  2188 2EC4 EC 90 06		        cpx pg_end
-  2189 2EC7 D0 DB		        bne ud_pl
-  2190 				        ; page-2 sequencer grid (step cells + play head + transport)
-  2191 2EC9 AD 8D 06		        lda page
-  2192 2ECC C9 01		        cmp #1
-  2193 2ECE D0 03		        bne ud_noseq
-  2194 2ED0 20 EB 2E		        jsr seq_draw
-  2195 2ED3			ud_noseq
-  2196 2ED3 20 43 32		        jsr hint_update         ; context-sensitive hint line above the keyboard
-  2197 2ED6 20 06 30		        jsr draw_meters         ; per-voice VU bars (both pages)
-  2198 				        ; NOTE name + active-key indicator (on note change)
-  2199 2ED9 AD 07 06		        lda note_idx
-  2200 2EDC CD 08 06		        cmp prev_note
-  2201 2EDF F0 09		        beq ud_donote
-  2202 2EE1 8D 08 06		        sta prev_note
-  2203 2EE4 20 3C 33		        jsr draw_note
-  2204 2EE7 20 09 34		        jsr key_indicator
-  2205 2EEA			ud_donote
-  2206 2EEA 60			        rts
-  2207
-  2208 				; ----------------------------------------------------------------------------
-  2209 				;  Sequencer page (page 2) display: 16 step cells (block = note, '.' = rest),
-  2210 				;  a play-head marker above the active step, and PLAY/STOP + REC status.
-  2211 				; ----------------------------------------------------------------------------
-  2212 2EEB			seq_draw
-  2213 2EEB A9 00		        lda #0
-  2214 2EED 8D 4B 06		        sta bc_inv
-  2215 2EF0 8D 62 06		        sta bc_mode
-  2216 2EF3 AD AA 06		        lda seq_dirty           ; full step grid redraw when the pattern changed
-  2217 2EF6 F0 54		        beq sd_nogrid
-  2218 2EF8 A9 00		        lda #0
-  2219 2EFA 8D AA 06		        sta seq_dirty
-  2220 2EFD A2 00		        ldx #0
-  2221 2EFF			sd_cell
-  2222 2EFF 8E 46 06		        stx s_kc
-  2223 2F02 8A			        txa                     ; col = 4 + step*2
-  2224 2F03 0A			        asl
-  2225 2F04 18			        clc
-  2226 2F05 69 04		        adc #4
-  2227 2F07 8D 49 06		        sta bc_col
-  2228 2F0A A9 38		        lda #56
-  2229 2F0C 8D 4A 06		        sta bc_scan
-  2230 2F0F A9 00		        lda #0                  ; default normal video (notes flip this for a block)
-  2231 2F11 8D 4B 06		        sta bc_inv
-  2232 2F14 AE 46 06		        ldx s_kc
-  2233 2F17 BD 91 06		        lda seq_notes,x
-  2234 2F1A C9 FF		        cmp #$FF
-  2235 2F1C D0 04		        bne sd_notrest
-  2236 2F1E A9 0E		        lda #$0E                ; '.' = rest
-  2237 2F20 D0 17		        bne sd_putcell
-  2238 2F22			sd_notrest
-  2239 2F22 C9 FE		        cmp #$FE
-  2240 2F24 D0 04		        bne sd_nottie
-  2241 2F26 A9 0D		        lda #$0D                ; '-' = tie (held note continues)
-  2242 2F28 D0 0F		        bne sd_putcell
-  2243 2F2A			sd_nottie
-  2244 2F2A C9 FD		        cmp #$FD
-  2245 2F2C D0 04		        bne sd_filled
-  2246 2F2E A9 0A		        lda #$0A                ; '*' = drum hit (distinct from a pitched note)
-  2247 2F30 D0 07		        bne sd_putcell
-  2248 2F32			sd_filled
-  2249 2F32 A9 FF		        lda #$FF                ; note = SOLID block: inverse-video space ($00 EOR $FF).
-  2250 2F34 8D 4B 06		        sta bc_inv              ; (code $80 read garbage past the 128-glyph ROM font)
-  2251 2F37 A9 00		        lda #$00
-  2252 2F39			sd_putcell
-  2253 2F39 8D 48 06		        sta bc_code
-  2254 2F3C 20 58 2B		        jsr blit_char
-  2255 2F3F A9 00		        lda #0                  ; restore normal video for the head/transport draws
-  2256 2F41 8D 4B 06		        sta bc_inv
-  2257 2F44 AE 46 06		        ldx s_kc
-  2258 2F47 E8			        inx
-  2259 2F48 E0 10		        cpx #16
-  2260 2F4A D0 B3		        bne sd_cell
-  2261 2F4C			sd_nogrid
-  2262 2F4C AD A1 06		        lda seq_play            ; transport text on change
-  2263 2F4F CD A8 06		        cmp prev_splay
-  2264 2F52 D0 08		        bne sd_txt
-  2265 2F54 AD A2 06		        lda seq_rec
-  2266 2F57 CD A9 06		        cmp prev_srec
-  2267 2F5A F0 56		        beq sd_phead
-  2268 2F5C			sd_txt
-  2269 2F5C AD A1 06		        lda seq_play
-  2270 2F5F 8D A8 06		        sta prev_splay
-  2271 2F62 AD A2 06		        lda seq_rec
-  2272 2F65 8D A9 06		        sta prev_srec
-  2273 2F68 AD A1 06		        lda seq_play
-  2274 2F6B F0 0B		        beq sd_stop
-  2275 2F6D A9 7B		        lda #<txt_play
-  2276 2F6F 85 CD		        sta srcptr
-  2277 2F71 A9 3D		        lda #>txt_play
-  2278 2F73 85 CE		        sta srcptr+1
-  2279 2F75 4C 80 2F		        jmp sd_pput
-  2280 2F78			sd_stop
-  2281 2F78 A9 80		        lda #<txt_stop
-  2282 2F7A 85 CD		        sta srcptr
-  2283 2F7C A9 3D		        lda #>txt_stop
-  2284 2F7E 85 CE		        sta srcptr+1
-  2285 2F80			sd_pput
-  2286 2F80 A9 04		        lda #4
-  2287 2F82 8D 49 06		        sta bc_col
-  2288 2F85 A9 48		        lda #72
-  2289 2F87 8D 4A 06		        sta bc_scan
-  2290 2F8A 20 BB 2B		        jsr print_strz
-  2291 2F8D AD A2 06		        lda seq_rec
-  2292 2F90 F0 0B		        beq sd_norec
-  2293 2F92 A9 85		        lda #<txt_rec
-  2294 2F94 85 CD		        sta srcptr
-  2295 2F96 A9 3D		        lda #>txt_rec
-  2296 2F98 85 CE		        sta srcptr+1
-  2297 2F9A 4C A5 2F		        jmp sd_rput
-  2298 2F9D			sd_norec
-  2299 2F9D A9 89		        lda #<txt_blk3
-  2300 2F9F 85 CD		        sta srcptr
-  2301 2FA1 A9 3D		        lda #>txt_blk3
-  2302 2FA3 85 CE		        sta srcptr+1
-  2303 2FA5			sd_rput
-  2304 2FA5 A9 0A		        lda #10
-  2305 2FA7 8D 49 06		        sta bc_col
-  2306 2FAA A9 48		        lda #72
-  2307 2FAC 8D 4A 06		        sta bc_scan
-  2308 2FAF 20 BB 2B		        jsr print_strz
-  2309 2FB2			sd_phead
-  2310 				        ; the ↓ head marks the active step: the WRITE head during step entry
-  2311 				        ; (rec armed + stopped), else the PLAY/clock head (playback or real-time).
-  2312 2FB2 AD A2 06		        lda seq_rec
-  2313 2FB5 F0 0B		        beq sd_ph_useplay
-  2314 2FB7 AD A1 06		        lda seq_play
-  2315 2FBA D0 06		        bne sd_ph_useplay       ; real-time record -> clock head, not write head
-  2316 2FBC AD A4 06		        lda seq_wpos
-  2317 2FBF 4C C5 2F		        jmp sd_ph_have
-  2318 2FC2			sd_ph_useplay
-  2319 2FC2 AD A3 06		        lda seq_pos
-  2320 2FC5			sd_ph_have
-  2321 2FC5 8D 0C 06		        sta tmpA                ; tmpA = step to mark (survives blit_char)
-  2322 2FC8 CD A7 06		        cmp prev_spos
-  2323 2FCB F0 38		        beq sd_done
-  2324 2FCD AD A7 06		        lda prev_spos
-  2325 2FD0 C9 10		        cmp #16
-  2326 2FD2 B0 14		        bcs sd_ph_new           ; previous head invalid ($FF) -> nothing to erase
-  2327 2FD4 0A			        asl
-  2328 2FD5 18			        clc
-  2329 2FD6 69 04		        adc #4
-  2330 2FD8 8D 49 06		        sta bc_col
-  2331 2FDB A9 30		        lda #48
-  2332 2FDD 8D 4A 06		        sta bc_scan
-  2333 2FE0 A9 00		        lda #$00
-  2334 2FE2 8D 48 06		        sta bc_code
-  2335 2FE5 20 58 2B		        jsr blit_char
-  2336 2FE8			sd_ph_new
-  2337 2FE8 AD 0C 06		        lda tmpA
-  2338 2FEB 0A			        asl
-  2339 2FEC 18			        clc
-  2340 2FED 69 04		        adc #4
-  2341 2FEF 8D 49 06		        sta bc_col
-  2342 2FF2 A9 30		        lda #48
-  2343 2FF4 8D 4A 06		        sta bc_scan
-  2344 2FF7 A9 5D		        lda #$5D                ; down-arrow marker (distinct from note blocks)
-  2345 2FF9 8D 48 06		        sta bc_code
-  2346 2FFC 20 58 2B		        jsr blit_char
-  2347 2FFF AD 0C 06		        lda tmpA
-  2348 3002 8D A7 06		        sta prev_spos
-  2349 3005			sd_done
-  2350 3005 60			        rts
-  2351
-  2352 				; ----------------------------------------------------------------------------
-  2353 				;  Per-voice level meters: 4 horizontal VU bars at scan 9-13, bar width =
-  2354 				;  voice envelope level * 3 px. Drawn INCREMENTALLY -- each frame only the
-  2355 				;  delta between the old and new level is set/cleared, so meters animating
-  2356 				;  with the envelopes cost a few pixels per voice, not a full redraw.
-  2357 				; ----------------------------------------------------------------------------
-  2358 3006			draw_meters
-  2359 3006 A2 00		        ldx #0
-  2360 3008			dm_loop
-  2361 3008 8E 46 06		        stx s_kc
-  2362 300B BD 14 06		        lda voice_level,x
-  2363 300E DD AD 06		        cmp prev_vmeter,x
-  2364 3011 F0 69		        beq dm_next
-  2365 3013 BC AD 06		        ldy prev_vmeter,x       ; old level
-  2366 3016 8C 0D 06		        sty tmp2
-  2367 3019 9D AD 06		        sta prev_vmeter,x       ; store new
-  2368 301C CD 0D 06		        cmp tmp2                ; new - old
-  2369 301F B0 14		        bcs dm_rise
-  2370 3021 A9 FF		        lda #$FF                ; level fell -> CLEAR from new to old
-  2371 3023 8D 61 06		        sta pmode
-  2372 3026 AD 0D 06		        lda tmp2
-  2373 3029 8D B2 06		        sta dm_hi               ; hi = old
-  2374 302C BD AD 06		        lda prev_vmeter,x
-  2375 302F 8D B1 06		        sta dm_lo               ; lo = new
-  2376 3032 4C 46 30		        jmp dm_calc
-  2377 3035			dm_rise
-  2378 3035 A9 00		        lda #0                  ; level rose -> SET from old to new
-  2379 3037 8D 61 06		        sta pmode
-  2380 303A AD 0D 06		        lda tmp2
-  2381 303D 8D B1 06		        sta dm_lo               ; lo = old
-  2382 3040 BD AD 06		        lda prev_vmeter,x
-  2383 3043 8D B2 06		        sta dm_hi               ; hi = new
-  2384 3046			dm_calc
-  2385 3046 AE 46 06		        ldx s_kc
-  2386 3049 AD B1 06		        lda dm_lo               ; xlo = met_x[v] + lo*3
-  2387 304C 0A			        asl
-  2388 304D 18			        clc
-  2389 304E 6D B1 06		        adc dm_lo
-  2390 3051 18			        clc
-  2391 3052 7D 8A 30		        adc met_x,x
-  2392 3055 8D 40 06		        sta xlo
-  2393 3058 A9 00		        lda #0
-  2394 305A 8D 41 06		        sta xhi
-  2395 305D AD B2 06		        lda dm_hi               ; rw = (hi - lo)*3
-  2396 3060 38			        sec
-  2397 3061 ED B1 06		        sbc dm_lo
-  2398 3064 8D 0C 06		        sta tmpA
-  2399 3067 0A			        asl
-  2400 3068 18			        clc
-  2401 3069 6D 0C 06		        adc tmpA
-  2402 306C 8D 51 06		        sta rw
-  2403 306F A9 09		        lda #9
-  2404 3071 8D 42 06		        sta py
-  2405 3074 A9 05		        lda #5
-  2406 3076 8D 52 06		        sta rh
-  2407 3079 20 2C 2B		        jsr fillrect
-  2408 307C			dm_next
-  2409 307C AE 46 06		        ldx s_kc
-  2410 307F E8			        inx
-  2411 3080 E0 04		        cpx #4
-  2412 3082 D0 84		        bne dm_loop
-  2413 3084 A9 00		        lda #0
-  2414 3086 8D 61 06		        sta pmode
-  2415 3089 60			        rts
-  2416 308A 04 48 8C D0		met_x   .byte 4,72,140,208
-  2417
-  2418 				; clear the panel area (scan 8..123); leaves title row and keyboard intact
-  2419 308E			clear_panel
-  2420 308E A9 08		        lda #8
-  2421 3090 8D 44 06		        sta s1
-  2422 3093			cpan
-  2423 3093 AC 44 06		        ldy s1
-  2424 3096 B9 00 60		        lda linetab_lo,y
-  2425 3099 85 CB		        sta scrptr
-  2426 309B B9 C0 60		        lda linetab_hi,y
-  2427 309E 85 CC		        sta scrptr+1
-  2428 30A0 A0 27		        ldy #39
-  2429 30A2 A9 00		        lda #0
-  2430 30A4			cpan2
-  2431 30A4 91 CB		        sta (scrptr),y
-  2432 30A6 88			        dey
-  2433 30A7 10 FB		        bpl cpan2
-  2434 30A9 EE 44 06		        inc s1
-  2435 30AC AD 44 06		        lda s1
-  2436 30AF C9 7C		        cmp #124
-  2437 30B1 D0 E0		        bne cpan
-  2438 30B3 60			        rts
-  2439
-  2440 				; draw the current page's parameter labels
-  2441 30B4			draw_page_labels
-  2442 30B4 A9 00		        lda #0
-  2443 30B6 8D 4B 06		        sta bc_inv
-  2444 30B9 8D 62 06		        sta bc_mode
-  2445 30BC AE 8F 06		        ldx pg_base
-  2446 30BF			dpgl
-  2447 30BF 8E 46 06		        stx s_kc
-  2448 30C2 BD 74 37		        lda p_lblptr_lo,x
-  2449 30C5 85 CD		        sta srcptr
-  2450 30C7 BD 87 37		        lda p_lblptr_hi,x
-  2451 30CA 85 CE		        sta srcptr+1
-  2452 30CC BD 15 37		        lda p_lblcol,x
-  2453 30CF 8D 49 06		        sta bc_col
-  2454 30D2 BD 02 37		        lda p_scan,x
-  2455 30D5 8D 4A 06		        sta bc_scan
-  2456 30D8 BD 9A 37		        lda p_hl,x
-  2457 30DB 8D CC 06		        sta hl_idx
-  2458 30DE BD AD 37		        lda p_hl_shift,x        ; is this param's shortcut a Shift+letter?
-  2459 30E1 8D D3 06		        sta hl_shift
-  2460 30E4 A9 00		        lda #0                  ; focus highlight: inverse the selected param's label
-  2461 30E6 EC 00 06		        cpx cur_param
-  2462 30E9 D0 02		        bne dpgl_inv
-  2463 30EB A9 FF		        lda #$FF
-  2464 30ED			dpgl_inv
-  2465 30ED 8D D2 06		        sta pl_inv
-  2466 30F0 20 34 31		        jsr print_label         ; (leaves bc_col at the label's end column)
-  2467 30F3 AD 04 06		        lda clock15             ; 16-bit mode disables some FX -> strike them through
-  2468 30F6 C9 02		        cmp #2
-  2469 30F8 D0 0B		        bne dpgl_next
-  2470 30FA AE 46 06		        ldx s_kc
-  2471 30FD BD C0 37		        lda p_inert16,x
-  2472 3100 F0 03		        beq dpgl_next
-  2473 3102 20 0F 31		        jsr draw_strike
-  2474 3105			dpgl_next
-  2475 3105 AE 46 06		        ldx s_kc
-  2476 3108 E8			        inx
-  2477 3109 EC 90 06		        cpx pg_end
-  2478 310C D0 B1		        bne dpgl
-  2479 310E 60			        rts
-  2480
-  2481 				; strike a horizontal line through the label just drawn (cols p_lblcol..bc_col at
-  2482 				; the cell's middle row) -> the "this control is inert in 16-bit mode" marker.
-  2483 310F			draw_strike
-  2484 310F AD 4A 06		        lda bc_scan
-  2485 3112 18			        clc
-  2486 3113 69 03		        adc #3
-  2487 3115 A8			        tay
-  2488 3116 B9 00 60		        lda linetab_lo,y
-  2489 3119 85 CF		        sta adjptr
-  2490 311B B9 C0 60		        lda linetab_hi,y
-  2491 311E 85 D0		        sta adjptr+1
-  2492 3120 AE 46 06		        ldx s_kc
-  2493 3123 BC 15 37		        ldy p_lblcol,x
-  2494 3126			ds_l
-  2495 3126 CC 49 06		        cpy bc_col
-  2496 3129 B0 08		        bcs ds_done
-  2497 312B A9 FF		        lda #$FF
-  2498 312D 91 CF		        sta (adjptr),y
-  2499 312F C8			        iny
-  2500 3130 4C 26 31		        jmp ds_l
-  2501 3133			ds_done
-  2502 3133 60			        rts
-  2503
-  2504 				; Print a label. The char at index hl_idx is the shortcut key, drawn highlighted
-  2505 				; (HL_STYLE 1 = underline). pl_inv ($FF) renders the whole label in inverse video
-  2506 				; -> the FOCUS highlight for the selected param (underline=shortcut, inverse=focus).
-  2507 3134			print_label
-  2508 3134 A9 00		        lda #0
-  2509 3136 8D 4C 06		        sta psi
-  2510 3139 AD D2 06		        lda pl_inv              ; base inverse for every cell (focus highlight)
-  2511 313C 8D 4B 06		        sta bc_inv
-  2512 313F			pl_l
-  2513 313F AC 4C 06		        ldy psi
-  2514 3142 B1 CD		        lda (srcptr),y
-  2515 3144 C9 FF		        cmp #$FF
-  2516 3146 F0 33		        beq pl_done
-  2517 3148 8D 48 06		        sta bc_code
-  2518 314B AD 4C 06		        lda psi
-  2519 314E CD CC 06		        cmp hl_idx
-  2520 3151 D0 1C		        bne pl_normal
-  2521 				    .if HL_STYLE = 0
-  2522 				        lda pl_inv              ; shortcut char = opposite of the label's base
-  2523 				        eor #$FF
-  2524 				        sta bc_inv
-  2525 				        jsr blit_char
-  2526 				        lda pl_inv
-  2527 				        sta bc_inv
-  2528 				    .else
-  2529 3153 AD D3 06		        lda hl_shift            ; SHIFT shortcut -> draw the char OPPOSITE the
-  2530 3156 F0 08		        beq pl_sc_draw          ; label's video (the cue for "add Shift")
-  2531 3158 AD D2 06		        lda pl_inv
-  2532 315B 49 FF		        eor #$FF
-  2533 315D 8D 4B 06		        sta bc_inv
-  2534 3160			pl_sc_draw
-  2535 3160 20 58 2B		        jsr blit_char           ; glyph + underline beneath it
-  2536 3163 20 81 31		        jsr draw_underline
-  2537 3166 AD D2 06		        lda pl_inv              ; restore base video for the remaining chars
-  2538 3169 8D 4B 06		        sta bc_inv
-  2539 				    .endif
-  2540 316C 4C 72 31		        jmp pl_adv
-  2541 316F			pl_normal
-  2542 316F 20 58 2B		        jsr blit_char
-  2543 3172			pl_adv
-  2544 3172 EE 49 06		        inc bc_col
-  2545 3175 EE 4C 06		        inc psi
-  2546 3178 4C 3F 31		        jmp pl_l
-  2547 317B			pl_done
-  2548 317B A9 00		        lda #0                  ; leave bc_inv clean (num2/knob draws assume 0)
-  2549 317D 8D 4B 06		        sta bc_inv
-  2550 3180 60			        rts
-  2551
-  2552 				; DEMO: underline the glyph cell at bc_col, bottom row of bc_scan
-  2553 3181			draw_underline
-  2554 3181 AD 4A 06		        lda bc_scan
-  2555 3184 18			        clc
-  2556 3185 69 07		        adc #7
-  2557 3187 A8			        tay
-  2558 3188 B9 00 60		        lda linetab_lo,y
-  2559 318B 18			        clc
-  2560 318C 6D 49 06		        adc bc_col
-  2561 318F 85 CF		        sta adjptr
-  2562 3191 B9 C0 60		        lda linetab_hi,y
-  2563 3194 69 00		        adc #0
-  2564 3196 85 D0		        sta adjptr+1
-  2565 3198 A0 00		        ldy #0
-  2566 319A A9 FF		        lda #$FF
-  2567 319C 91 CF		        sta (adjptr),y
-  2568 319E 60			        rts
-  2569
-  2570 				; draw one parameter widget; X = param index
-  2571 319F			draw_param
-  2572 319F BD EF 36		        lda p_kind,x
-  2573 31A2 C9 02		        cmp #K_WAVE
-  2574 31A4 D0 03		        bne dp_n1
-  2575 31A6 4C 9E 34		        jmp draw_wave_selector
-  2576 31A9			dp_n1
-  2577 31A9 C9 03		        cmp #K_CLK
-  2578 31AB D0 03		        bne dp_chkpre
-  2579 31AD 4C 1F 35		        jmp draw_clk_toggle
-  2580 31B0			dp_chkpre
-  2581 31B0 E0 11		        cpx #17                 ; PRESET -> knob + name (INIT/PAD/LEAD/ARP) or SAVED
-  2582 31B2 D0 03		        bne dp_n2
-  2583 31B4 4C B4 32		        jmp draw_preset_widget
-  2584 31B7			dp_n2
-  2585 31B7 BD 28 37		        lda p_knobcx,x          ; KNOB / OCT: common knob setup
-  2586 31BA 8D 4E 06		        sta kcx
-  2587 31BD BD 02 37		        lda p_scan,x
-  2588 31C0 18			        clc
-  2589 31C1 69 05		        adc #5
-  2590 31C3 8D 4F 06		        sta kcy
-  2591 31C6 BD 3B 37		        lda p_numcol,x
-  2592 31C9 8D 6C 06		        sta dp_numcol
-  2593 31CC BD 02 37		        lda p_scan,x
-  2594 31CF 8D 6D 06		        sta dp_scan
-  2595 31D2 BD F7 37		        lda p_zoff,x            ; capture before draw_knob clobbers X
-  2596 31D5 8D D0 06		        sta dp_zoff
-  2597 31D8 BD 4E 37		        lda p_vaddr_lo,x
-  2598 31DB 85 CD		        sta srcptr
-  2599 31DD BD 61 37		        lda p_vaddr_hi,x
-  2600 31E0 85 CE		        sta srcptr+1
-  2601 31E2 A0 00		        ldy #0
-  2602 31E4 B1 CD		        lda (srcptr),y
-  2603 31E6 8D 6B 06		        sta dp_val
-  2604 31E9 BD EF 36		        lda p_kind,x
-  2605 31EC C9 01		        cmp #K_OCT
-  2606 31EE F0 37		        beq dp_oct
-  2607 31F0 AD 6B 06		        lda dp_val              ; --- K_KNOB ---
-  2608 31F3 8D 50 06		        sta kfrm
-  2609 31F6 20 21 2C		        jsr draw_knob
-  2610 31F9 AD 6C 06		        lda dp_numcol
-  2611 31FC 8D 49 06		        sta bc_col
-  2612 31FF AD 6D 06		        lda dp_scan
-  2613 3202 8D 4A 06		        sta bc_scan
-  2614 3205 AD D0 06		        lda dp_zoff             ; OFF-capable param sitting at 0 -> show "OFF"
-  2615 3208 F0 09		        beq dp_num
-  2616 320A AD 6B 06		        lda dp_val
-  2617 320D D0 04		        bne dp_num
-  2618 320F 20 1D 33		        jsr draw_off
-  2619 3212 60			        rts
-  2620 3213			dp_num
-  2621 3213 AD 6B 06		        lda dp_val
-  2622 3216 20 F8 2B		        jsr num2                ; num2 leaves bc_col at the 3rd cell
-  2623 3219 AD D0 06		        lda dp_zoff             ; OFF-capable -> clear the 3rd cell ("OFF" leftover)
-  2624 321C F0 08		        beq dp_knobdone
-  2625 321E A9 00		        lda #0
-  2626 3220 8D 48 06		        sta bc_code
-  2627 3223 20 58 2B		        jsr blit_char
-  2628 3226			dp_knobdone
-  2629 3226 60			        rts
-  2630 3227			dp_oct
-  2631 3227 AC 6B 06		        ldy dp_val              ; --- K_OCT ---
-  2632 322A B9 59 38		        lda oct_knob16,y
-  2633 322D 8D 50 06		        sta kfrm
-  2634 3230 20 21 2C		        jsr draw_knob
-  2635 3233 AD 6C 06		        lda dp_numcol
-  2636 3236 8D 49 06		        sta bc_col
-  2637 3239 AD 6D 06		        lda dp_scan
-  2638 323C 8D 4A 06		        sta bc_scan
-  2639 323F 20 B7 33		        jsr draw_octave_num
-  2640 3242 60			        rts
-  2641
-  2642 				; Context-sensitive hint line. Pick an id from what's selected, and only redraw
-  2643 				; when it changes (prev_hint):  2 = PRESET selected -> save tip,
-  2644 				; 1 = sequencer page -> transport tip,  0 = default -> nav/hold tip.
-  2645 3243			hint_update
-  2646 3243 AD 00 06		        lda cur_param
-  2647 3246 C9 11		        cmp #17                 ; PRESET param selected?
-  2648 3248 D0 05		        bne hu_n1
-  2649 324A A9 02		        lda #2
-  2650 324C 4C 5D 32		        jmp hu_have
-  2651 324F			hu_n1
-  2652 324F AD 8D 06		        lda page
-  2653 3252 C9 01		        cmp #1                  ; sequencer page?
-  2654 3254 D0 05		        bne hu_n2
-  2655 3256 A9 01		        lda #1
-  2656 3258 4C 5D 32		        jmp hu_have
-  2657 325B			hu_n2
-  2658 325B A9 00		        lda #0
-  2659 325D			hu_have
-  2660 325D CD D1 06		        cmp prev_hint
-  2661 3260 F0 06		        beq hu_done
-  2662 3262 8D D1 06		        sta prev_hint
-  2663 3265 20 69 32		        jsr draw_hint
-  2664 3268			hu_done
-  2665 3268 60			        rts
-  2666
-  2667 				; draw the hint string for id in prev_hint, centred on the HINTSCAN row
-  2668 3269			draw_hint
-  2669 3269 20 90 32		        jsr clear_hint
-  2670 326C AE D1 06		        ldx prev_hint
-  2671 326F BD C3 3D		        lda hint_lo,x
-  2672 3272 85 CD		        sta srcptr
-  2673 3274 BD C6 3D		        lda hint_hi,x
-  2674 3277 85 CE		        sta srcptr+1
-  2675 3279 BD C9 3D		        lda hint_col,x
-  2676 327C 8D 49 06		        sta bc_col
-  2677 327F A9 7C		        lda #HINTSCAN
-  2678 3281 8D 4A 06		        sta bc_scan
-  2679 3284 A9 00		        lda #0
-  2680 3286 8D 4B 06		        sta bc_inv
-  2681 3289 8D 62 06		        sta bc_mode
-  2682 328C 20 BB 2B		        jsr print_strz
-  2683 328F 60			        rts
-  2684
-  2685 				; blank the 8-scanline hint row (full 40-byte width) before redrawing
-  2686 3290			clear_hint
-  2687 3290 A9 7C		        lda #HINTSCAN
-  2688 3292 8D 44 06		        sta s1
-  2689 3295 A2 08		        ldx #8
-  2690 3297			ch_row
-  2691 3297 AC 44 06		        ldy s1
-  2692 329A B9 00 60		        lda linetab_lo,y
-  2693 329D 85 CB		        sta scrptr
-  2694 329F B9 C0 60		        lda linetab_hi,y
-  2695 32A2 85 CC		        sta scrptr+1
-  2696 32A4 A0 27		        ldy #39
-  2697 32A6 A9 00		        lda #0
-  2698 32A8			ch_col
-  2699 32A8 91 CB		        sta (scrptr),y
-  2700 32AA 88			        dey
-  2701 32AB 10 FB		        bpl ch_col
-  2702 32AD EE 44 06		        inc s1
-  2703 32B0 CA			        dex
-  2704 32B1 D0 E4		        bne ch_row
-  2705 32B3 60			        rts
-  2706
-  2707 				; PRESET widget: knob (slot 0..3) + the slot NAME (INIT/PAD/LEAD/ARP), or a brief
-  2708 				; "SAVED" flash right after a save. X = 17 on entry. Names are 5 cells wide (padded)
-  2709 				; so they overwrite each other and "SAVED" cleanly.
-  2710 32B4			draw_preset_widget
-  2711 32B4 BD 28 37		        lda p_knobcx,x
-  2712 32B7 8D 4E 06		        sta kcx
-  2713 32BA BD 02 37		        lda p_scan,x
-  2714 32BD 18			        clc
-  2715 32BE 69 05		        adc #5
-  2716 32C0 8D 4F 06		        sta kcy
-  2717 32C3 BD 3B 37		        lda p_numcol,x
-  2718 32C6 8D 6C 06		        sta dp_numcol
-  2719 32C9 BD 02 37		        lda p_scan,x
-  2720 32CC 8D 6D 06		        sta dp_scan
-  2721 32CF AD C5 06		        lda preset_slot
-  2722 32D2 8D 50 06		        sta kfrm
-  2723 32D5 20 21 2C		        jsr draw_knob
-  2724 32D8 A9 00		        lda #0
-  2725 32DA 8D 4B 06		        sta bc_inv
-  2726 32DD 8D 62 06		        sta bc_mode
-  2727 32E0 AD 6C 06		        lda dp_numcol
-  2728 32E3 8D 49 06		        sta bc_col
-  2729 32E6 AD 6D 06		        lda dp_scan
-  2730 32E9 8D 4A 06		        sta bc_scan
-  2731 32EC AD D4 06		        lda saved_flash
-  2732 32EF F0 0B		        beq dpw_name
-  2733 32F1 A9 CC		        lda #<txt_saved
-  2734 32F3 85 CD		        sta srcptr
-  2735 32F5 A9 3D		        lda #>txt_saved
-  2736 32F7 85 CE		        sta srcptr+1
-  2737 32F9 4C 09 33		        jmp dpw_print
-  2738 32FC			dpw_name
-  2739 32FC AC C5 06		        ldy preset_slot
-  2740 32FF B9 EA 3D		        lda preset_name_lo,y
-  2741 3302 85 CD		        sta srcptr
-  2742 3304 B9 EE 3D		        lda preset_name_hi,y
-  2743 3307 85 CE		        sta srcptr+1
-  2744 3309			dpw_print
-  2745 3309 20 BB 2B		        jsr print_strz
-  2746 330C 60			        rts
-  2747
-  2748 				; tick the SAVED flash; when it expires, force the PRESET name to redraw
-  2749 330D			saved_flash_tick
-  2750 330D AD D4 06		        lda saved_flash
-  2751 3310 F0 0A		        beq sft_done
-  2752 3312 CE D4 06		        dec saved_flash
-  2753 3315 D0 05		        bne sft_done
-  2754 3317 A9 FF		        lda #$FF                ; flash ended -> force PRESET value cell to redraw
-  2755 3319 8D 81 06		        sta prev_disp+17
-  2756 331C			sft_done
-  2757 331C 60			        rts
-  2758
-  2759 				; "OFF" (3 chars) at bc_col/bc_scan -> shown for effect params at value 0
-  2760 331D			draw_off
-  2761 331D A9 2F		        lda #$2F                ; 'O'
-  2762 331F 8D 48 06		        sta bc_code
-  2763 3322 20 58 2B		        jsr blit_char
-  2764 3325 EE 49 06		        inc bc_col
-  2765 3328 A9 26		        lda #$26                ; 'F'
-  2766 332A 8D 48 06		        sta bc_code
-  2767 332D 20 58 2B		        jsr blit_char
-  2768 3330 EE 49 06		        inc bc_col
-  2769 3333 A9 26		        lda #$26                ; 'F'
-  2770 3335 8D 48 06		        sta bc_code
-  2771 3338 20 58 2B		        jsr blit_char
-  2772 333B 60			        rts
-  2773
-  2774 				; NOTE name (3 chars) at col 7, scan 112 -- blank when silent
-  2775 333C			draw_note
-  2776 333C A9 23		        lda #35
-  2777 333E 8D 49 06		        sta bc_col
-  2778 3341 A9 00		        lda #0
-  2779 3343 8D 4A 06		        sta bc_scan
-  2780 3346 AD 07 06		        lda note_idx
-  2781 3349 C9 FF		        cmp #$FF
-  2782 334B D0 15		        bne dn_play
-  2783 334D A9 00		        lda #$00                ; blank 3 cells
-  2784 334F 8D 48 06		        sta bc_code
-  2785 3352 20 58 2B		        jsr blit_char
-  2786 3355 EE 49 06		        inc bc_col
-  2787 3358 20 58 2B		        jsr blit_char
-  2788 335B EE 49 06		        inc bc_col
-  2789 335E 20 58 2B		        jsr blit_char
-  2790 3361 60			        rts
-  2791 3362			dn_play
-  2792 3362 AE 03 06		        ldx octave
-  2793 3365 BD C5 35		        lda octave_base,x
-  2794 3368 18			        clc
-  2795 3369 6D 07 06		        adc note_idx
-  2796 336C A2 00		        ldx #0
-  2797 336E			dn_div
-  2798 336E C9 0C		        cmp #12
-  2799 3370 90 07		        bcc dn_div_done
-  2800 3372 38			        sec
-  2801 3373 E9 0C		        sbc #12
-  2802 3375 E8			        inx
-  2803 3376 4C 6E 33		        jmp dn_div
-  2804 3379			dn_div_done
-  2805 				        ; A = semitone 0..11, X = octave step.  NB: blit_char clobbers X/s0/s1,
-  2806 				        ; so hold our values in tmpA/tmp2 (which blit_char does not touch).
-  2807 3379 0A			        asl                     ; semitone*2 -> note_names index
-  2808 337A 8D 0C 06		        sta tmpA
-  2809 337D 8A			        txa
-  2810 337E 18			        clc
-  2811 337F 69 02		        adc #2                  ; chromatic table is labelled from octave 2 (C2..)
-  2812 				        ; The chromatic dividers are tuned for the 15 kHz / 16-bit clocks. In
-  2813 				        ; NORMAL mode the 64 kHz clock makes every note sound TWO octaves higher
-  2814 				        ; (8-bit AUDF can't reach the low octaves), so the displayed octave must
-  2815 				        ; match what's actually heard: add 2 in NORMAL mode only.
-  2816 3381 AC 04 06		        ldy clock15
-  2817 3384 D0 03		        bne dn_oct_done         ; 15KHZ(1) / 16-BIT(2): label already correct
-  2818 3386 18			        clc
-  2819 3387 69 02		        adc #2                  ; NORMAL(0): +2 octaves to match the real pitch
-  2820 3389			dn_oct_done
-  2821 3389 18			        clc
-  2822 338A 69 10		        adc #$10                ; octave digit screen code
-  2823 338C 8D 0D 06		        sta tmp2
-  2824 338F AE 0C 06		        ldx tmpA                ; name char 1
-  2825 3392 BD F8 35		        lda note_names,x
-  2826 3395 8D 48 06		        sta bc_code
-  2827 3398 20 58 2B		        jsr blit_char
-  2828 339B EE 49 06		        inc bc_col
-  2829 339E AE 0C 06		        ldx tmpA                ; name char 2
-  2830 33A1 BD F9 35		        lda note_names+1,x
-  2831 33A4 8D 48 06		        sta bc_code
-  2832 33A7 20 58 2B		        jsr blit_char
-  2833 33AA EE 49 06		        inc bc_col
-  2834 33AD AD 0D 06		        lda tmp2                ; octave digit
-  2835 33B0 8D 48 06		        sta bc_code
-  2836 33B3 20 58 2B		        jsr blit_char
-  2837 33B6 60			        rts
-  2838
-  2839 				; octave value as sign + digit at bc_col,bc_scan.  NB: blit_char clobbers
-  2840 				; A/X/Y/s0/s1, so the sign char goes in tmpA and the digit in tmp2 first,
-  2841 				; then both are blitted (no live value kept across a blit_char call).
-  2842 33B7			draw_octave_num
-  2843 33B7 AD 03 06		        lda octave
-  2844 33BA 38			        sec
-  2845 33BB E9 02		        sbc #2                  ; A = n (-2..+2)
-  2846 33BD 30 23		        bmi don_neg
-  2847 33BF F0 14		        beq don_zero
-  2848 33C1 A9 0B		        lda #$0B                ; n > 0: '+'
-  2849 33C3 8D 0C 06		        sta tmpA
-  2850 33C6 AD 03 06		        lda octave              ; digit = n = octave-2
-  2851 33C9 38			        sec
-  2852 33CA E9 02		        sbc #2
-  2853 33CC 18			        clc
-  2854 33CD 69 10		        adc #$10
-  2855 33CF 8D 0D 06		        sta tmp2
-  2856 33D2 4C F3 33		        jmp don_emit
-  2857 33D5			don_zero
-  2858 33D5 A9 00		        lda #$00                ; n = 0: blank sign, '0'
-  2859 33D7 8D 0C 06		        sta tmpA
-  2860 33DA A9 10		        lda #$10
-  2861 33DC 8D 0D 06		        sta tmp2
-  2862 33DF 4C F3 33		        jmp don_emit
-  2863 33E2			don_neg
-  2864 33E2 A9 0D		        lda #$0D                ; n < 0: '-'
-  2865 33E4 8D 0C 06		        sta tmpA
-  2866 33E7 A9 02		        lda #2                  ; digit = -n = 2 - octave
-  2867 33E9 38			        sec
-  2868 33EA ED 03 06		        sbc octave
-  2869 33ED 18			        clc
-  2870 33EE 69 10		        adc #$10
-  2871 33F0 8D 0D 06		        sta tmp2
-  2872 33F3			don_emit
-  2873 33F3 AD 0C 06		        lda tmpA
-  2874 33F6 8D 48 06		        sta bc_code
-  2875 33F9 20 58 2B		        jsr blit_char
-  2876 33FC EE 49 06		        inc bc_col
-  2877 33FF AD 0D 06		        lda tmp2
-  2878 3402 8D 48 06		        sta bc_code
-  2879 3405 20 58 2B		        jsr blit_char
-  2880 3408 60			        rts
-  2881
-  2882 				; active-key indicator: clear a strip below the keys, draw a bar at the key
-  2883 3409			key_indicator
-  2884 				        ; clear strip y=186..190 (5 rows, full 40 bytes)
-  2885 3409 A9 BA		        lda #186
-  2886 340B 8D 44 06		        sta s1
-  2887 340E A2 05		        ldx #5
-  2888 3410			ki_clr
-  2889 3410 AC 44 06		        ldy s1
-  2890 3413 B9 00 60		        lda linetab_lo,y
-  2891 3416 85 CB		        sta scrptr
-  2892 3418 B9 C0 60		        lda linetab_hi,y
-  2893 341B 85 CC		        sta scrptr+1
-  2894 341D A0 27		        ldy #39
-  2895 341F A9 00		        lda #0
-  2896 3421			ki_clr2
-  2897 3421 91 CB		        sta (scrptr),y
-  2898 3423 88			        dey
-  2899 3424 10 FB		        bpl ki_clr2
-  2900 3426 EE 44 06		        inc s1
-  2901 3429 CA			        dex
-  2902 342A D0 E4		        bne ki_clr
-  2903 				        ; draw bar at active key (if any)
-  2904 342C AD 07 06		        lda note_idx
-  2905 342F C9 FF		        cmp #$FF
-  2906 3431 F0 29		        beq ki_done
-  2907 3433 AA			        tax
-  2908 3434 BD 8E 38		        lda key_xind_lo,x
-  2909 3437 38			        sec
-  2910 3438 E9 04		        sbc #4                  ; centre-4
-  2911 343A 8D 40 06		        sta xlo
-  2912 343D BD 9F 38		        lda key_xind_hi,x
-  2913 3440 E9 00		        sbc #0
-  2914 3442 8D 41 06		        sta xhi
-  2915 3445 A9 BA		        lda #186
-  2916 3447 8D 42 06		        sta py
-  2917 344A A9 08		        lda #8
-  2918 344C 8D 51 06		        sta rw
-  2919 344F A9 04		        lda #4
-  2920 3451 8D 52 06		        sta rh
-  2921 3454 A9 00		        lda #0
-  2922 3456 8D 61 06		        sta pmode
-  2923 3459 20 2C 2B		        jsr fillrect
-  2924 345C			ki_done
-  2925 345C 60			        rts
-  2926
-  2927 				; OR a bitmap into the framebuffer: srcptr=data, s0=wbytes, s1=hrows,
-  2928 				; bc_col=dest byte column, bc_scan=top scan line
-  2929 345D			blit_bitmap
-  2930 345D A9 00		        lda #0
-  2931 345F 8D 4C 06		        sta psi
-  2932 3462 A2 00		        ldx #0
-  2933 3464			bbm_row
-  2934 3464 8A			        txa
-  2935 3465 18			        clc
-  2936 3466 6D 4A 06		        adc bc_scan
-  2937 3469 A8			        tay
-  2938 346A B9 00 60		        lda linetab_lo,y
-  2939 346D 18			        clc
-  2940 346E 6D 49 06		        adc bc_col
-  2941 3471 85 CF		        sta adjptr
-  2942 3473 B9 C0 60		        lda linetab_hi,y
-  2943 3476 69 00		        adc #0
-  2944 3478 85 D0		        sta adjptr+1
-  2945 347A A0 00		        ldy #0
-  2946 347C			bbm_col
-  2947 347C 8C 45 06		        sty s_dy
-  2948 347F AC 4C 06		        ldy psi
-  2949 3482 B1 CD		        lda (srcptr),y
-  2950 3484 AC 45 06		        ldy s_dy
-  2951 3487 11 CF		        ora (adjptr),y
-  2952 3489 91 CF		        sta (adjptr),y
-  2953 348B EE 4C 06		        inc psi
-  2954 348E AC 45 06		        ldy s_dy
-  2955 3491 C8			        iny
-  2956 3492 CC 43 06		        cpy s0
-  2957 3495 D0 E5		        bne bbm_col
-  2958 3497 E8			        inx
-  2959 3498 EC 44 06		        cpx s1
-  2960 349B D0 C7		        bne bbm_row
-  2961 349D 60			        rts
-  2962
-  2963 				; WAVEFORM selector: 4 waveform icons, the active one boxed
-  2964 349E			draw_wave_selector
-  2965 349E A9 10		        lda #16                 ; clear icon strip: byte cols 9..18, 14 rows
-  2966 34A0 8D 44 06		        sta s1
-  2967 34A3 A2 0E		        ldx #14
-  2968 34A5			dws_clr
-  2969 34A5 AC 44 06		        ldy s1
-  2970 34A8 B9 00 60		        lda linetab_lo,y
-  2971 34AB 18			        clc
-  2972 34AC 69 09		        adc #9
-  2973 34AE 85 CB		        sta scrptr
-  2974 34B0 B9 C0 60		        lda linetab_hi,y
-  2975 34B3 69 00		        adc #0
-  2976 34B5 85 CC		        sta scrptr+1
-  2977 34B7 A0 09		        ldy #9
-  2978 34B9 A9 00		        lda #0
-  2979 34BB			dws_clr2
-  2980 34BB 91 CB		        sta (scrptr),y
-  2981 34BD 88			        dey
-  2982 34BE 10 FB		        bpl dws_clr2
-  2983 34C0 EE 44 06		        inc s1
-  2984 34C3 CA			        dex
-  2985 34C4 D0 DF		        bne dws_clr
-  2986 34C6 A2 00		        ldx #0                  ; draw 4 icons (16x8)
-  2987 34C8			dws_ic
-  2988 34C8 8E 47 06		        stx s_pc
-  2989 34CB BD F4 38		        lda icon_ptr_lo,x
-  2990 34CE 85 CD		        sta srcptr
-  2991 34D0 BD F8 38		        lda icon_ptr_hi,x
-  2992 34D3 85 CE		        sta srcptr+1
-  2993 34D5 BD F0 38		        lda icon_col,x
-  2994 34D8 8D 49 06		        sta bc_col
-  2995 34DB A9 12		        lda #18
-  2996 34DD 8D 4A 06		        sta bc_scan
-  2997 34E0 A9 02		        lda #2
-  2998 34E2 8D 43 06		        sta s0
-  2999 34E5 A9 08		        lda #8
-  3000 34E7 8D 44 06		        sta s1
-  3001 34EA 20 5D 34		        jsr blit_bitmap
-  3002 34ED AE 47 06		        ldx s_pc
-  3003 34F0 E8			        inx
-  3004 34F1 E0 04		        cpx #4
-  3005 34F3 D0 D3		        bne dws_ic
-  3006 34F5 AE 01 06		        ldx wave_idx            ; box around the active icon
-  3007 34F8 BD F0 38		        lda icon_col,x
-  3008 34FB 0A			        asl
-  3009 34FC 0A			        asl
-  3010 34FD 0A			        asl                     ; byte col -> pixel x
-  3011 34FE 38			        sec
-  3012 34FF E9 02		        sbc #2
-  3013 3501 8D 40 06		        sta xlo
-  3014 3504 A9 00		        lda #0
-  3015 3506 8D 41 06		        sta xhi
-  3016 3509 8D 61 06		        sta pmode
-  3017 350C A9 10		        lda #16
-  3018 350E 8D 42 06		        sta py
-  3019 3511 A9 13		        lda #19
-  3020 3513 8D 51 06		        sta rw
-  3021 3516 A9 0C		        lda #12
-  3022 3518 8D 52 06		        sta rh
-  3023 351B 20 AD 2A		        jsr rect
-  3024 351E 60			        rts
-  3025
-  3026 				; CLOCK mode: show the active mode name (NORMAL / 15 KHZ / 16-BIT)
-  3027 351F			draw_clk_toggle
-  3028 351F A9 36		        lda #54                 ; clear strip: byte cols 29..38, 14 rows
-  3029 3521 8D 44 06		        sta s1
-  3030 3524 A2 0E		        ldx #14
-  3031 3526			dct_clr
-  3032 3526 AC 44 06		        ldy s1
-  3033 3529 B9 00 60		        lda linetab_lo,y
-  3034 352C 18			        clc
-  3035 352D 69 1D		        adc #29
-  3036 352F 85 CB		        sta scrptr
-  3037 3531 B9 C0 60		        lda linetab_hi,y
-  3038 3534 69 00		        adc #0
-  3039 3536 85 CC		        sta scrptr+1
-  3040 3538 A0 09		        ldy #9
-  3041 353A A9 00		        lda #0
-  3042 353C			dct_clr2
-  3043 353C 91 CB		        sta (scrptr),y
-  3044 353E 88			        dey
-  3045 353F 10 FB		        bpl dct_clr2
-  3046 3541 EE 44 06		        inc s1
-  3047 3544 CA			        dex
-  3048 3545 D0 DF		        bne dct_clr
-  3049 3547 A9 00		        lda #0
-  3050 3549 8D 4B 06		        sta bc_inv
-  3051 354C 8D 62 06		        sta bc_mode
-  3052 354F AD 04 06		        lda clock15             ; name = clock_names[mode*6]
-  3053 3552 20 73 35		        jsr mul6
-  3054 3555 18			        clc
-  3055 3556 69 E6		        adc #<clock_names
-  3056 3558 85 CD		        sta srcptr
-  3057 355A A9 35		        lda #>clock_names
-  3058 355C 69 00		        adc #0
-  3059 355E 85 CE		        sta srcptr+1
-  3060 3560 A9 1E		        lda #30
-  3061 3562 8D 49 06		        sta bc_col
-  3062 3565 A9 38		        lda #56
-  3063 3567 8D 4A 06		        sta bc_scan
-  3064 356A A9 06		        lda #6
-  3065 356C 8D 4D 06		        sta pcnt
-  3066 356F 20 D9 2B		        jsr print_n
-  3067 3572 60			        rts
-  3068
-  3069 				; A * 6 -> A
-  3070 3573			mul6
-  3071 3573 8D 0C 06		        sta tmpA
-  3072 3576 0A			        asl
-  3073 3577 8D 0D 06		        sta tmp2
-  3074 357A AD 0C 06		        lda tmpA
-  3075 357D 0A			        asl
-  3076 357E 0A			        asl
-  3077 357F 18			        clc
-  3078 3580 6D 0D 06		        adc tmp2
-  3079 3583 60			        rts
-  3080
-  3081 				; ============================================================================
-  3082 				;  TABLES
-  3083 				; ============================================================================
-  3084 				; chromatic AUDF divisors, PAL 8-bit, C2..E7 (index 0 = C2)
-  3085 3584			chromatic
-  3086 3584 78 71 6B 65 5F 5A +         .byte $78,$71,$6B,$65,$5F,$5A,$55,$50,$4B,$47,$43,$3F
-  3087 3590 3C 38 35 32 2F 2C +         .byte $3C,$38,$35,$32,$2F,$2C,$2A,$27,$25,$23,$21,$1F
-  3088 359C 1D 1C 1A 18 17 16 +         .byte $1D,$1C,$1A,$18,$17,$16,$14,$13,$12,$11,$10,$0F
-  3089 35A8 0E 0D 0C 0C 0B 0A +         .byte $0E,$0D,$0C,$0C,$0B,$0A,$0A,$09,$09,$08,$07,$07
-  3090 35B4 07 06 06 05 05 05 +         .byte $07,$06,$06,$05,$05,$05,$04,$04,$04,$03,$03,$03
-  3091 35C0 03 03 02 02 02	        .byte $03,$03,$02,$02,$02
-  3092 35C5			octave_base
-  3093 35C5 00 0C 18 24 30	        .byte 0,12,24,36,48
-  3094 35CA			wave_base
-  3095 35CA A0 E0 C0 80		        .byte $A0,$E0,$C0,$80
-  3096 35CE			wave_names
-  3097 35CE 33 31 35 21 32 25 +         .byte "SQUARE","PURE  ","BUZZ  ","NOISE "
-  3098 35E6			clock_names
-  3099 35E6 2E 2F 32 2D 21 2C +         .byte "NORMAL","15 KHZ","16-BIT"
-  3100 35F8			note_names
-  3101 35F8 23 00 23 03 24 00 +         .byte "C C#D D#E F F#G G#A A#B "
-  3102
-  3103 				; 16-bit chromatic dividers, PAL 1.79 MHz clock, C2..E7 (index 0 = C2)
-  3104 				; POKEY's joined-pair fast-clock period is (n+1)+6 = n+7 master cycles
-  3105 				; (6-cycle chain-setup overhead), so n = round(master / (2*f) - 7).
-  3106 3610			chrom16_lo
-  3107 3610 EE F5 27 81 01 A5 +         .byte $EE,$F5,$27,$81,$01,$A5,$6B,$51,$55,$76,$B2,$07
-  3108 361C 74 F7 90 3D FD CF +         .byte $74,$F7,$90,$3D,$FD,$CF,$B2,$A5,$A7,$B8,$D5,$00
-  3109 3628 36 78 C5 1B 7B E4 +         .byte $36,$78,$C5,$1B,$7B,$E4,$56,$CF,$50,$D8,$67,$FC
-  3110 3634 98 39 DF 8A 3A EF +         .byte $98,$39,$DF,$8A,$3A,$EF,$A7,$64,$25,$E9,$B0,$7B
-  3111 3640 48 19 EC C2 9A 74 +         .byte $48,$19,$EC,$C2,$9A,$74,$50,$2F,$0F,$F1,$D5,$BA
-  3112 364C A1 89 72 5D 49	        .byte $A1,$89,$72,$5D,$49
-  3113 3651			chrom16_hi
-  3114 3651 34 31 2F 2C 2A 27 +         .byte $34,$31,$2F,$2C,$2A,$27,$25,$23,$21,$1F,$1D,$1C
-  3115 365D 1A 18 17 16 14 13 +         .byte $1A,$18,$17,$16,$14,$13,$12,$11,$10,$0F,$0E,$0E
-  3116 3669 0D 0C 0B 0B 0A 09 +         .byte $0D,$0C,$0B,$0B,$0A,$09,$09,$08,$08,$07,$07,$06
-  3117 3675 06 06 05 05 05 04 +         .byte $06,$06,$05,$05,$05,$04,$04,$04,$04,$03,$03,$03
-  3118 3681 03 03 02 02 02 02 +         .byte $03,$03,$02,$02,$02,$02,$02,$02,$02,$01,$01,$01
-  3119 368D 01 01 01 01 01	        .byte $01,$01,$01,$01,$01
-  3120
-  3121 3692			key_scan
-  3122 3692 2F 1E 2E 1A 2A 28 +         .byte $2F,$1E,$2E,$1A,$2A,$28,$1D,$2D,$1B,$2B,$33,$0B,$0D,$30,$08,$32,$0A
-  3123
-  3124 				; apply_adjust parameter table (cur_param 0..7)
-  3125 				; NB: param_lo/hi MUST have one entry per param (0..NPARAM-1). They previously
-  3126 				; omitted TEMPO (index 12) -> apply_adjust read past the table when adjusting
-  3127 				; TEMPO via the joystick (wrote stray RAM). Now includes TEMPO + ARPMODE.
-  3128 36A3			param_lo
-  3129 36A3 01 02 03 2C 2D 6E	        .byte <wave_idx,<volume,<octave,<atk_rate,<dec_rate,<detune
-  3130 36A9 2E 2F 04 63 64 84	        .byte <sus_level,<rel_rate,<clock15,<lfo_rate,<lfo_depth,<arp_rate
-  3131 36AF 8C B5 B6 BD C0 C5 +         .byte <tempo,<arp_mode,<porta_rate,<drum_dec,<hpf_cut,<preset_slot,<drum_beat
-  3132 36B6			param_hi
-  3133 36B6 06 06 06 06 06 06	        .byte >wave_idx,>volume,>octave,>atk_rate,>dec_rate,>detune
-  3134 36BC 06 06 06 06 06 06	        .byte >sus_level,>rel_rate,>clock15,>lfo_rate,>lfo_depth,>arp_rate
-  3135 36C2 06 06 06 06 06 06 +         .byte >tempo,>arp_mode,>porta_rate,>drum_dec,>hpf_cut,>preset_slot,>drum_beat
-  3136 36C9			param_max
-  3137 36C9 03 0F 04 0F 0F 0F +         .byte 3,15,4,15,15,15, 15,15,2,15,15,15, 15,3,15,15, 15,3,15
-  3138 36DC			param_maxp1
-  3139 36DC 04 10 05 10 10 10 +         .byte 4,16,5,16,16,16, 16,16,3,16,16,16, 16,4,16,16, 16,4,16
-  3140
-  3141 				; ----- parameter descriptor tables (NPARAM entries) -------------------------
-  3142 				;        0 WAVE  1 VOL  2 OCT  3 ATK  4 DEC | 5 SUS  6 REL  7 CLK  8 LFOR 9 LFOD
-  3143 				;        left column (0-4)                  | right column (5-9)
-  3144 				; INDEX ORDER == VISUAL ORDER so UP/DOWN steps through the panel as drawn:
-  3145 				;   left column top->bottom (0-5), then right column top->bottom (6-10).
-  3146 				;        0 WAVE 1 VOL 2 OCT 3 ATK 4 DEC 5 DET | 6 SUS 7 REL 8 CLK 9 LFOR 10 LFOD
-  3147 				;  left column 0-5             | right column 6-11 (incl ARP=11)
-  3148 				; Page 0 = indices 0-11 (osc/env/fx).  Page 2 = indices 12+ (layout positions
-  3149 				; reuse the page-0 grid, so all tables index by absolute param).
-  3150 				;        page 2: 12 TEMPO (r0 left) 13 ARPMODE (r0 right) 14 PORTA (r1 left) 15 DRUM (r1 right)
-  3151 36EF			p_kind
-  3152 36EF 02 00 01 00 00 00	        .byte K_WAVE,K_KNOB,K_OCT,K_KNOB,K_KNOB,K_KNOB
-  3153 36F5 00 00 03 00 00 00	        .byte K_KNOB,K_KNOB,K_CLK,K_KNOB,K_KNOB,K_KNOB
-  3154 36FB 00 00 00 00		        .byte K_KNOB,K_KNOB,K_KNOB,K_KNOB                 ; 12 TEMPO,13 ARPMODE,14 PORTA,15 DRUM
-  3155 36FF 00 00 00		        .byte K_KNOB,K_KNOB,K_KNOB                        ; 16 HPF, 17 PRESET, 18 DRUMBEAT
-  3156 3702			p_scan
-  3157 3702 10 24 38 4C 60 6E +         .byte 16,36,56,76,96,110, 16,36,56,76,96,110
-  3158 370E 10 10 24 24 10 10 +         .byte 16,16,36,36, 16,16,36
-  3159 3715			p_lblcol
-  3160 3715 01 01 01 01 01 01 +         .byte 1,1,1,1,1,1, 21,21,21,21,21,21
-  3161 3721 01 15 01 15 01 15 +         .byte 1,21,1,21, 1,21,1
-  3162 3728			p_knobcx
-  3163 3728 56 56 56 56 56 56 +         .byte 86,86,86,86,86,86, 246,246,246,246,246,246
-  3164 3734 56 F6 56 F6 56 F6 +         .byte 86,246,86,246, 86,246,86
-  3165 373B			p_numcol
-  3166 373B 0D 0D 0D 0D 0D 0D +         .byte 13,13,13,13,13,13, 33,33,33,33,33,33
-  3167 3747 0D 21 0D 21 0D 21 +         .byte 13,33,13,33, 13,33,13
-  3168 374E			p_vaddr_lo
-  3169 374E 01 02 03 2C 2D 6E	        .byte <wave_idx,<volume,<octave,<atk_rate,<dec_rate,<detune
-  3170 3754 2E 2F 04 63 64 84	        .byte <sus_level,<rel_rate,<clock15,<lfo_rate,<lfo_depth,<arp_rate
-  3171 375A 8C B5 B6 BD C0 C5 +         .byte <tempo,<arp_mode,<porta_rate,<drum_dec,<hpf_cut,<preset_slot,<drum_beat
-  3172 3761			p_vaddr_hi
-  3173 3761 06 06 06 06 06 06	        .byte >wave_idx,>volume,>octave,>atk_rate,>dec_rate,>detune
-  3174 3767 06 06 06 06 06 06	        .byte >sus_level,>rel_rate,>clock15,>lfo_rate,>lfo_depth,>arp_rate
-  3175 376D 06 06 06 06 06 06 +         .byte >tempo,>arp_mode,>porta_rate,>drum_dec,>hpf_cut,>preset_slot,>drum_beat
-  3176 3774			p_lblptr_lo
-  3177 3774 DC E5 EC F3 FA 37	        .byte <txt_wave,<txt_vol,<txt_oct,<txt_atk,<txt_dec,<txt_det
-  3178 377A 00 08 10 24 2D 3E	        .byte <txt_sus,<txt_rel,<txt_clk,<txt_lfor,<txt_lfod,<txt_arp
-  3179 3780 47 4D 56 5C 61 6B +         .byte <txt_tempo,<txt_arpm,<txt_porta,<txt_drum,<txt_hpf,<txt_preset,<txt_dbeat
-  3180 3787			p_lblptr_hi
-  3181 3787 3C 3C 3C 3C 3C 3D	        .byte >txt_wave,>txt_vol,>txt_oct,>txt_atk,>txt_dec,>txt_det
-  3182 378D 3D 3D 3D 3D 3D 3D	        .byte >txt_sus,>txt_rel,>txt_clk,>txt_lfor,>txt_lfod,>txt_arp
-  3183 3793 3D 3D 3D 3D 3D 3D +         .byte >txt_tempo,>txt_arpm,>txt_porta,>txt_drum,>txt_hpf,>txt_preset,>txt_dbeat
-  3184 				; Which char index in each label is the shortcut key (underlined). Renaming ARP
-  3185 				; -> ARPEGGIO introduces a free 'G', which frees up enough letters to give EVERY
-  3186 				; page-0 param a unique in-label letter, plus DRUMBEAT(B). Pages 1-2 (except
-  3187 				; DRUMBEAT) have no spare free letter -> $FF (reach them via Tab + arrows).
-  3188 				;   WAVE M=7  VOL V=0  OCT A=3  ATK K=5  DEC D=0  DET N=4
-  3189 				;   SUS  S=0  REL L=2  CLK C=0  LFOR F=1 LFOD H=8  ARPEGGIO G=4   DRUMBEAT B=4
-  3190 				;   page 0 + DRUMBEAT use PLAIN letters; the 5 page-1/2 params below use SHIFT+letter
-  3191 				;   TEMPO M=2  ARP MODE D=6  PORTA A=4  HP FILTER H=0  PRESET S=3   (DRUM: none)
-  3192 379A			p_hl
-  3193 379A 07 00 03 05 00 04	        .byte 7,0,3,5,0,4
-  3194 37A0 00 02 00 01 08 04	        .byte 0,2,0,1,8,4
-  3195 37A6 02 06 04 FF 00 03 +         .byte 2,6,4,$FF, 0,3,4
-  3196 				; 1 = this param's shortcut is a SHIFT+letter (drawn opposite video to its label)
-  3197 37AD			p_hl_shift
-  3198 37AD 00 00 00 00 00 00	        .byte 0,0,0,0,0,0
-  3199 37B3 00 00 00 00 00 00	        .byte 0,0,0,0,0,0
-  3200 37B9 01 01 01 00 01 01 +         .byte 1,1,1,0, 1,1,0
-  3201 				; 1 = inert in 16-BIT clock mode (channels 3/4 are paired): PORTA, DRUM, HP FILTER,
-  3202 				; DRUMBEAT. Struck through when clock15 = 2 so users don't twiddle dead controls.
-  3203 37C0			p_inert16
-  3204 37C0 00 00 00 00 00 00	        .byte 0,0,0,0,0,0
-  3205 37C6 00 00 00 00 00 00	        .byte 0,0,0,0,0,0
-  3206 37CC 00 00 01 01 01 00 +         .byte 0,0,1,1, 1,0,1
-  3207 				; shortcut key -> param jump (read_navkeys). Letter is a FREE key (not piano)
-  3208 				; underlined in the label; KBCODEs are the bridge/hardware values. Shift+letter
-  3209 				; entries have bit7 ($80) set (Shift sets KBCODE bit7).
-  3210 37D3			shortcut_kc
-  3211 37D3 25 10 3F 05 3A 23 +         .byte $25,$10,$3F,$05,$3A,$23,$3E,$00,$12,$38,$39,$3D,$15
-  3212 				;             M   V   A   K   D   N   S   L   C   F   H   G   B    (plain)
-  3213 37E0 A5 BA BF B9 BE	        .byte $A5,$BA,$BF,$B9,$BE
-  3214 				;             ^M  ^D  ^A  ^H  ^S                                  (shift)
-  3215 37E5			shortcut_param
-  3216 37E5 00 01 02 03 04 05 +         .byte 0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 18
-  3217 				;             WAV VOL OCT ATK DEC DET SUS REL CLK LFR LFD ARP DBT
-  3218 37F2 0C 0D 0E 10 11	        .byte 12, 13, 14, 16, 17
-  3219 				;             TMP ARM POR HPF PRE
-  3220 				; effect params that render value 0 as "OFF": DETUNE(5) LFO DEPTH(10) ARP(11)
-  3221 				;                                             PORTA(14) DRUM(15) HP FILTER(16)
-  3222 37F7			p_zoff
-  3223 37F7 00 00 00 00 00 01	        .byte 0,0,0,0,0,1
-  3224 37FD 00 00 00 00 01 01	        .byte 0,0,0,0,1,1
-  3225 3803 00 00 01 01 01 00 +         .byte 0,0,1,1, 1,0,0
-  3226
-  3227 				; knob geometry
-  3228 380A			bitmask_tab
-  3229 380A 80 40 20 10 08 04 +         .byte $80,$40,$20,$10,$08,$04,$02,$01
-  3230 3812			hw_tab                          ; half-width per |dy| 0..6
-  3231 3812 06 06 06 05 04 03 +         .byte 6,6,6,5,4,3,0
-  3232 				; pointer rim offsets (16 directions, clockwise from up), signed
-  3233 3819			kn_ex
-  3234 3819 00 02 04 05 05 05 +         .byte 0,2,4,5,5,5,4,2,0,$FE,$FC,$FB,$FB,$FB,$FC,$FE
-  3235 3829			kn_ey
-  3236 3829 FB FB FC FE 00 02 +         .byte $FB,$FB,$FC,$FE,0,2,4,5,5,5,4,2,0,$FE,$FC,$FB
-  3237 3839			kn_mx
-  3238 3839 00 01 02 03 03 03 +         .byte 0,1,2,3,3,3,2,1,0,$FF,$FE,$FD,$FD,$FD,$FE,$FF
-  3239 3849			kn_my
-  3240 3849 FD FD FE FF 00 01 +         .byte $FD,$FD,$FE,$FF,0,1,2,3,3,3,2,1,0,$FF,$FE,$FD
-  3241 3859			oct_knob16                      ; octave 0..4 -> knob position
-  3242 3859 00 04 08 0C 0F	        .byte 0,4,8,12,15
-  3243
-  3244 				; keyboard layout
-  3245 385E			blackx_lo
-  3246 385E 20 3E 7A 98 B6 F2 +         .byte 32,62,122,152,182,242,16
-  3247 3865			blackx_hi
-  3248 3865 00 00 00 00 00 00 +         .byte 0,0,0,0,0,0,1
-  3249 386C			white_lblcol
-  3250 386C 02 06 0A 0D 11 15 +         .byte 2,6,10,13,17,21,25,28,32,36
-  3251 3876			white_lblch                     ; Q W E R T Y U I O P (screen codes)
-  3252 3876 31 37 25 32 34 39 +         .byte $31,$37,$25,$32,$34,$39,$35,$29,$2F,$30
-  3253 3880			black_lblcol                    ; byte col centering each number on its 16px black key
-  3254 3880 04 08 10 13 17 1F +         .byte 4,8,16,19,23,31,34
-  3255 3887			black_lblch                     ; 2 3 5 6 7 9 0 (screen codes)
-  3256 3887 12 13 15 16 17 19 +         .byte $12,$13,$15,$16,$17,$19,$10
-  3257 				; active-key indicator centre x per semitone 0..16
-  3258 388E			key_xind_lo
-  3259 388E 18 28 36 46 54 72 +         .byte 24,40,54,70,84,114,130,144,160,174,190,204,234,250,8,24,38
-  3260 389F			key_xind_hi
-  3261 389F 00 00 00 00 00 00 +         .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1
-  3262
-  3263 				; waveform icons (16x8, 2 bytes/row) for the WAVEFORM selector
-  3264 38B0			icon_sq                         ; square / pulse
-  3265 38B0 F8 3F 08 20 08 20 +         .byte $F8,$3F,$08,$20,$08,$20,$08,$20,$08,$20,$08,$20,$08,$20,$0F,$E0
-  3266 38C0			icon_tri                        ; triangle (PURE)
-  3267 38C0 01 80 02 40 04 20 +         .byte $01,$80,$02,$40,$04,$20,$08,$10,$10,$08,$20,$04,$40,$02,$80,$01
-  3268 38D0			icon_saw                        ; sawtooth (BUZZ)
-  3269 38D0 01 01 03 03 05 05 +         .byte $01,$01,$03,$03,$05,$05,$09,$09,$11,$11,$21,$21,$41,$41,$81,$81
-  3270 38E0			icon_noise                      ; scattered dots (NOISE)
-  3271 38E0 20 40 00 04 04 00 +         .byte $20,$40,$00,$04,$04,$00,$80,$10,$01,$01,$10,$00,$00,$82,$42,$08
-  3272 38F0			icon_col
-  3273 38F0 0A 0C 0E 10		        .byte 10,12,14,16       ; dest byte column of each icon
-  3274 38F4			icon_ptr_lo
-  3275 38F4 B0 C0 D0 E0		        .byte <icon_sq,<icon_tri,<icon_saw,<icon_noise
-  3276 38F8			icon_ptr_hi
-  3277 38F8 38 38 38 38		        .byte >icon_sq,>icon_tri,>icon_saw,>icon_noise
-  3278
-  3279 				; ----- display list: GR.8 (ANTIC mode $0F), 192 lines, two LMS regions ------
-  3280 				; Fixed 1KB-aligned home, clear of linetab ($3000) and the framebuffer ($4000+),
-  3281 				; and within one 1KB block (ANTIC's DL counter is 10-bit).
-  3282 38FC			        org $3C00
-  3283 3C00			dlist
-  3284 3C00-3DF1> 70 70 70	        .byte $70,$70,$70       ; 24 blank lines
-  3285 3C03 4F			        .byte $4F               ; LMS + mode F  (scanline 0 = title row)
-  3286 3C04 00 40		        .word FB1
-  3287 3C06 0F 0F 0F 0F 0F 0F +         :101 .byte $0F          ; 101 more lines (102 total from FB1)
-  3288 3C6B 4F			        .byte $4F               ; scanline 102: LMS FB2
-  3289 3C6C 00 50		        .word FB2
-  3290 3C6E 0F 0F 0F 0F 0F 0F +         :89 .byte $0F           ; 89 more lines (90 total from FB2)
-  3291 3CC7 41			        .byte $41               ; JVB
-  3292 3CC8 00 3C		        .word dlist
-  3293
-  3294 				; ----- text labels (screen codes, $FF-terminated) ---------------------------
-  3295 3CCA 21 34 21 32 29 00 + txt_title  .byte "ATARI POKEY SYNTH",$FF
-  3296 3CDC 37 21 36 25 26 2F + txt_wave   .byte "WAVEFORM",$FF
-  3297 3CE5 36 2F 2C 35 2D 25 + txt_vol    .byte "VOLUME",$FF
-  3298 3CEC 2F 23 34 21 36 25 + txt_oct    .byte "OCTAVE",$FF
-  3299 3CF3 21 34 34 21 23 2B + txt_atk    .byte "ATTACK",$FF
-  3300 3CFA 24 25 23 21 39 FF	txt_dec    .byte "DECAY",$FF
-  3301 3D00 33 35 33 34 21 29 + txt_sus    .byte "SUSTAIN",$FF
-  3302 3D08 32 25 2C 25 21 33 + txt_rel    .byte "RELEASE",$FF
-  3303 3D10 23 2C 2F 23 2B FF	txt_clk    .byte "CLOCK",$FF
-  3304 3D16 2E 2F 34 25 FF	txt_note   .byte "NOTE",$FF
-  3305 3D1B 2E 2F 32 2D FF	txt_norm   .byte "NORM",$FF
-  3306 3D20 11 15 2B FF		txt_15k    .byte "15K",$FF
-  3307 3D24 2C 26 2F 00 32 21 + txt_lfor   .byte "LFO RATE",$FF
-  3308 3D2D 2C 26 2F 00 24 25 + txt_lfod   .byte "LFO DEPTH",$FF
-  3309 3D37 24 25 34 35 2E 25 + txt_det    .byte "DETUNE",$FF
-  3310 3D3E 21 32 30 25 27 27 + txt_arp    .byte "ARPEGGIO",$FF
-  3311 3D47 34 25 2D 30 2F FF	txt_tempo  .byte "TEMPO",$FF
-  3312 3D4D 21 32 30 00 2D 2F + txt_arpm   .byte "ARP MODE",$FF
-  3313 3D56 30 2F 32 34 21 FF	txt_porta  .byte "PORTA",$FF
-  3314 3D5C 24 32 35 2D FF	txt_drum   .byte "DRUM",$FF
-  3315 3D61 28 30 00 26 29 2C + txt_hpf    .byte "HP FILTER",$FF
-  3316 3D6B 30 32 25 33 25 34 + txt_preset .byte "PRESET",$FF
-  3317 3D72 24 32 35 2D 22 25 + txt_dbeat  .byte "DRUMBEAT",$FF
-  3318 3D7B 30 2C 21 39 FF	txt_play   .byte "PLAY",$FF
-  3319 3D80 33 34 2F 30 FF	txt_stop   .byte "STOP",$FF
-  3320 3D85 32 25 23 FF		txt_rec    .byte "REC",$FF
-  3321 3D89 00 00 00 FF		txt_blk3   .byte "   ",$FF
-  3322
-  3323 				; context hint strings (drawn on the HINTSCAN row); hint_col centres each
-  3324 3D8D 34 21 22 1D 30 21 + hint_d0    .byte "TAB=PAGE  OPT=HOLD",$FF      ; default (18 chars)
-  3325 3DA0 33 34 21 32 34 1D + hint_d1    .byte "START=PLAY SEL=REC",$FF      ; sequencer page (18 chars)
-  3326 3DB3 32 25 34 1D 33 21 + hint_d2    .byte "RET=SAVE PRESET",$FF         ; PRESET selected (15 chars)
-  3327 3DC3 8D A0 B3		hint_lo    .byte <hint_d0,<hint_d1,<hint_d2
-  3328 3DC6 3D 3D 3D		hint_hi    .byte >hint_d0,>hint_d1,>hint_d2
-  3329 3DC9 0B 0B 0C		hint_col   .byte 11,11,12                      ; centre col per hint
-  3330
-  3331 				; PRESET slot names (5 cells, space-padded so they overwrite cleanly) + SAVED flash
-  3332 3DCC 33 21 36 25 24 FF	txt_saved  .byte "SAVED",$FF
-  3333 3DD2 29 2E 29 34 00 FF	pn_init    .byte "INIT ",$FF
-  3334 3DD8 30 21 24 00 00 FF	pn_pad     .byte "PAD  ",$FF
-  3335 3DDE 2C 25 21 24 00 FF	pn_lead    .byte "LEAD ",$FF
-  3336 3DE4 21 32 30 00 00 FF	pn_arp     .byte "ARP  ",$FF
-  3337 3DEA D2 D8 DE E4		preset_name_lo .byte <pn_init,<pn_pad,<pn_lead,<pn_arp
-  3338 3DEE 3D 3D 3D 3D		preset_name_hi .byte >pn_init,>pn_pad,>pn_lead,>pn_arp
-  3339
-  3340 02E0-02E1> 00 20		        run main
+  1772 2B82			blit_glyph                      ; alt entry: scrptr already -> an 8-byte glyph bitmap
+  1773 2B82 A2 00		        ldx #0
+  1774 2B84			bc_l
+  1775 2B84 8A			        txa
+  1776 2B85 18			        clc
+  1777 2B86 6D 4A 06		        adc bc_scan
+  1778 2B89 A8			        tay
+  1779 2B8A B9 00 60		        lda linetab_lo,y
+  1780 2B8D 18			        clc
+  1781 2B8E 6D 49 06		        adc bc_col
+  1782 2B91 85 CF		        sta adjptr
+  1783 2B93 B9 C0 60		        lda linetab_hi,y
+  1784 2B96 69 00		        adc #0
+  1785 2B98 85 D0		        sta adjptr+1
+  1786 2B9A 8A			        txa
+  1787 2B9B A8			        tay
+  1788 2B9C B1 CB		        lda (scrptr),y
+  1789 2B9E 4D 4B 06		        eor bc_inv
+  1790 2BA1 AC 62 06		        ldy bc_mode
+  1791 2BA4 F0 0B		        beq bc_set
+  1792 2BA6 49 FF		        eor #$FF                ; clear mode: dest AND (NOT glyph)
+  1793 2BA8 A0 00		        ldy #0
+  1794 2BAA 31 CF		        and (adjptr),y
+  1795 2BAC 91 CF		        sta (adjptr),y
+  1796 2BAE 4C B5 2B		        jmp bc_step
+  1797 2BB1			bc_set
+  1798 2BB1 A0 00		        ldy #0
+  1799 2BB3 91 CF		        sta (adjptr),y
+  1800 2BB5			bc_step
+  1801 2BB5 E8			        inx
+  1802 2BB6 E0 08		        cpx #8
+  1803 2BB8 D0 CA		        bne bc_l
+  1804 2BBA 60			        rts
+  1805
+  1806 				; print $FF-terminated screen-code string srcptr at bc_col,bc_scan
+  1807 2BBB			print_strz
+  1808 2BBB A9 00		        lda #0
+  1809 2BBD 8D 4C 06		        sta psi
+  1810 2BC0			ps_l
+  1811 2BC0 AC 4C 06		        ldy psi
+  1812 2BC3 B1 CD		        lda (srcptr),y
+  1813 2BC5 C9 FF		        cmp #$FF
+  1814 2BC7 F0 0F		        beq ps_done
+  1815 2BC9 8D 48 06		        sta bc_code
+  1816 2BCC 20 58 2B		        jsr blit_char
+  1817 2BCF EE 49 06		        inc bc_col
+  1818 2BD2 EE 4C 06		        inc psi
+  1819 2BD5 4C C0 2B		        jmp ps_l
+  1820 2BD8			ps_done
+  1821 2BD8 60			        rts
+  1822
+  1823 				; print pcnt screen-code bytes from srcptr at bc_col,bc_scan
+  1824 2BD9			print_n
+  1825 2BD9 A9 00		        lda #0
+  1826 2BDB 8D 4C 06		        sta psi
+  1827 2BDE			pn_l
+  1828 2BDE AC 4C 06		        ldy psi
+  1829 2BE1 B1 CD		        lda (srcptr),y
+  1830 2BE3 8D 48 06		        sta bc_code
+  1831 2BE6 20 58 2B		        jsr blit_char
+  1832 2BE9 EE 49 06		        inc bc_col
+  1833 2BEC EE 4C 06		        inc psi
+  1834 2BEF AD 4C 06		        lda psi
+  1835 2BF2 CD 4D 06		        cmp pcnt
+  1836 2BF5 D0 E7		        bne pn_l
+  1837 2BF7 60			        rts
+  1838
+  1839 				; draw A (0..99) as two digits at bc_col,bc_scan (advances bc_col by 2)
+  1840 2BF8			num2
+  1841 2BF8 A2 00		        ldx #0
+  1842 2BFA			n2_l
+  1843 2BFA C9 0A		        cmp #10
+  1844 2BFC 90 07		        bcc n2_done
+  1845 2BFE 38			        sec
+  1846 2BFF E9 0A		        sbc #10
+  1847 2C01 E8			        inx
+  1848 2C02 4C FA 2B		        jmp n2_l
+  1849 2C05			n2_done
+  1850 2C05 48			        pha
+  1851 2C06 8A			        txa
+  1852 2C07 18			        clc
+  1853 2C08 69 10		        adc #$10
+  1854 2C0A 8D 48 06		        sta bc_code
+  1855 2C0D 20 58 2B		        jsr blit_char
+  1856 2C10 EE 49 06		        inc bc_col
+  1857 2C13 68			        pla
+  1858 2C14 18			        clc
+  1859 2C15 69 10		        adc #$10
+  1860 2C17 8D 48 06		        sta bc_code
+  1861 2C1A 20 58 2B		        jsr blit_char
+  1862 2C1D EE 49 06		        inc bc_col
+  1863 2C20 60			        rts
+  1864
+  1865 				; ============================================================================
+  1866 				;  KNOB  (ring + pointer; centre kcx,kcy, position kfrm 0..15)
+  1867 				; ============================================================================
+  1868 2C21			draw_knob
+  1869 2C21 20 CB 2C		        jsr clr_knob_box
+  1870 2C24 A9 00		        lda #0
+  1871 2C26 8D 61 06		        sta pmode
+  1872 2C29 8D 41 06		        sta xhi
+  1873 2C2C A2 00		        ldx #0
+  1874 2C2E			dkc
+  1875 2C2E 8E 45 06		        stx s_dy
+  1876 2C31 BD 15 38		        lda hw_tab,x
+  1877 2C34 8D 43 06		        sta s0                  ; half-width for this row
+  1878 2C37 AD 4F 06		        lda kcy                 ; upper row cy-dy
+  1879 2C3A 38			        sec
+  1880 2C3B ED 45 06		        sbc s_dy
+  1881 2C3E 8D 42 06		        sta py
+  1882 2C41 AD 4E 06		        lda kcx
+  1883 2C44 38			        sec
+  1884 2C45 ED 43 06		        sbc s0
+  1885 2C48 8D 40 06		        sta xlo
+  1886 2C4B 20 42 2A		        jsr plot
+  1887 2C4E AD 4E 06		        lda kcx
+  1888 2C51 18			        clc
+  1889 2C52 6D 43 06		        adc s0
+  1890 2C55 8D 40 06		        sta xlo
+  1891 2C58 20 42 2A		        jsr plot
+  1892 2C5B AD 4F 06		        lda kcy                 ; lower row cy+dy
+  1893 2C5E 18			        clc
+  1894 2C5F 6D 45 06		        adc s_dy
+  1895 2C62 8D 42 06		        sta py
+  1896 2C65 AD 4E 06		        lda kcx
+  1897 2C68 38			        sec
+  1898 2C69 ED 43 06		        sbc s0
+  1899 2C6C 8D 40 06		        sta xlo
+  1900 2C6F 20 42 2A		        jsr plot
+  1901 2C72 AD 4E 06		        lda kcx
+  1902 2C75 18			        clc
+  1903 2C76 6D 43 06		        adc s0
+  1904 2C79 8D 40 06		        sta xlo
+  1905 2C7C 20 42 2A		        jsr plot
+  1906 2C7F AE 45 06		        ldx s_dy
+  1907 2C82 E8			        inx
+  1908 2C83 E0 07		        cpx #7
+  1909 2C85 D0 A7		        bne dkc
+  1910 2C87 AE 50 06		        ldx kfrm                ; pointer: rim, mid, centre
+  1911 2C8A AD 4E 06		        lda kcx
+  1912 2C8D 18			        clc
+  1913 2C8E 7D 1C 38		        adc kn_ex,x
+  1914 2C91 8D 40 06		        sta xlo
+  1915 2C94 AD 4F 06		        lda kcy
+  1916 2C97 18			        clc
+  1917 2C98 7D 2C 38		        adc kn_ey,x
+  1918 2C9B 8D 42 06		        sta py
+  1919 2C9E 20 42 2A		        jsr plot
+  1920 2CA1 AE 50 06		        ldx kfrm
+  1921 2CA4 AD 4E 06		        lda kcx
+  1922 2CA7 18			        clc
+  1923 2CA8 7D 3C 38		        adc kn_mx,x
+  1924 2CAB 8D 40 06		        sta xlo
+  1925 2CAE AD 4F 06		        lda kcy
+  1926 2CB1 18			        clc
+  1927 2CB2 7D 4C 38		        adc kn_my,x
+  1928 2CB5 8D 42 06		        sta py
+  1929 2CB8 20 42 2A		        jsr plot
+  1930 2CBB AD 4E 06		        lda kcx
+  1931 2CBE 8D 40 06		        sta xlo
+  1932 2CC1 AD 4F 06		        lda kcy
+  1933 2CC4 8D 42 06		        sta py
+  1934 2CC7 20 42 2A		        jsr plot
+  1935 2CCA 60			        rts
+  1936
+  1937 				; clear a 3-byte x 14-row box around the knob centre (erase before redraw)
+  1938 2CCB			clr_knob_box
+  1939 2CCB AD 4E 06		        lda kcx
+  1940 2CCE 4A			        lsr
+  1941 2CCF 4A			        lsr
+  1942 2CD0 4A			        lsr
+  1943 2CD1 38			        sec
+  1944 2CD2 E9 01		        sbc #1
+  1945 2CD4 8D 43 06		        sta s0                  ; start byte column
+  1946 2CD7 AD 4F 06		        lda kcy
+  1947 2CDA 38			        sec
+  1948 2CDB E9 07		        sbc #7
+  1949 2CDD 8D 44 06		        sta s1                  ; top scan line
+  1950 2CE0 A2 0E		        ldx #14
+  1951 2CE2			ckb_row
+  1952 2CE2 AC 44 06		        ldy s1
+  1953 2CE5 B9 00 60		        lda linetab_lo,y
+  1954 2CE8 18			        clc
+  1955 2CE9 6D 43 06		        adc s0
+  1956 2CEC 85 CB		        sta scrptr
+  1957 2CEE B9 C0 60		        lda linetab_hi,y
+  1958 2CF1 69 00		        adc #0
+  1959 2CF3 85 CC		        sta scrptr+1
+  1960 2CF5 A9 00		        lda #0
+  1961 2CF7 A0 00		        ldy #0
+  1962 2CF9 91 CB		        sta (scrptr),y
+  1963 2CFB A0 01		        ldy #1
+  1964 2CFD 91 CB		        sta (scrptr),y
+  1965 2CFF A0 02		        ldy #2
+  1966 2D01 91 CB		        sta (scrptr),y
+  1967 2D03 EE 44 06		        inc s1
+  1968 2D06 CA			        dex
+  1969 2D07 D0 D9		        bne ckb_row
+  1970 2D09 60			        rts
+  1971
+  1972 				; ============================================================================
+  1973 				;  STATIC LAYOUT  (drawn once)
+  1974 				; ============================================================================
+  1975 2D0A			draw_static_gfx
+  1976 2D0A A9 00		        lda #0
+  1977 2D0C 8D 4B 06		        sta bc_inv
+  1978 2D0F 8D 62 06		        sta bc_mode
+  1979 				        ; title
+  1980 2D12 A9 EA		        lda #<txt_title
+  1981 2D14 85 CD		        sta srcptr
+  1982 2D16 A9 3C		        lda #>txt_title
+  1983 2D18 85 CE		        sta srcptr+1
+  1984 2D1A A9 0B		        lda #11
+  1985 2D1C 8D 49 06		        sta bc_col
+  1986 2D1F A9 00		        lda #0
+  1987 2D21 8D 4A 06		        sta bc_scan
+  1988 2D24 20 BB 2B		        jsr print_strz
+  1989 				        ; (parameter labels are drawn per-page by update_display on page change)
+  1990 				        ; NOTE label (top-right, on the title line)
+  1991 2D27 A9 36		        lda #<txt_note
+  1992 2D29 85 CD		        sta srcptr
+  1993 2D2B A9 3D		        lda #>txt_note
+  1994 2D2D 85 CE		        sta srcptr+1
+  1995 2D2F A9 1E		        lda #30
+  1996 2D31 8D 49 06		        sta bc_col
+  1997 2D34 A9 00		        lda #0
+  1998 2D36 8D 4A 06		        sta bc_scan
+  1999 2D39 20 BB 2B		        jsr print_strz
+  2000 2D3C 20 40 2D		        jsr draw_keyboard
+  2001 2D3F 60			        rts
+  2002
+  2003 2D40			draw_keyboard
+  2004 				        ; white keys: 10 FILLED rectangles, 28x56, pitch 30, from x=10
+  2005 2D40 A9 00		        lda #0
+  2006 2D42 8D 61 06		        sta pmode
+  2007 2D45 A9 0A		        lda #10
+  2008 2D47 8D 56 06		        sta wxl
+  2009 2D4A A9 00		        lda #0
+  2010 2D4C 8D 57 06		        sta wxh
+  2011 2D4F A2 00		        ldx #0
+  2012 2D51			dkw
+  2013 2D51 8E 46 06		        stx s_kc
+  2014 2D54 AD 56 06		        lda wxl
+  2015 2D57 8D 40 06		        sta xlo
+  2016 2D5A AD 57 06		        lda wxh
+  2017 2D5D 8D 41 06		        sta xhi
+  2018 2D60 A9 84		        lda #KBTOP
+  2019 2D62 8D 42 06		        sta py
+  2020 2D65 A9 1C		        lda #28
+  2021 2D67 8D 51 06		        sta rw
+  2022 2D6A A9 38		        lda #56
+  2023 2D6C 8D 52 06		        sta rh
+  2024 2D6F 20 2C 2B		        jsr fillrect
+  2025 2D72 18			        clc
+  2026 2D73 AD 56 06		        lda wxl
+  2027 2D76 69 1E		        adc #30
+  2028 2D78 8D 56 06		        sta wxl
+  2029 2D7B AD 57 06		        lda wxh
+  2030 2D7E 69 00		        adc #0
+  2031 2D80 8D 57 06		        sta wxh
+  2032 2D83 AE 46 06		        ldx s_kc
+  2033 2D86 E8			        inx
+  2034 2D87 E0 0A		        cpx #10
+  2035 2D89 D0 C6		        bne dkw
+  2036 				        ; black keys: CLEAR 7 rectangles, 16x34 (black notches at the top)
+  2037 2D8B A9 FF		        lda #$FF
+  2038 2D8D 8D 61 06		        sta pmode
+  2039 2D90 A2 00		        ldx #0
+  2040 2D92			dkb
+  2041 2D92 8E 46 06		        stx s_kc
+  2042 2D95 BD 61 38		        lda blackx_lo,x
+  2043 2D98 8D 40 06		        sta xlo
+  2044 2D9B BD 68 38		        lda blackx_hi,x
+  2045 2D9E 8D 41 06		        sta xhi
+  2046 2DA1 A9 84		        lda #KBTOP
+  2047 2DA3 8D 42 06		        sta py
+  2048 2DA6 A9 10		        lda #16
+  2049 2DA8 8D 51 06		        sta rw
+  2050 2DAB A9 22		        lda #34
+  2051 2DAD 8D 52 06		        sta rh
+  2052 2DB0 20 2C 2B		        jsr fillrect
+  2053 2DB3 AE 46 06		        ldx s_kc
+  2054 2DB6 E8			        inx
+  2055 2DB7 E0 07		        cpx #7
+  2056 2DB9 D0 D7		        bne dkb
+  2057 2DBB A9 00		        lda #0
+  2058 2DBD 8D 61 06		        sta pmode
+  2059 2DC0 8D 4B 06		        sta bc_inv
+  2060 				        ; white-key letters ON the keys (black on white)
+  2061 2DC3 A9 FF		        lda #$FF
+  2062 2DC5 8D 62 06		        sta bc_mode
+  2063 2DC8 A2 00		        ldx #0
+  2064 2DCA			dwl
+  2065 2DCA 8E 46 06		        stx s_kc
+  2066 2DCD BD 6F 38		        lda white_lblcol,x
+  2067 2DD0 8D 49 06		        sta bc_col
+  2068 2DD3 A9 A8		        lda #KBTOP+36
+  2069 2DD5 8D 4A 06		        sta bc_scan
+  2070 2DD8 BD 79 38		        lda white_lblch,x
+  2071 2DDB 8D 48 06		        sta bc_code
+  2072 2DDE 20 58 2B		        jsr blit_char
+  2073 2DE1 AE 46 06		        ldx s_kc
+  2074 2DE4 E8			        inx
+  2075 2DE5 E0 0A		        cpx #10
+  2076 2DE7 D0 E1		        bne dwl
+  2077 				        ; black-key numbers ON the black keys (white on black)
+  2078 2DE9 A9 00		        lda #0
+  2079 2DEB 8D 62 06		        sta bc_mode
+  2080 2DEE A2 00		        ldx #0
+  2081 2DF0			dbl
+  2082 2DF0 8E 46 06		        stx s_kc
+  2083 2DF3 BD 83 38		        lda black_lblcol,x
+  2084 2DF6 8D 49 06		        sta bc_col
+  2085 2DF9 A9 88		        lda #KBTOP+4
+  2086 2DFB 8D 4A 06		        sta bc_scan
+  2087 2DFE BD 8A 38		        lda black_lblch,x
+  2088 2E01 8D 48 06		        sta bc_code
+  2089 2E04 20 58 2B		        jsr blit_char
+  2090 2E07 AE 46 06		        ldx s_kc
+  2091 2E0A E8			        inx
+  2092 2E0B E0 07		        cpx #7
+  2093 2E0D D0 E1		        bne dbl
+  2094 2E0F 60			        rts
+  2095
+  2096 				; ============================================================================
+  2097 				;  PER-FRAME DISPLAY
+  2098 				; ============================================================================
+  2099 				; redraw only the widgets whose value changed this frame (no per-frame
+  2100 				; clear/redraw -> no flicker, low cost).
+  2101 2E10			update_display
+  2102 2E10 A9 00		        lda #0
+  2103 2E12 8D 4B 06		        sta bc_inv
+  2104 2E15 8D 62 06		        sta bc_mode
+  2105 				        ; page ranges: 0 = 0..11 (osc/env/fx), 1 = 12..15 + sequencer grid,
+  2106 				        ; 2 = 16..NPARAM-1 (filter etc.)
+  2107 2E18 AD 00 06		        lda cur_param
+  2108 2E1B C9 0C		        cmp #PER_PAGE
+  2109 2E1D 90 28		        bcc ud_pg0
+  2110 2E1F C9 10		        cmp #PG2BASE
+  2111 2E21 90 12		        bcc ud_pg1
+  2112 2E23 A9 10		        lda #PG2BASE            ; page 2
+  2113 2E25 8D 8F 06		        sta pg_base
+  2114 2E28 A9 13		        lda #NPARAM
+  2115 2E2A 8D 90 06		        sta pg_end
+  2116 2E2D A9 02		        lda #2
+  2117 2E2F 8D 8D 06		        sta page
+  2118 2E32 4C 54 2E		        jmp ud_pgset
+  2119 2E35			ud_pg1
+  2120 2E35 A9 0C		        lda #PER_PAGE           ; page 1 (sequencer)
+  2121 2E37 8D 8F 06		        sta pg_base
+  2122 2E3A A9 10		        lda #PG2BASE
+  2123 2E3C 8D 90 06		        sta pg_end
+  2124 2E3F A9 01		        lda #1
+  2125 2E41 8D 8D 06		        sta page
+  2126 2E44 4C 54 2E		        jmp ud_pgset
+  2127 2E47			ud_pg0
+  2128 2E47 A9 00		        lda #0
+  2129 2E49 8D 8F 06		        sta pg_base
+  2130 2E4C 8D 8D 06		        sta page
+  2131 2E4F A9 0C		        lda #PER_PAGE
+  2132 2E51 8D 90 06		        sta pg_end
+  2133 2E54			ud_pgset
+  2134 				        ; page change -> clear panel, redraw labels, force value + marker redraw
+  2135 2E54 AD 8D 06		        lda page
+  2136 2E57 CD 8E 06		        cmp prev_page
+  2137 2E5A F0 37		        beq ud_pgsame
+  2138 2E5C 8D 8E 06		        sta prev_page
+  2139 2E5F 20 91 30		        jsr clear_panel
+  2140 2E62 20 B7 30		        jsr draw_page_labels
+  2141 2E65 AE 8F 06		        ldx pg_base
+  2142 2E68 A9 FF		        lda #$FF
+  2143 2E6A			ud_rst
+  2144 2E6A 9D 70 06		        sta prev_disp,x
+  2145 2E6D E8			        inx
+  2146 2E6E EC 90 06		        cpx pg_end
+  2147 2E71 D0 F7		        bne ud_rst
+  2148 2E73 AD 00 06		        lda cur_param           ; labels already drawn (focused) above -> sync
+  2149 2E76 8D 58 06		        sta prev_param          ; prev_param so ud_pgsame doesn't redraw them again
+  2150 2E79 A9 FF		        lda #$FF
+  2151 2E7B 8D A7 06		        sta prev_spos           ; force sequencer grid/transport redraw on page 2
+  2152 2E7E 8D A8 06		        sta prev_splay
+  2153 2E81 8D A9 06		        sta prev_srec
+  2154 2E84 A9 01		        lda #1
+  2155 2E86 8D AA 06		        sta seq_dirty
+  2156 2E89 A2 03		        ldx #3                  ; clear_panel wiped the VU bars -> redraw from 0
+  2157 2E8B A9 00		        lda #0
+  2158 2E8D			ud_pgvm
+  2159 2E8D 9D AD 06		        sta prev_vmeter,x
+  2160 2E90 CA			        dex
+  2161 2E91 10 FA		        bpl ud_pgvm
+  2162 2E93			ud_pgsame
+  2163 				        ; focus highlight: when the selection moves, redraw the page's labels so the
+  2164 				        ; newly-selected one is inverse and the old one reverts to normal (replaces
+  2165 				        ; the old '>' marker). draw_page_labels applies pl_inv per param.
+  2166 2E93 AD 00 06		        lda cur_param
+  2167 2E96 CD 58 06		        cmp prev_param
+  2168 2E99 F0 06		        beq ud_nomk
+  2169 2E9B 8D 58 06		        sta prev_param
+  2170 2E9E 20 B7 30		        jsr draw_page_labels
+  2171 2EA1			ud_nomk
+  2172 				        ; per-parameter value redraw on change (current page only)
+  2173 2EA1 AE 8F 06		        ldx pg_base
+  2174 2EA4			ud_pl
+  2175 2EA4 8E 46 06		        stx s_kc
+  2176 2EA7 BD 51 37		        lda p_vaddr_lo,x
+  2177 2EAA 85 CD		        sta srcptr
+  2178 2EAC BD 64 37		        lda p_vaddr_hi,x
+  2179 2EAF 85 CE		        sta srcptr+1
+  2180 2EB1 A0 00		        ldy #0
+  2181 2EB3 B1 CD		        lda (srcptr),y          ; current value
+  2182 2EB5 DD 70 06		        cmp prev_disp,x
+  2183 2EB8 F0 06		        beq ud_pn
+  2184 2EBA 9D 70 06		        sta prev_disp,x
+  2185 2EBD 20 A2 31		        jsr draw_param
+  2186 2EC0			ud_pn
+  2187 2EC0 AE 46 06		        ldx s_kc
+  2188 2EC3 E8			        inx
+  2189 2EC4 EC 90 06		        cpx pg_end
+  2190 2EC7 D0 DB		        bne ud_pl
+  2191 				        ; page-2 sequencer grid (step cells + play head + transport)
+  2192 2EC9 AD 8D 06		        lda page
+  2193 2ECC C9 01		        cmp #1
+  2194 2ECE D0 03		        bne ud_noseq
+  2195 2ED0 20 EB 2E		        jsr seq_draw
+  2196 2ED3			ud_noseq
+  2197 2ED3 20 46 32		        jsr hint_update         ; context-sensitive hint line above the keyboard
+  2198 2ED6 20 09 30		        jsr draw_meters         ; per-voice VU bars (both pages)
+  2199 				        ; NOTE name + active-key indicator (on note change)
+  2200 2ED9 AD 07 06		        lda note_idx
+  2201 2EDC CD 08 06		        cmp prev_note
+  2202 2EDF F0 09		        beq ud_donote
+  2203 2EE1 8D 08 06		        sta prev_note
+  2204 2EE4 20 3F 33		        jsr draw_note
+  2205 2EE7 20 0C 34		        jsr key_indicator
+  2206 2EEA			ud_donote
+  2207 2EEA 60			        rts
+  2208
+  2209 				; ----------------------------------------------------------------------------
+  2210 				;  Sequencer page (page 2) display: 16 step cells (block = note, '.' = rest),
+  2211 				;  a play-head marker above the active step, and PLAY/STOP + REC status.
+  2212 				; ----------------------------------------------------------------------------
+  2213 2EEB			seq_draw
+  2214 2EEB A9 00		        lda #0
+  2215 2EED 8D 4B 06		        sta bc_inv
+  2216 2EF0 8D 62 06		        sta bc_mode
+  2217 2EF3 AD AA 06		        lda seq_dirty           ; full step grid redraw when the pattern changed
+  2218 2EF6 F0 57		        beq sd_nogrid
+  2219 2EF8 A9 00		        lda #0
+  2220 2EFA 8D AA 06		        sta seq_dirty
+  2221 2EFD A2 00		        ldx #0
+  2222 2EFF A9 00		        lda #0                  ; custom step glyphs draw as-is (no inverse)
+  2223 2F01 8D 4B 06		        sta bc_inv
+  2224 2F04 A2 00		        ldx #0
+  2225 2F06			sd_cell
+  2226 2F06 8E 46 06		        stx s_kc
+  2227 2F09 8A			        txa                     ; col = 4 + step*2
+  2228 2F0A 0A			        asl
+  2229 2F0B 18			        clc
+  2230 2F0C 69 04		        adc #4
+  2231 2F0E 8D 49 06		        sta bc_col
+  2232 2F11 A9 38		        lda #56
+  2233 2F13 8D 4A 06		        sta bc_scan
+  2234 2F16 AE 46 06		        ldx s_kc
+  2235 				        ; map the step value -> custom-glyph index (0 rest,1 note,2 tie,3 drum)
+  2236 2F19 BD 91 06		        lda seq_notes,x
+  2237 2F1C C9 FF		        cmp #$FF
+  2238 2F1E D0 04		        bne sd_n1
+  2239 2F20 A9 00		        lda #0                  ; rest -> dot
+  2240 2F22 F0 12		        beq sd_putcell
+  2241 2F24			sd_n1
+  2242 2F24 C9 FE		        cmp #$FE
+  2243 2F26 D0 04		        bne sd_n2
+  2244 2F28 A9 02		        lda #2                  ; tie -> bar
+  2245 2F2A D0 0A		        bne sd_putcell
+  2246 2F2C			sd_n2
+  2247 2F2C C9 FD		        cmp #$FD
+  2248 2F2E D0 04		        bne sd_note
+  2249 2F30 A9 03		        lda #3                  ; drum -> diamond
+  2250 2F32 D0 02		        bne sd_putcell
+  2251 2F34			sd_note
+  2252 2F34 A9 01		        lda #1                  ; pitched note -> filled square
+  2253 2F36			sd_putcell
+  2254 2F36 0A			        asl                     ; index*8 -> offset into seq_glyphs (8 bytes each)
+  2255 2F37 0A			        asl
+  2256 2F38 0A			        asl
+  2257 2F39 18			        clc
+  2258 2F3A 69 CA		        adc #<seq_glyphs
+  2259 2F3C 85 CB		        sta scrptr
+  2260 2F3E A9 00		        lda #0
+  2261 2F40 69 3C		        adc #>seq_glyphs
+  2262 2F42 85 CC		        sta scrptr+1
+  2263 2F44 20 82 2B		        jsr blit_glyph          ; blit our custom 8x8 bitmap at bc_col/bc_scan
+  2264 2F47 AE 46 06		        ldx s_kc
+  2265 2F4A E8			        inx
+  2266 2F4B E0 10		        cpx #16
+  2267 2F4D D0 B7		        bne sd_cell
+  2268 2F4F			sd_nogrid
+  2269 2F4F AD A1 06		        lda seq_play            ; transport text on change
+  2270 2F52 CD A8 06		        cmp prev_splay
+  2271 2F55 D0 08		        bne sd_txt
+  2272 2F57 AD A2 06		        lda seq_rec
+  2273 2F5A CD A9 06		        cmp prev_srec
+  2274 2F5D F0 56		        beq sd_phead
+  2275 2F5F			sd_txt
+  2276 2F5F AD A1 06		        lda seq_play
+  2277 2F62 8D A8 06		        sta prev_splay
+  2278 2F65 AD A2 06		        lda seq_rec
+  2279 2F68 8D A9 06		        sta prev_srec
+  2280 2F6B AD A1 06		        lda seq_play
+  2281 2F6E F0 0B		        beq sd_stop
+  2282 2F70 A9 9B		        lda #<txt_play
+  2283 2F72 85 CD		        sta srcptr
+  2284 2F74 A9 3D		        lda #>txt_play
+  2285 2F76 85 CE		        sta srcptr+1
+  2286 2F78 4C 83 2F		        jmp sd_pput
+  2287 2F7B			sd_stop
+  2288 2F7B A9 A0		        lda #<txt_stop
+  2289 2F7D 85 CD		        sta srcptr
+  2290 2F7F A9 3D		        lda #>txt_stop
+  2291 2F81 85 CE		        sta srcptr+1
+  2292 2F83			sd_pput
+  2293 2F83 A9 04		        lda #4
+  2294 2F85 8D 49 06		        sta bc_col
+  2295 2F88 A9 48		        lda #72
+  2296 2F8A 8D 4A 06		        sta bc_scan
+  2297 2F8D 20 BB 2B		        jsr print_strz
+  2298 2F90 AD A2 06		        lda seq_rec
+  2299 2F93 F0 0B		        beq sd_norec
+  2300 2F95 A9 A5		        lda #<txt_rec
+  2301 2F97 85 CD		        sta srcptr
+  2302 2F99 A9 3D		        lda #>txt_rec
+  2303 2F9B 85 CE		        sta srcptr+1
+  2304 2F9D 4C A8 2F		        jmp sd_rput
+  2305 2FA0			sd_norec
+  2306 2FA0 A9 A9		        lda #<txt_blk3
+  2307 2FA2 85 CD		        sta srcptr
+  2308 2FA4 A9 3D		        lda #>txt_blk3
+  2309 2FA6 85 CE		        sta srcptr+1
+  2310 2FA8			sd_rput
+  2311 2FA8 A9 0A		        lda #10
+  2312 2FAA 8D 49 06		        sta bc_col
+  2313 2FAD A9 48		        lda #72
+  2314 2FAF 8D 4A 06		        sta bc_scan
+  2315 2FB2 20 BB 2B		        jsr print_strz
+  2316 2FB5			sd_phead
+  2317 				        ; the ↓ head marks the active step: the WRITE head during step entry
+  2318 				        ; (rec armed + stopped), else the PLAY/clock head (playback or real-time).
+  2319 2FB5 AD A2 06		        lda seq_rec
+  2320 2FB8 F0 0B		        beq sd_ph_useplay
+  2321 2FBA AD A1 06		        lda seq_play
+  2322 2FBD D0 06		        bne sd_ph_useplay       ; real-time record -> clock head, not write head
+  2323 2FBF AD A4 06		        lda seq_wpos
+  2324 2FC2 4C C8 2F		        jmp sd_ph_have
+  2325 2FC5			sd_ph_useplay
+  2326 2FC5 AD A3 06		        lda seq_pos
+  2327 2FC8			sd_ph_have
+  2328 2FC8 8D 0C 06		        sta tmpA                ; tmpA = step to mark (survives blit_char)
+  2329 2FCB CD A7 06		        cmp prev_spos
+  2330 2FCE F0 38		        beq sd_done
+  2331 2FD0 AD A7 06		        lda prev_spos
+  2332 2FD3 C9 10		        cmp #16
+  2333 2FD5 B0 14		        bcs sd_ph_new           ; previous head invalid ($FF) -> nothing to erase
+  2334 2FD7 0A			        asl
+  2335 2FD8 18			        clc
+  2336 2FD9 69 04		        adc #4
+  2337 2FDB 8D 49 06		        sta bc_col
+  2338 2FDE A9 30		        lda #48
+  2339 2FE0 8D 4A 06		        sta bc_scan
+  2340 2FE3 A9 00		        lda #$00
+  2341 2FE5 8D 48 06		        sta bc_code
+  2342 2FE8 20 58 2B		        jsr blit_char
+  2343 2FEB			sd_ph_new
+  2344 2FEB AD 0C 06		        lda tmpA
+  2345 2FEE 0A			        asl
+  2346 2FEF 18			        clc
+  2347 2FF0 69 04		        adc #4
+  2348 2FF2 8D 49 06		        sta bc_col
+  2349 2FF5 A9 30		        lda #48
+  2350 2FF7 8D 4A 06		        sta bc_scan
+  2351 2FFA A9 5D		        lda #$5D                ; down-arrow marker (distinct from note blocks)
+  2352 2FFC 8D 48 06		        sta bc_code
+  2353 2FFF 20 58 2B		        jsr blit_char
+  2354 3002 AD 0C 06		        lda tmpA
+  2355 3005 8D A7 06		        sta prev_spos
+  2356 3008			sd_done
+  2357 3008 60			        rts
+  2358
+  2359 				; ----------------------------------------------------------------------------
+  2360 				;  Per-voice level meters: 4 horizontal VU bars at scan 9-13, bar width =
+  2361 				;  voice envelope level * 3 px. Drawn INCREMENTALLY -- each frame only the
+  2362 				;  delta between the old and new level is set/cleared, so meters animating
+  2363 				;  with the envelopes cost a few pixels per voice, not a full redraw.
+  2364 				; ----------------------------------------------------------------------------
+  2365 3009			draw_meters
+  2366 3009 A2 00		        ldx #0
+  2367 300B			dm_loop
+  2368 300B 8E 46 06		        stx s_kc
+  2369 300E BD 14 06		        lda voice_level,x
+  2370 3011 DD AD 06		        cmp prev_vmeter,x
+  2371 3014 F0 69		        beq dm_next
+  2372 3016 BC AD 06		        ldy prev_vmeter,x       ; old level
+  2373 3019 8C 0D 06		        sty tmp2
+  2374 301C 9D AD 06		        sta prev_vmeter,x       ; store new
+  2375 301F CD 0D 06		        cmp tmp2                ; new - old
+  2376 3022 B0 14		        bcs dm_rise
+  2377 3024 A9 FF		        lda #$FF                ; level fell -> CLEAR from new to old
+  2378 3026 8D 61 06		        sta pmode
+  2379 3029 AD 0D 06		        lda tmp2
+  2380 302C 8D B2 06		        sta dm_hi               ; hi = old
+  2381 302F BD AD 06		        lda prev_vmeter,x
+  2382 3032 8D B1 06		        sta dm_lo               ; lo = new
+  2383 3035 4C 49 30		        jmp dm_calc
+  2384 3038			dm_rise
+  2385 3038 A9 00		        lda #0                  ; level rose -> SET from old to new
+  2386 303A 8D 61 06		        sta pmode
+  2387 303D AD 0D 06		        lda tmp2
+  2388 3040 8D B1 06		        sta dm_lo               ; lo = old
+  2389 3043 BD AD 06		        lda prev_vmeter,x
+  2390 3046 8D B2 06		        sta dm_hi               ; hi = new
+  2391 3049			dm_calc
+  2392 3049 AE 46 06		        ldx s_kc
+  2393 304C AD B1 06		        lda dm_lo               ; xlo = met_x[v] + lo*3
+  2394 304F 0A			        asl
+  2395 3050 18			        clc
+  2396 3051 6D B1 06		        adc dm_lo
+  2397 3054 18			        clc
+  2398 3055 7D 8D 30		        adc met_x,x
+  2399 3058 8D 40 06		        sta xlo
+  2400 305B A9 00		        lda #0
+  2401 305D 8D 41 06		        sta xhi
+  2402 3060 AD B2 06		        lda dm_hi               ; rw = (hi - lo)*3
+  2403 3063 38			        sec
+  2404 3064 ED B1 06		        sbc dm_lo
+  2405 3067 8D 0C 06		        sta tmpA
+  2406 306A 0A			        asl
+  2407 306B 18			        clc
+  2408 306C 6D 0C 06		        adc tmpA
+  2409 306F 8D 51 06		        sta rw
+  2410 3072 A9 09		        lda #9
+  2411 3074 8D 42 06		        sta py
+  2412 3077 A9 05		        lda #5
+  2413 3079 8D 52 06		        sta rh
+  2414 307C 20 2C 2B		        jsr fillrect
+  2415 307F			dm_next
+  2416 307F AE 46 06		        ldx s_kc
+  2417 3082 E8			        inx
+  2418 3083 E0 04		        cpx #4
+  2419 3085 D0 84		        bne dm_loop
+  2420 3087 A9 00		        lda #0
+  2421 3089 8D 61 06		        sta pmode
+  2422 308C 60			        rts
+  2423 308D 04 48 8C D0		met_x   .byte 4,72,140,208
+  2424
+  2425 				; clear the panel area (scan 8..123); leaves title row and keyboard intact
+  2426 3091			clear_panel
+  2427 3091 A9 08		        lda #8
+  2428 3093 8D 44 06		        sta s1
+  2429 3096			cpan
+  2430 3096 AC 44 06		        ldy s1
+  2431 3099 B9 00 60		        lda linetab_lo,y
+  2432 309C 85 CB		        sta scrptr
+  2433 309E B9 C0 60		        lda linetab_hi,y
+  2434 30A1 85 CC		        sta scrptr+1
+  2435 30A3 A0 27		        ldy #39
+  2436 30A5 A9 00		        lda #0
+  2437 30A7			cpan2
+  2438 30A7 91 CB		        sta (scrptr),y
+  2439 30A9 88			        dey
+  2440 30AA 10 FB		        bpl cpan2
+  2441 30AC EE 44 06		        inc s1
+  2442 30AF AD 44 06		        lda s1
+  2443 30B2 C9 7C		        cmp #124
+  2444 30B4 D0 E0		        bne cpan
+  2445 30B6 60			        rts
+  2446
+  2447 				; draw the current page's parameter labels
+  2448 30B7			draw_page_labels
+  2449 30B7 A9 00		        lda #0
+  2450 30B9 8D 4B 06		        sta bc_inv
+  2451 30BC 8D 62 06		        sta bc_mode
+  2452 30BF AE 8F 06		        ldx pg_base
+  2453 30C2			dpgl
+  2454 30C2 8E 46 06		        stx s_kc
+  2455 30C5 BD 77 37		        lda p_lblptr_lo,x
+  2456 30C8 85 CD		        sta srcptr
+  2457 30CA BD 8A 37		        lda p_lblptr_hi,x
+  2458 30CD 85 CE		        sta srcptr+1
+  2459 30CF BD 18 37		        lda p_lblcol,x
+  2460 30D2 8D 49 06		        sta bc_col
+  2461 30D5 BD 05 37		        lda p_scan,x
+  2462 30D8 8D 4A 06		        sta bc_scan
+  2463 30DB BD 9D 37		        lda p_hl,x
+  2464 30DE 8D CC 06		        sta hl_idx
+  2465 30E1 BD B0 37		        lda p_hl_shift,x        ; is this param's shortcut a Shift+letter?
+  2466 30E4 8D D3 06		        sta hl_shift
+  2467 30E7 A9 00		        lda #0                  ; focus highlight: inverse the selected param's label
+  2468 30E9 EC 00 06		        cpx cur_param
+  2469 30EC D0 02		        bne dpgl_inv
+  2470 30EE A9 FF		        lda #$FF
+  2471 30F0			dpgl_inv
+  2472 30F0 8D D2 06		        sta pl_inv
+  2473 30F3 20 37 31		        jsr print_label         ; (leaves bc_col at the label's end column)
+  2474 30F6 AD 04 06		        lda clock15             ; 16-bit mode disables some FX -> strike them through
+  2475 30F9 C9 02		        cmp #2
+  2476 30FB D0 0B		        bne dpgl_next
+  2477 30FD AE 46 06		        ldx s_kc
+  2478 3100 BD C3 37		        lda p_inert16,x
+  2479 3103 F0 03		        beq dpgl_next
+  2480 3105 20 12 31		        jsr draw_strike
+  2481 3108			dpgl_next
+  2482 3108 AE 46 06		        ldx s_kc
+  2483 310B E8			        inx
+  2484 310C EC 90 06		        cpx pg_end
+  2485 310F D0 B1		        bne dpgl
+  2486 3111 60			        rts
+  2487
+  2488 				; strike a horizontal line through the label just drawn (cols p_lblcol..bc_col at
+  2489 				; the cell's middle row) -> the "this control is inert in 16-bit mode" marker.
+  2490 3112			draw_strike
+  2491 3112 AD 4A 06		        lda bc_scan
+  2492 3115 18			        clc
+  2493 3116 69 03		        adc #3
+  2494 3118 A8			        tay
+  2495 3119 B9 00 60		        lda linetab_lo,y
+  2496 311C 85 CF		        sta adjptr
+  2497 311E B9 C0 60		        lda linetab_hi,y
+  2498 3121 85 D0		        sta adjptr+1
+  2499 3123 AE 46 06		        ldx s_kc
+  2500 3126 BC 18 37		        ldy p_lblcol,x
+  2501 3129			ds_l
+  2502 3129 CC 49 06		        cpy bc_col
+  2503 312C B0 08		        bcs ds_done
+  2504 312E A9 FF		        lda #$FF
+  2505 3130 91 CF		        sta (adjptr),y
+  2506 3132 C8			        iny
+  2507 3133 4C 29 31		        jmp ds_l
+  2508 3136			ds_done
+  2509 3136 60			        rts
+  2510
+  2511 				; Print a label. The char at index hl_idx is the shortcut key, drawn highlighted
+  2512 				; (HL_STYLE 1 = underline). pl_inv ($FF) renders the whole label in inverse video
+  2513 				; -> the FOCUS highlight for the selected param (underline=shortcut, inverse=focus).
+  2514 3137			print_label
+  2515 3137 A9 00		        lda #0
+  2516 3139 8D 4C 06		        sta psi
+  2517 313C AD D2 06		        lda pl_inv              ; base inverse for every cell (focus highlight)
+  2518 313F 8D 4B 06		        sta bc_inv
+  2519 3142			pl_l
+  2520 3142 AC 4C 06		        ldy psi
+  2521 3145 B1 CD		        lda (srcptr),y
+  2522 3147 C9 FF		        cmp #$FF
+  2523 3149 F0 33		        beq pl_done
+  2524 314B 8D 48 06		        sta bc_code
+  2525 314E AD 4C 06		        lda psi
+  2526 3151 CD CC 06		        cmp hl_idx
+  2527 3154 D0 1C		        bne pl_normal
+  2528 				    .if HL_STYLE = 0
+  2529 				        lda pl_inv              ; shortcut char = opposite of the label's base
+  2530 				        eor #$FF
+  2531 				        sta bc_inv
+  2532 				        jsr blit_char
+  2533 				        lda pl_inv
+  2534 				        sta bc_inv
+  2535 				    .else
+  2536 3156 AD D3 06		        lda hl_shift            ; SHIFT shortcut -> draw the char OPPOSITE the
+  2537 3159 F0 08		        beq pl_sc_draw          ; label's video (the cue for "add Shift")
+  2538 315B AD D2 06		        lda pl_inv
+  2539 315E 49 FF		        eor #$FF
+  2540 3160 8D 4B 06		        sta bc_inv
+  2541 3163			pl_sc_draw
+  2542 3163 20 58 2B		        jsr blit_char           ; glyph + underline beneath it
+  2543 3166 20 84 31		        jsr draw_underline
+  2544 3169 AD D2 06		        lda pl_inv              ; restore base video for the remaining chars
+  2545 316C 8D 4B 06		        sta bc_inv
+  2546 				    .endif
+  2547 316F 4C 75 31		        jmp pl_adv
+  2548 3172			pl_normal
+  2549 3172 20 58 2B		        jsr blit_char
+  2550 3175			pl_adv
+  2551 3175 EE 49 06		        inc bc_col
+  2552 3178 EE 4C 06		        inc psi
+  2553 317B 4C 42 31		        jmp pl_l
+  2554 317E			pl_done
+  2555 317E A9 00		        lda #0                  ; leave bc_inv clean (num2/knob draws assume 0)
+  2556 3180 8D 4B 06		        sta bc_inv
+  2557 3183 60			        rts
+  2558
+  2559 				; DEMO: underline the glyph cell at bc_col, bottom row of bc_scan
+  2560 3184			draw_underline
+  2561 3184 AD 4A 06		        lda bc_scan
+  2562 3187 18			        clc
+  2563 3188 69 07		        adc #7
+  2564 318A A8			        tay
+  2565 318B B9 00 60		        lda linetab_lo,y
+  2566 318E 18			        clc
+  2567 318F 6D 49 06		        adc bc_col
+  2568 3192 85 CF		        sta adjptr
+  2569 3194 B9 C0 60		        lda linetab_hi,y
+  2570 3197 69 00		        adc #0
+  2571 3199 85 D0		        sta adjptr+1
+  2572 319B A0 00		        ldy #0
+  2573 319D A9 FF		        lda #$FF
+  2574 319F 91 CF		        sta (adjptr),y
+  2575 31A1 60			        rts
+  2576
+  2577 				; draw one parameter widget; X = param index
+  2578 31A2			draw_param
+  2579 31A2 BD F2 36		        lda p_kind,x
+  2580 31A5 C9 02		        cmp #K_WAVE
+  2581 31A7 D0 03		        bne dp_n1
+  2582 31A9 4C A1 34		        jmp draw_wave_selector
+  2583 31AC			dp_n1
+  2584 31AC C9 03		        cmp #K_CLK
+  2585 31AE D0 03		        bne dp_chkpre
+  2586 31B0 4C 22 35		        jmp draw_clk_toggle
+  2587 31B3			dp_chkpre
+  2588 31B3 E0 11		        cpx #17                 ; PRESET -> knob + name (INIT/PAD/LEAD/ARP) or SAVED
+  2589 31B5 D0 03		        bne dp_n2
+  2590 31B7 4C B7 32		        jmp draw_preset_widget
+  2591 31BA			dp_n2
+  2592 31BA BD 2B 37		        lda p_knobcx,x          ; KNOB / OCT: common knob setup
+  2593 31BD 8D 4E 06		        sta kcx
+  2594 31C0 BD 05 37		        lda p_scan,x
+  2595 31C3 18			        clc
+  2596 31C4 69 05		        adc #5
+  2597 31C6 8D 4F 06		        sta kcy
+  2598 31C9 BD 3E 37		        lda p_numcol,x
+  2599 31CC 8D 6C 06		        sta dp_numcol
+  2600 31CF BD 05 37		        lda p_scan,x
+  2601 31D2 8D 6D 06		        sta dp_scan
+  2602 31D5 BD FA 37		        lda p_zoff,x            ; capture before draw_knob clobbers X
+  2603 31D8 8D D0 06		        sta dp_zoff
+  2604 31DB BD 51 37		        lda p_vaddr_lo,x
+  2605 31DE 85 CD		        sta srcptr
+  2606 31E0 BD 64 37		        lda p_vaddr_hi,x
+  2607 31E3 85 CE		        sta srcptr+1
+  2608 31E5 A0 00		        ldy #0
+  2609 31E7 B1 CD		        lda (srcptr),y
+  2610 31E9 8D 6B 06		        sta dp_val
+  2611 31EC BD F2 36		        lda p_kind,x
+  2612 31EF C9 01		        cmp #K_OCT
+  2613 31F1 F0 37		        beq dp_oct
+  2614 31F3 AD 6B 06		        lda dp_val              ; --- K_KNOB ---
+  2615 31F6 8D 50 06		        sta kfrm
+  2616 31F9 20 21 2C		        jsr draw_knob
+  2617 31FC AD 6C 06		        lda dp_numcol
+  2618 31FF 8D 49 06		        sta bc_col
+  2619 3202 AD 6D 06		        lda dp_scan
+  2620 3205 8D 4A 06		        sta bc_scan
+  2621 3208 AD D0 06		        lda dp_zoff             ; OFF-capable param sitting at 0 -> show "OFF"
+  2622 320B F0 09		        beq dp_num
+  2623 320D AD 6B 06		        lda dp_val
+  2624 3210 D0 04		        bne dp_num
+  2625 3212 20 20 33		        jsr draw_off
+  2626 3215 60			        rts
+  2627 3216			dp_num
+  2628 3216 AD 6B 06		        lda dp_val
+  2629 3219 20 F8 2B		        jsr num2                ; num2 leaves bc_col at the 3rd cell
+  2630 321C AD D0 06		        lda dp_zoff             ; OFF-capable -> clear the 3rd cell ("OFF" leftover)
+  2631 321F F0 08		        beq dp_knobdone
+  2632 3221 A9 00		        lda #0
+  2633 3223 8D 48 06		        sta bc_code
+  2634 3226 20 58 2B		        jsr blit_char
+  2635 3229			dp_knobdone
+  2636 3229 60			        rts
+  2637 322A			dp_oct
+  2638 322A AC 6B 06		        ldy dp_val              ; --- K_OCT ---
+  2639 322D B9 5C 38		        lda oct_knob16,y
+  2640 3230 8D 50 06		        sta kfrm
+  2641 3233 20 21 2C		        jsr draw_knob
+  2642 3236 AD 6C 06		        lda dp_numcol
+  2643 3239 8D 49 06		        sta bc_col
+  2644 323C AD 6D 06		        lda dp_scan
+  2645 323F 8D 4A 06		        sta bc_scan
+  2646 3242 20 BA 33		        jsr draw_octave_num
+  2647 3245 60			        rts
+  2648
+  2649 				; Context-sensitive hint line. Pick an id from what's selected, and only redraw
+  2650 				; when it changes (prev_hint):  2 = PRESET selected -> save tip,
+  2651 				; 1 = sequencer page -> transport tip,  0 = default -> nav/hold tip.
+  2652 3246			hint_update
+  2653 3246 AD 00 06		        lda cur_param
+  2654 3249 C9 11		        cmp #17                 ; PRESET param selected?
+  2655 324B D0 05		        bne hu_n1
+  2656 324D A9 02		        lda #2
+  2657 324F 4C 60 32		        jmp hu_have
+  2658 3252			hu_n1
+  2659 3252 AD 8D 06		        lda page
+  2660 3255 C9 01		        cmp #1                  ; sequencer page?
+  2661 3257 D0 05		        bne hu_n2
+  2662 3259 A9 01		        lda #1
+  2663 325B 4C 60 32		        jmp hu_have
+  2664 325E			hu_n2
+  2665 325E A9 00		        lda #0
+  2666 3260			hu_have
+  2667 3260 CD D1 06		        cmp prev_hint
+  2668 3263 F0 06		        beq hu_done
+  2669 3265 8D D1 06		        sta prev_hint
+  2670 3268 20 6C 32		        jsr draw_hint
+  2671 326B			hu_done
+  2672 326B 60			        rts
+  2673
+  2674 				; draw the hint string for id in prev_hint, centred on the HINTSCAN row
+  2675 326C			draw_hint
+  2676 326C 20 93 32		        jsr clear_hint
+  2677 326F AE D1 06		        ldx prev_hint
+  2678 3272 BD E3 3D		        lda hint_lo,x
+  2679 3275 85 CD		        sta srcptr
+  2680 3277 BD E6 3D		        lda hint_hi,x
+  2681 327A 85 CE		        sta srcptr+1
+  2682 327C BD E9 3D		        lda hint_col,x
+  2683 327F 8D 49 06		        sta bc_col
+  2684 3282 A9 7C		        lda #HINTSCAN
+  2685 3284 8D 4A 06		        sta bc_scan
+  2686 3287 A9 00		        lda #0
+  2687 3289 8D 4B 06		        sta bc_inv
+  2688 328C 8D 62 06		        sta bc_mode
+  2689 328F 20 BB 2B		        jsr print_strz
+  2690 3292 60			        rts
+  2691
+  2692 				; blank the 8-scanline hint row (full 40-byte width) before redrawing
+  2693 3293			clear_hint
+  2694 3293 A9 7C		        lda #HINTSCAN
+  2695 3295 8D 44 06		        sta s1
+  2696 3298 A2 08		        ldx #8
+  2697 329A			ch_row
+  2698 329A AC 44 06		        ldy s1
+  2699 329D B9 00 60		        lda linetab_lo,y
+  2700 32A0 85 CB		        sta scrptr
+  2701 32A2 B9 C0 60		        lda linetab_hi,y
+  2702 32A5 85 CC		        sta scrptr+1
+  2703 32A7 A0 27		        ldy #39
+  2704 32A9 A9 00		        lda #0
+  2705 32AB			ch_col
+  2706 32AB 91 CB		        sta (scrptr),y
+  2707 32AD 88			        dey
+  2708 32AE 10 FB		        bpl ch_col
+  2709 32B0 EE 44 06		        inc s1
+  2710 32B3 CA			        dex
+  2711 32B4 D0 E4		        bne ch_row
+  2712 32B6 60			        rts
+  2713
+  2714 				; PRESET widget: knob (slot 0..3) + the slot NAME (INIT/PAD/LEAD/ARP), or a brief
+  2715 				; "SAVED" flash right after a save. X = 17 on entry. Names are 5 cells wide (padded)
+  2716 				; so they overwrite each other and "SAVED" cleanly.
+  2717 32B7			draw_preset_widget
+  2718 32B7 BD 2B 37		        lda p_knobcx,x
+  2719 32BA 8D 4E 06		        sta kcx
+  2720 32BD BD 05 37		        lda p_scan,x
+  2721 32C0 18			        clc
+  2722 32C1 69 05		        adc #5
+  2723 32C3 8D 4F 06		        sta kcy
+  2724 32C6 BD 3E 37		        lda p_numcol,x
+  2725 32C9 8D 6C 06		        sta dp_numcol
+  2726 32CC BD 05 37		        lda p_scan,x
+  2727 32CF 8D 6D 06		        sta dp_scan
+  2728 32D2 AD C5 06		        lda preset_slot
+  2729 32D5 8D 50 06		        sta kfrm
+  2730 32D8 20 21 2C		        jsr draw_knob
+  2731 32DB A9 00		        lda #0
+  2732 32DD 8D 4B 06		        sta bc_inv
+  2733 32E0 8D 62 06		        sta bc_mode
+  2734 32E3 AD 6C 06		        lda dp_numcol
+  2735 32E6 8D 49 06		        sta bc_col
+  2736 32E9 AD 6D 06		        lda dp_scan
+  2737 32EC 8D 4A 06		        sta bc_scan
+  2738 32EF AD D4 06		        lda saved_flash
+  2739 32F2 F0 0B		        beq dpw_name
+  2740 32F4 A9 EC		        lda #<txt_saved
+  2741 32F6 85 CD		        sta srcptr
+  2742 32F8 A9 3D		        lda #>txt_saved
+  2743 32FA 85 CE		        sta srcptr+1
+  2744 32FC 4C 0C 33		        jmp dpw_print
+  2745 32FF			dpw_name
+  2746 32FF AC C5 06		        ldy preset_slot
+  2747 3302 B9 0A 3E		        lda preset_name_lo,y
+  2748 3305 85 CD		        sta srcptr
+  2749 3307 B9 0E 3E		        lda preset_name_hi,y
+  2750 330A 85 CE		        sta srcptr+1
+  2751 330C			dpw_print
+  2752 330C 20 BB 2B		        jsr print_strz
+  2753 330F 60			        rts
+  2754
+  2755 				; tick the SAVED flash; when it expires, force the PRESET name to redraw
+  2756 3310			saved_flash_tick
+  2757 3310 AD D4 06		        lda saved_flash
+  2758 3313 F0 0A		        beq sft_done
+  2759 3315 CE D4 06		        dec saved_flash
+  2760 3318 D0 05		        bne sft_done
+  2761 331A A9 FF		        lda #$FF                ; flash ended -> force PRESET value cell to redraw
+  2762 331C 8D 81 06		        sta prev_disp+17
+  2763 331F			sft_done
+  2764 331F 60			        rts
+  2765
+  2766 				; "OFF" (3 chars) at bc_col/bc_scan -> shown for effect params at value 0
+  2767 3320			draw_off
+  2768 3320 A9 2F		        lda #$2F                ; 'O'
+  2769 3322 8D 48 06		        sta bc_code
+  2770 3325 20 58 2B		        jsr blit_char
+  2771 3328 EE 49 06		        inc bc_col
+  2772 332B A9 26		        lda #$26                ; 'F'
+  2773 332D 8D 48 06		        sta bc_code
+  2774 3330 20 58 2B		        jsr blit_char
+  2775 3333 EE 49 06		        inc bc_col
+  2776 3336 A9 26		        lda #$26                ; 'F'
+  2777 3338 8D 48 06		        sta bc_code
+  2778 333B 20 58 2B		        jsr blit_char
+  2779 333E 60			        rts
+  2780
+  2781 				; NOTE name (3 chars) at col 7, scan 112 -- blank when silent
+  2782 333F			draw_note
+  2783 333F A9 23		        lda #35
+  2784 3341 8D 49 06		        sta bc_col
+  2785 3344 A9 00		        lda #0
+  2786 3346 8D 4A 06		        sta bc_scan
+  2787 3349 AD 07 06		        lda note_idx
+  2788 334C C9 FF		        cmp #$FF
+  2789 334E D0 15		        bne dn_play
+  2790 3350 A9 00		        lda #$00                ; blank 3 cells
+  2791 3352 8D 48 06		        sta bc_code
+  2792 3355 20 58 2B		        jsr blit_char
+  2793 3358 EE 49 06		        inc bc_col
+  2794 335B 20 58 2B		        jsr blit_char
+  2795 335E EE 49 06		        inc bc_col
+  2796 3361 20 58 2B		        jsr blit_char
+  2797 3364 60			        rts
+  2798 3365			dn_play
+  2799 3365 AE 03 06		        ldx octave
+  2800 3368 BD C8 35		        lda octave_base,x
+  2801 336B 18			        clc
+  2802 336C 6D 07 06		        adc note_idx
+  2803 336F A2 00		        ldx #0
+  2804 3371			dn_div
+  2805 3371 C9 0C		        cmp #12
+  2806 3373 90 07		        bcc dn_div_done
+  2807 3375 38			        sec
+  2808 3376 E9 0C		        sbc #12
+  2809 3378 E8			        inx
+  2810 3379 4C 71 33		        jmp dn_div
+  2811 337C			dn_div_done
+  2812 				        ; A = semitone 0..11, X = octave step.  NB: blit_char clobbers X/s0/s1,
+  2813 				        ; so hold our values in tmpA/tmp2 (which blit_char does not touch).
+  2814 337C 0A			        asl                     ; semitone*2 -> note_names index
+  2815 337D 8D 0C 06		        sta tmpA
+  2816 3380 8A			        txa
+  2817 3381 18			        clc
+  2818 3382 69 02		        adc #2                  ; chromatic table is labelled from octave 2 (C2..)
+  2819 				        ; The chromatic dividers are tuned for the 15 kHz / 16-bit clocks. In
+  2820 				        ; NORMAL mode the 64 kHz clock makes every note sound TWO octaves higher
+  2821 				        ; (8-bit AUDF can't reach the low octaves), so the displayed octave must
+  2822 				        ; match what's actually heard: add 2 in NORMAL mode only.
+  2823 3384 AC 04 06		        ldy clock15
+  2824 3387 D0 03		        bne dn_oct_done         ; 15KHZ(1) / 16-BIT(2): label already correct
+  2825 3389 18			        clc
+  2826 338A 69 02		        adc #2                  ; NORMAL(0): +2 octaves to match the real pitch
+  2827 338C			dn_oct_done
+  2828 338C 18			        clc
+  2829 338D 69 10		        adc #$10                ; octave digit screen code
+  2830 338F 8D 0D 06		        sta tmp2
+  2831 3392 AE 0C 06		        ldx tmpA                ; name char 1
+  2832 3395 BD FB 35		        lda note_names,x
+  2833 3398 8D 48 06		        sta bc_code
+  2834 339B 20 58 2B		        jsr blit_char
+  2835 339E EE 49 06		        inc bc_col
+  2836 33A1 AE 0C 06		        ldx tmpA                ; name char 2
+  2837 33A4 BD FC 35		        lda note_names+1,x
+  2838 33A7 8D 48 06		        sta bc_code
+  2839 33AA 20 58 2B		        jsr blit_char
+  2840 33AD EE 49 06		        inc bc_col
+  2841 33B0 AD 0D 06		        lda tmp2                ; octave digit
+  2842 33B3 8D 48 06		        sta bc_code
+  2843 33B6 20 58 2B		        jsr blit_char
+  2844 33B9 60			        rts
+  2845
+  2846 				; octave value as sign + digit at bc_col,bc_scan.  NB: blit_char clobbers
+  2847 				; A/X/Y/s0/s1, so the sign char goes in tmpA and the digit in tmp2 first,
+  2848 				; then both are blitted (no live value kept across a blit_char call).
+  2849 33BA			draw_octave_num
+  2850 33BA AD 03 06		        lda octave
+  2851 33BD 38			        sec
+  2852 33BE E9 02		        sbc #2                  ; A = n (-2..+2)
+  2853 33C0 30 23		        bmi don_neg
+  2854 33C2 F0 14		        beq don_zero
+  2855 33C4 A9 0B		        lda #$0B                ; n > 0: '+'
+  2856 33C6 8D 0C 06		        sta tmpA
+  2857 33C9 AD 03 06		        lda octave              ; digit = n = octave-2
+  2858 33CC 38			        sec
+  2859 33CD E9 02		        sbc #2
+  2860 33CF 18			        clc
+  2861 33D0 69 10		        adc #$10
+  2862 33D2 8D 0D 06		        sta tmp2
+  2863 33D5 4C F6 33		        jmp don_emit
+  2864 33D8			don_zero
+  2865 33D8 A9 00		        lda #$00                ; n = 0: blank sign, '0'
+  2866 33DA 8D 0C 06		        sta tmpA
+  2867 33DD A9 10		        lda #$10
+  2868 33DF 8D 0D 06		        sta tmp2
+  2869 33E2 4C F6 33		        jmp don_emit
+  2870 33E5			don_neg
+  2871 33E5 A9 0D		        lda #$0D                ; n < 0: '-'
+  2872 33E7 8D 0C 06		        sta tmpA
+  2873 33EA A9 02		        lda #2                  ; digit = -n = 2 - octave
+  2874 33EC 38			        sec
+  2875 33ED ED 03 06		        sbc octave
+  2876 33F0 18			        clc
+  2877 33F1 69 10		        adc #$10
+  2878 33F3 8D 0D 06		        sta tmp2
+  2879 33F6			don_emit
+  2880 33F6 AD 0C 06		        lda tmpA
+  2881 33F9 8D 48 06		        sta bc_code
+  2882 33FC 20 58 2B		        jsr blit_char
+  2883 33FF EE 49 06		        inc bc_col
+  2884 3402 AD 0D 06		        lda tmp2
+  2885 3405 8D 48 06		        sta bc_code
+  2886 3408 20 58 2B		        jsr blit_char
+  2887 340B 60			        rts
+  2888
+  2889 				; active-key indicator: clear a strip below the keys, draw a bar at the key
+  2890 340C			key_indicator
+  2891 				        ; clear strip y=186..190 (5 rows, full 40 bytes)
+  2892 340C A9 BA		        lda #186
+  2893 340E 8D 44 06		        sta s1
+  2894 3411 A2 05		        ldx #5
+  2895 3413			ki_clr
+  2896 3413 AC 44 06		        ldy s1
+  2897 3416 B9 00 60		        lda linetab_lo,y
+  2898 3419 85 CB		        sta scrptr
+  2899 341B B9 C0 60		        lda linetab_hi,y
+  2900 341E 85 CC		        sta scrptr+1
+  2901 3420 A0 27		        ldy #39
+  2902 3422 A9 00		        lda #0
+  2903 3424			ki_clr2
+  2904 3424 91 CB		        sta (scrptr),y
+  2905 3426 88			        dey
+  2906 3427 10 FB		        bpl ki_clr2
+  2907 3429 EE 44 06		        inc s1
+  2908 342C CA			        dex
+  2909 342D D0 E4		        bne ki_clr
+  2910 				        ; draw bar at active key (if any)
+  2911 342F AD 07 06		        lda note_idx
+  2912 3432 C9 FF		        cmp #$FF
+  2913 3434 F0 29		        beq ki_done
+  2914 3436 AA			        tax
+  2915 3437 BD 91 38		        lda key_xind_lo,x
+  2916 343A 38			        sec
+  2917 343B E9 04		        sbc #4                  ; centre-4
+  2918 343D 8D 40 06		        sta xlo
+  2919 3440 BD A2 38		        lda key_xind_hi,x
+  2920 3443 E9 00		        sbc #0
+  2921 3445 8D 41 06		        sta xhi
+  2922 3448 A9 BA		        lda #186
+  2923 344A 8D 42 06		        sta py
+  2924 344D A9 08		        lda #8
+  2925 344F 8D 51 06		        sta rw
+  2926 3452 A9 04		        lda #4
+  2927 3454 8D 52 06		        sta rh
+  2928 3457 A9 00		        lda #0
+  2929 3459 8D 61 06		        sta pmode
+  2930 345C 20 2C 2B		        jsr fillrect
+  2931 345F			ki_done
+  2932 345F 60			        rts
+  2933
+  2934 				; OR a bitmap into the framebuffer: srcptr=data, s0=wbytes, s1=hrows,
+  2935 				; bc_col=dest byte column, bc_scan=top scan line
+  2936 3460			blit_bitmap
+  2937 3460 A9 00		        lda #0
+  2938 3462 8D 4C 06		        sta psi
+  2939 3465 A2 00		        ldx #0
+  2940 3467			bbm_row
+  2941 3467 8A			        txa
+  2942 3468 18			        clc
+  2943 3469 6D 4A 06		        adc bc_scan
+  2944 346C A8			        tay
+  2945 346D B9 00 60		        lda linetab_lo,y
+  2946 3470 18			        clc
+  2947 3471 6D 49 06		        adc bc_col
+  2948 3474 85 CF		        sta adjptr
+  2949 3476 B9 C0 60		        lda linetab_hi,y
+  2950 3479 69 00		        adc #0
+  2951 347B 85 D0		        sta adjptr+1
+  2952 347D A0 00		        ldy #0
+  2953 347F			bbm_col
+  2954 347F 8C 45 06		        sty s_dy
+  2955 3482 AC 4C 06		        ldy psi
+  2956 3485 B1 CD		        lda (srcptr),y
+  2957 3487 AC 45 06		        ldy s_dy
+  2958 348A 11 CF		        ora (adjptr),y
+  2959 348C 91 CF		        sta (adjptr),y
+  2960 348E EE 4C 06		        inc psi
+  2961 3491 AC 45 06		        ldy s_dy
+  2962 3494 C8			        iny
+  2963 3495 CC 43 06		        cpy s0
+  2964 3498 D0 E5		        bne bbm_col
+  2965 349A E8			        inx
+  2966 349B EC 44 06		        cpx s1
+  2967 349E D0 C7		        bne bbm_row
+  2968 34A0 60			        rts
+  2969
+  2970 				; WAVEFORM selector: 4 waveform icons, the active one boxed
+  2971 34A1			draw_wave_selector
+  2972 34A1 A9 10		        lda #16                 ; clear icon strip: byte cols 9..18, 14 rows
+  2973 34A3 8D 44 06		        sta s1
+  2974 34A6 A2 0E		        ldx #14
+  2975 34A8			dws_clr
+  2976 34A8 AC 44 06		        ldy s1
+  2977 34AB B9 00 60		        lda linetab_lo,y
+  2978 34AE 18			        clc
+  2979 34AF 69 09		        adc #9
+  2980 34B1 85 CB		        sta scrptr
+  2981 34B3 B9 C0 60		        lda linetab_hi,y
+  2982 34B6 69 00		        adc #0
+  2983 34B8 85 CC		        sta scrptr+1
+  2984 34BA A0 09		        ldy #9
+  2985 34BC A9 00		        lda #0
+  2986 34BE			dws_clr2
+  2987 34BE 91 CB		        sta (scrptr),y
+  2988 34C0 88			        dey
+  2989 34C1 10 FB		        bpl dws_clr2
+  2990 34C3 EE 44 06		        inc s1
+  2991 34C6 CA			        dex
+  2992 34C7 D0 DF		        bne dws_clr
+  2993 34C9 A2 00		        ldx #0                  ; draw 4 icons (16x8)
+  2994 34CB			dws_ic
+  2995 34CB 8E 47 06		        stx s_pc
+  2996 34CE BD F7 38		        lda icon_ptr_lo,x
+  2997 34D1 85 CD		        sta srcptr
+  2998 34D3 BD FB 38		        lda icon_ptr_hi,x
+  2999 34D6 85 CE		        sta srcptr+1
+  3000 34D8 BD F3 38		        lda icon_col,x
+  3001 34DB 8D 49 06		        sta bc_col
+  3002 34DE A9 12		        lda #18
+  3003 34E0 8D 4A 06		        sta bc_scan
+  3004 34E3 A9 02		        lda #2
+  3005 34E5 8D 43 06		        sta s0
+  3006 34E8 A9 08		        lda #8
+  3007 34EA 8D 44 06		        sta s1
+  3008 34ED 20 60 34		        jsr blit_bitmap
+  3009 34F0 AE 47 06		        ldx s_pc
+  3010 34F3 E8			        inx
+  3011 34F4 E0 04		        cpx #4
+  3012 34F6 D0 D3		        bne dws_ic
+  3013 34F8 AE 01 06		        ldx wave_idx            ; box around the active icon
+  3014 34FB BD F3 38		        lda icon_col,x
+  3015 34FE 0A			        asl
+  3016 34FF 0A			        asl
+  3017 3500 0A			        asl                     ; byte col -> pixel x
+  3018 3501 38			        sec
+  3019 3502 E9 02		        sbc #2
+  3020 3504 8D 40 06		        sta xlo
+  3021 3507 A9 00		        lda #0
+  3022 3509 8D 41 06		        sta xhi
+  3023 350C 8D 61 06		        sta pmode
+  3024 350F A9 10		        lda #16
+  3025 3511 8D 42 06		        sta py
+  3026 3514 A9 13		        lda #19
+  3027 3516 8D 51 06		        sta rw
+  3028 3519 A9 0C		        lda #12
+  3029 351B 8D 52 06		        sta rh
+  3030 351E 20 AD 2A		        jsr rect
+  3031 3521 60			        rts
+  3032
+  3033 				; CLOCK mode: show the active mode name (NORMAL / 15 KHZ / 16-BIT)
+  3034 3522			draw_clk_toggle
+  3035 3522 A9 36		        lda #54                 ; clear strip: byte cols 29..38, 14 rows
+  3036 3524 8D 44 06		        sta s1
+  3037 3527 A2 0E		        ldx #14
+  3038 3529			dct_clr
+  3039 3529 AC 44 06		        ldy s1
+  3040 352C B9 00 60		        lda linetab_lo,y
+  3041 352F 18			        clc
+  3042 3530 69 1D		        adc #29
+  3043 3532 85 CB		        sta scrptr
+  3044 3534 B9 C0 60		        lda linetab_hi,y
+  3045 3537 69 00		        adc #0
+  3046 3539 85 CC		        sta scrptr+1
+  3047 353B A0 09		        ldy #9
+  3048 353D A9 00		        lda #0
+  3049 353F			dct_clr2
+  3050 353F 91 CB		        sta (scrptr),y
+  3051 3541 88			        dey
+  3052 3542 10 FB		        bpl dct_clr2
+  3053 3544 EE 44 06		        inc s1
+  3054 3547 CA			        dex
+  3055 3548 D0 DF		        bne dct_clr
+  3056 354A A9 00		        lda #0
+  3057 354C 8D 4B 06		        sta bc_inv
+  3058 354F 8D 62 06		        sta bc_mode
+  3059 3552 AD 04 06		        lda clock15             ; name = clock_names[mode*6]
+  3060 3555 20 76 35		        jsr mul6
+  3061 3558 18			        clc
+  3062 3559 69 E9		        adc #<clock_names
+  3063 355B 85 CD		        sta srcptr
+  3064 355D A9 35		        lda #>clock_names
+  3065 355F 69 00		        adc #0
+  3066 3561 85 CE		        sta srcptr+1
+  3067 3563 A9 1E		        lda #30
+  3068 3565 8D 49 06		        sta bc_col
+  3069 3568 A9 38		        lda #56
+  3070 356A 8D 4A 06		        sta bc_scan
+  3071 356D A9 06		        lda #6
+  3072 356F 8D 4D 06		        sta pcnt
+  3073 3572 20 D9 2B		        jsr print_n
+  3074 3575 60			        rts
+  3075
+  3076 				; A * 6 -> A
+  3077 3576			mul6
+  3078 3576 8D 0C 06		        sta tmpA
+  3079 3579 0A			        asl
+  3080 357A 8D 0D 06		        sta tmp2
+  3081 357D AD 0C 06		        lda tmpA
+  3082 3580 0A			        asl
+  3083 3581 0A			        asl
+  3084 3582 18			        clc
+  3085 3583 6D 0D 06		        adc tmp2
+  3086 3586 60			        rts
+  3087
+  3088 				; ============================================================================
+  3089 				;  TABLES
+  3090 				; ============================================================================
+  3091 				; chromatic AUDF divisors, PAL 8-bit, C2..E7 (index 0 = C2)
+  3092 3587			chromatic
+  3093 3587 78 71 6B 65 5F 5A +         .byte $78,$71,$6B,$65,$5F,$5A,$55,$50,$4B,$47,$43,$3F
+  3094 3593 3C 38 35 32 2F 2C +         .byte $3C,$38,$35,$32,$2F,$2C,$2A,$27,$25,$23,$21,$1F
+  3095 359F 1D 1C 1A 18 17 16 +         .byte $1D,$1C,$1A,$18,$17,$16,$14,$13,$12,$11,$10,$0F
+  3096 35AB 0E 0D 0C 0C 0B 0A +         .byte $0E,$0D,$0C,$0C,$0B,$0A,$0A,$09,$09,$08,$07,$07
+  3097 35B7 07 06 06 05 05 05 +         .byte $07,$06,$06,$05,$05,$05,$04,$04,$04,$03,$03,$03
+  3098 35C3 03 03 02 02 02	        .byte $03,$03,$02,$02,$02
+  3099 35C8			octave_base
+  3100 35C8 00 0C 18 24 30	        .byte 0,12,24,36,48
+  3101 35CD			wave_base
+  3102 35CD A0 E0 C0 80		        .byte $A0,$E0,$C0,$80
+  3103 35D1			wave_names
+  3104 35D1 33 31 35 21 32 25 +         .byte "SQUARE","PURE  ","BUZZ  ","NOISE "
+  3105 35E9			clock_names
+  3106 35E9 2E 2F 32 2D 21 2C +         .byte "NORMAL","15 KHZ","16-BIT"
+  3107 35FB			note_names
+  3108 35FB 23 00 23 03 24 00 +         .byte "C C#D D#E F F#G G#A A#B "
+  3109
+  3110 				; 16-bit chromatic dividers, PAL 1.79 MHz clock, C2..E7 (index 0 = C2)
+  3111 				; POKEY's joined-pair fast-clock period is (n+1)+6 = n+7 master cycles
+  3112 				; (6-cycle chain-setup overhead), so n = round(master / (2*f) - 7).
+  3113 3613			chrom16_lo
+  3114 3613 EE F5 27 81 01 A5 +         .byte $EE,$F5,$27,$81,$01,$A5,$6B,$51,$55,$76,$B2,$07
+  3115 361F 74 F7 90 3D FD CF +         .byte $74,$F7,$90,$3D,$FD,$CF,$B2,$A5,$A7,$B8,$D5,$00
+  3116 362B 36 78 C5 1B 7B E4 +         .byte $36,$78,$C5,$1B,$7B,$E4,$56,$CF,$50,$D8,$67,$FC
+  3117 3637 98 39 DF 8A 3A EF +         .byte $98,$39,$DF,$8A,$3A,$EF,$A7,$64,$25,$E9,$B0,$7B
+  3118 3643 48 19 EC C2 9A 74 +         .byte $48,$19,$EC,$C2,$9A,$74,$50,$2F,$0F,$F1,$D5,$BA
+  3119 364F A1 89 72 5D 49	        .byte $A1,$89,$72,$5D,$49
+  3120 3654			chrom16_hi
+  3121 3654 34 31 2F 2C 2A 27 +         .byte $34,$31,$2F,$2C,$2A,$27,$25,$23,$21,$1F,$1D,$1C
+  3122 3660 1A 18 17 16 14 13 +         .byte $1A,$18,$17,$16,$14,$13,$12,$11,$10,$0F,$0E,$0E
+  3123 366C 0D 0C 0B 0B 0A 09 +         .byte $0D,$0C,$0B,$0B,$0A,$09,$09,$08,$08,$07,$07,$06
+  3124 3678 06 06 05 05 05 04 +         .byte $06,$06,$05,$05,$05,$04,$04,$04,$04,$03,$03,$03
+  3125 3684 03 03 02 02 02 02 +         .byte $03,$03,$02,$02,$02,$02,$02,$02,$02,$01,$01,$01
+  3126 3690 01 01 01 01 01	        .byte $01,$01,$01,$01,$01
+  3127
+  3128 3695			key_scan
+  3129 3695 2F 1E 2E 1A 2A 28 +         .byte $2F,$1E,$2E,$1A,$2A,$28,$1D,$2D,$1B,$2B,$33,$0B,$0D,$30,$08,$32,$0A
+  3130
+  3131 				; apply_adjust parameter table (cur_param 0..7)
+  3132 				; NB: param_lo/hi MUST have one entry per param (0..NPARAM-1). They previously
+  3133 				; omitted TEMPO (index 12) -> apply_adjust read past the table when adjusting
+  3134 				; TEMPO via the joystick (wrote stray RAM). Now includes TEMPO + ARPMODE.
+  3135 36A6			param_lo
+  3136 36A6 01 02 03 2C 2D 6E	        .byte <wave_idx,<volume,<octave,<atk_rate,<dec_rate,<detune
+  3137 36AC 2E 2F 04 63 64 84	        .byte <sus_level,<rel_rate,<clock15,<lfo_rate,<lfo_depth,<arp_rate
+  3138 36B2 8C B5 B6 BD C0 C5 +         .byte <tempo,<arp_mode,<porta_rate,<drum_dec,<hpf_cut,<preset_slot,<drum_beat
+  3139 36B9			param_hi
+  3140 36B9 06 06 06 06 06 06	        .byte >wave_idx,>volume,>octave,>atk_rate,>dec_rate,>detune
+  3141 36BF 06 06 06 06 06 06	        .byte >sus_level,>rel_rate,>clock15,>lfo_rate,>lfo_depth,>arp_rate
+  3142 36C5 06 06 06 06 06 06 +         .byte >tempo,>arp_mode,>porta_rate,>drum_dec,>hpf_cut,>preset_slot,>drum_beat
+  3143 36CC			param_max
+  3144 36CC 03 0F 04 0F 0F 0F +         .byte 3,15,4,15,15,15, 15,15,2,15,15,15, 15,3,15,15, 15,3,15
+  3145 36DF			param_maxp1
+  3146 36DF 04 10 05 10 10 10 +         .byte 4,16,5,16,16,16, 16,16,3,16,16,16, 16,4,16,16, 16,4,16
+  3147
+  3148 				; ----- parameter descriptor tables (NPARAM entries) -------------------------
+  3149 				;        0 WAVE  1 VOL  2 OCT  3 ATK  4 DEC | 5 SUS  6 REL  7 CLK  8 LFOR 9 LFOD
+  3150 				;        left column (0-4)                  | right column (5-9)
+  3151 				; INDEX ORDER == VISUAL ORDER so UP/DOWN steps through the panel as drawn:
+  3152 				;   left column top->bottom (0-5), then right column top->bottom (6-10).
+  3153 				;        0 WAVE 1 VOL 2 OCT 3 ATK 4 DEC 5 DET | 6 SUS 7 REL 8 CLK 9 LFOR 10 LFOD
+  3154 				;  left column 0-5             | right column 6-11 (incl ARP=11)
+  3155 				; Page 0 = indices 0-11 (osc/env/fx).  Page 2 = indices 12+ (layout positions
+  3156 				; reuse the page-0 grid, so all tables index by absolute param).
+  3157 				;        page 2: 12 TEMPO (r0 left) 13 ARPMODE (r0 right) 14 PORTA (r1 left) 15 DRUM (r1 right)
+  3158 36F2			p_kind
+  3159 36F2 02 00 01 00 00 00	        .byte K_WAVE,K_KNOB,K_OCT,K_KNOB,K_KNOB,K_KNOB
+  3160 36F8 00 00 03 00 00 00	        .byte K_KNOB,K_KNOB,K_CLK,K_KNOB,K_KNOB,K_KNOB
+  3161 36FE 00 00 00 00		        .byte K_KNOB,K_KNOB,K_KNOB,K_KNOB                 ; 12 TEMPO,13 ARPMODE,14 PORTA,15 DRUM
+  3162 3702 00 00 00		        .byte K_KNOB,K_KNOB,K_KNOB                        ; 16 HPF, 17 PRESET, 18 DRUMBEAT
+  3163 3705			p_scan
+  3164 3705 10 24 38 4C 60 6E +         .byte 16,36,56,76,96,110, 16,36,56,76,96,110
+  3165 3711 10 10 24 24 10 10 +         .byte 16,16,36,36, 16,16,36
+  3166 3718			p_lblcol
+  3167 3718 01 01 01 01 01 01 +         .byte 1,1,1,1,1,1, 21,21,21,21,21,21
+  3168 3724 01 15 01 15 01 15 +         .byte 1,21,1,21, 1,21,1
+  3169 372B			p_knobcx
+  3170 372B 56 56 56 56 56 56 +         .byte 86,86,86,86,86,86, 246,246,246,246,246,246
+  3171 3737 56 F6 56 F6 56 F6 +         .byte 86,246,86,246, 86,246,86
+  3172 373E			p_numcol
+  3173 373E 0D 0D 0D 0D 0D 0D +         .byte 13,13,13,13,13,13, 33,33,33,33,33,33
+  3174 374A 0D 21 0D 21 0D 21 +         .byte 13,33,13,33, 13,33,13
+  3175 3751			p_vaddr_lo
+  3176 3751 01 02 03 2C 2D 6E	        .byte <wave_idx,<volume,<octave,<atk_rate,<dec_rate,<detune
+  3177 3757 2E 2F 04 63 64 84	        .byte <sus_level,<rel_rate,<clock15,<lfo_rate,<lfo_depth,<arp_rate
+  3178 375D 8C B5 B6 BD C0 C5 +         .byte <tempo,<arp_mode,<porta_rate,<drum_dec,<hpf_cut,<preset_slot,<drum_beat
+  3179 3764			p_vaddr_hi
+  3180 3764 06 06 06 06 06 06	        .byte >wave_idx,>volume,>octave,>atk_rate,>dec_rate,>detune
+  3181 376A 06 06 06 06 06 06	        .byte >sus_level,>rel_rate,>clock15,>lfo_rate,>lfo_depth,>arp_rate
+  3182 3770 06 06 06 06 06 06 +         .byte >tempo,>arp_mode,>porta_rate,>drum_dec,>hpf_cut,>preset_slot,>drum_beat
+  3183 3777			p_lblptr_lo
+  3184 3777 FC 05 0C 13 1A 57	        .byte <txt_wave,<txt_vol,<txt_oct,<txt_atk,<txt_dec,<txt_det
+  3185 377D 20 28 30 44 4D 5E	        .byte <txt_sus,<txt_rel,<txt_clk,<txt_lfor,<txt_lfod,<txt_arp
+  3186 3783 67 6D 76 7C 81 8B +         .byte <txt_tempo,<txt_arpm,<txt_porta,<txt_drum,<txt_hpf,<txt_preset,<txt_dbeat
+  3187 378A			p_lblptr_hi
+  3188 378A 3C 3D 3D 3D 3D 3D	        .byte >txt_wave,>txt_vol,>txt_oct,>txt_atk,>txt_dec,>txt_det
+  3189 3790 3D 3D 3D 3D 3D 3D	        .byte >txt_sus,>txt_rel,>txt_clk,>txt_lfor,>txt_lfod,>txt_arp
+  3190 3796 3D 3D 3D 3D 3D 3D +         .byte >txt_tempo,>txt_arpm,>txt_porta,>txt_drum,>txt_hpf,>txt_preset,>txt_dbeat
+  3191 				; Which char index in each label is the shortcut key (underlined). Renaming ARP
+  3192 				; -> ARPEGGIO introduces a free 'G', which frees up enough letters to give EVERY
+  3193 				; page-0 param a unique in-label letter, plus DRUMBEAT(B). Pages 1-2 (except
+  3194 				; DRUMBEAT) have no spare free letter -> $FF (reach them via Tab + arrows).
+  3195 				;   WAVE M=7  VOL V=0  OCT A=3  ATK K=5  DEC D=0  DET N=4
+  3196 				;   SUS  S=0  REL L=2  CLK C=0  LFOR F=1 LFOD H=8  ARPEGGIO G=4   DRUMBEAT B=4
+  3197 				;   page 0 + DRUMBEAT use PLAIN letters; the 5 page-1/2 params below use SHIFT+letter
+  3198 				;   TEMPO M=2  ARP MODE D=6  PORTA A=4  HP FILTER H=0  PRESET S=3   (DRUM: none)
+  3199 379D			p_hl
+  3200 379D 07 00 03 05 00 04	        .byte 7,0,3,5,0,4
+  3201 37A3 00 02 00 01 08 04	        .byte 0,2,0,1,8,4
+  3202 37A9 02 06 04 FF 00 03 +         .byte 2,6,4,$FF, 0,3,4
+  3203 				; 1 = this param's shortcut is a SHIFT+letter (drawn opposite video to its label)
+  3204 37B0			p_hl_shift
+  3205 37B0 00 00 00 00 00 00	        .byte 0,0,0,0,0,0
+  3206 37B6 00 00 00 00 00 00	        .byte 0,0,0,0,0,0
+  3207 37BC 01 01 01 00 01 01 +         .byte 1,1,1,0, 1,1,0
+  3208 				; 1 = inert in 16-BIT clock mode (channels 3/4 are paired): PORTA, DRUM, HP FILTER,
+  3209 				; DRUMBEAT. Struck through when clock15 = 2 so users don't twiddle dead controls.
+  3210 37C3			p_inert16
+  3211 37C3 00 00 00 00 00 00	        .byte 0,0,0,0,0,0
+  3212 37C9 00 00 00 00 00 00	        .byte 0,0,0,0,0,0
+  3213 37CF 00 00 01 01 01 00 +         .byte 0,0,1,1, 1,0,1
+  3214 				; shortcut key -> param jump (read_navkeys). Letter is a FREE key (not piano)
+  3215 				; underlined in the label; KBCODEs are the bridge/hardware values. Shift+letter
+  3216 				; entries have bit7 ($80) set (Shift sets KBCODE bit7).
+  3217 37D6			shortcut_kc
+  3218 37D6 25 10 3F 05 3A 23 +         .byte $25,$10,$3F,$05,$3A,$23,$3E,$00,$12,$38,$39,$3D,$15
+  3219 				;             M   V   A   K   D   N   S   L   C   F   H   G   B    (plain)
+  3220 37E3 A5 BA BF B9 BE	        .byte $A5,$BA,$BF,$B9,$BE
+  3221 				;             ^M  ^D  ^A  ^H  ^S                                  (shift)
+  3222 37E8			shortcut_param
+  3223 37E8 00 01 02 03 04 05 +         .byte 0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  10, 11, 18
+  3224 				;             WAV VOL OCT ATK DEC DET SUS REL CLK LFR LFD ARP DBT
+  3225 37F5 0C 0D 0E 10 11	        .byte 12, 13, 14, 16, 17
+  3226 				;             TMP ARM POR HPF PRE
+  3227 				; effect params that render value 0 as "OFF": DETUNE(5) LFO DEPTH(10) ARP(11)
+  3228 				;                                             PORTA(14) DRUM(15) HP FILTER(16)
+  3229 37FA			p_zoff
+  3230 37FA 00 00 00 00 00 01	        .byte 0,0,0,0,0,1
+  3231 3800 00 00 00 00 01 01	        .byte 0,0,0,0,1,1
+  3232 3806 00 00 01 01 01 00 +         .byte 0,0,1,1, 1,0,0
+  3233
+  3234 				; knob geometry
+  3235 380D			bitmask_tab
+  3236 380D 80 40 20 10 08 04 +         .byte $80,$40,$20,$10,$08,$04,$02,$01
+  3237 3815			hw_tab                          ; half-width per |dy| 0..6
+  3238 3815 06 06 06 05 04 03 +         .byte 6,6,6,5,4,3,0
+  3239 				; pointer rim offsets (16 directions, clockwise from up), signed
+  3240 381C			kn_ex
+  3241 381C 00 02 04 05 05 05 +         .byte 0,2,4,5,5,5,4,2,0,$FE,$FC,$FB,$FB,$FB,$FC,$FE
+  3242 382C			kn_ey
+  3243 382C FB FB FC FE 00 02 +         .byte $FB,$FB,$FC,$FE,0,2,4,5,5,5,4,2,0,$FE,$FC,$FB
+  3244 383C			kn_mx
+  3245 383C 00 01 02 03 03 03 +         .byte 0,1,2,3,3,3,2,1,0,$FF,$FE,$FD,$FD,$FD,$FE,$FF
+  3246 384C			kn_my
+  3247 384C FD FD FE FF 00 01 +         .byte $FD,$FD,$FE,$FF,0,1,2,3,3,3,2,1,0,$FF,$FE,$FD
+  3248 385C			oct_knob16                      ; octave 0..4 -> knob position
+  3249 385C 00 04 08 0C 0F	        .byte 0,4,8,12,15
+  3250
+  3251 				; keyboard layout
+  3252 3861			blackx_lo
+  3253 3861 20 3E 7A 98 B6 F2 +         .byte 32,62,122,152,182,242,16
+  3254 3868			blackx_hi
+  3255 3868 00 00 00 00 00 00 +         .byte 0,0,0,0,0,0,1
+  3256 386F			white_lblcol
+  3257 386F 02 06 0A 0D 11 15 +         .byte 2,6,10,13,17,21,25,28,32,36
+  3258 3879			white_lblch                     ; Q W E R T Y U I O P (screen codes)
+  3259 3879 31 37 25 32 34 39 +         .byte $31,$37,$25,$32,$34,$39,$35,$29,$2F,$30
+  3260 3883			black_lblcol                    ; byte col centering each number on its 16px black key
+  3261 3883 04 08 10 13 17 1F +         .byte 4,8,16,19,23,31,34
+  3262 388A			black_lblch                     ; 2 3 5 6 7 9 0 (screen codes)
+  3263 388A 12 13 15 16 17 19 +         .byte $12,$13,$15,$16,$17,$19,$10
+  3264 				; active-key indicator centre x per semitone 0..16
+  3265 3891			key_xind_lo
+  3266 3891 18 28 36 46 54 72 +         .byte 24,40,54,70,84,114,130,144,160,174,190,204,234,250,8,24,38
+  3267 38A2			key_xind_hi
+  3268 38A2 00 00 00 00 00 00 +         .byte 0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1
+  3269
+  3270 				; waveform icons (16x8, 2 bytes/row) for the WAVEFORM selector
+  3271 38B3			icon_sq                         ; square / pulse
+  3272 38B3 F8 3F 08 20 08 20 +         .byte $F8,$3F,$08,$20,$08,$20,$08,$20,$08,$20,$08,$20,$08,$20,$0F,$E0
+  3273 38C3			icon_tri                        ; triangle (PURE)
+  3274 38C3 01 80 02 40 04 20 +         .byte $01,$80,$02,$40,$04,$20,$08,$10,$10,$08,$20,$04,$40,$02,$80,$01
+  3275 38D3			icon_saw                        ; sawtooth (BUZZ)
+  3276 38D3 01 01 03 03 05 05 +         .byte $01,$01,$03,$03,$05,$05,$09,$09,$11,$11,$21,$21,$41,$41,$81,$81
+  3277 38E3			icon_noise                      ; scattered dots (NOISE)
+  3278 38E3 20 40 00 04 04 00 +         .byte $20,$40,$00,$04,$04,$00,$80,$10,$01,$01,$10,$00,$00,$82,$42,$08
+  3279 38F3			icon_col
+  3280 38F3 0A 0C 0E 10		        .byte 10,12,14,16       ; dest byte column of each icon
+  3281 38F7			icon_ptr_lo
+  3282 38F7 B3 C3 D3 E3		        .byte <icon_sq,<icon_tri,<icon_saw,<icon_noise
+  3283 38FB			icon_ptr_hi
+  3284 38FB 38 38 38 38		        .byte >icon_sq,>icon_tri,>icon_saw,>icon_noise
+  3285
+  3286 				; ----- display list: GR.8 (ANTIC mode $0F), 192 lines, two LMS regions ------
+  3287 				; Fixed 1KB-aligned home, clear of linetab ($3000) and the framebuffer ($4000+),
+  3288 				; and within one 1KB block (ANTIC's DL counter is 10-bit).
+  3289 38FF			        org $3C00
+  3290 3C00			dlist
+  3291 3C00-3E11> 70 70 70	        .byte $70,$70,$70       ; 24 blank lines
+  3292 3C03 4F			        .byte $4F               ; LMS + mode F  (scanline 0 = title row)
+  3293 3C04 00 40		        .word FB1
+  3294 3C06 0F 0F 0F 0F 0F 0F +         :101 .byte $0F          ; 101 more lines (102 total from FB1)
+  3295 3C6B 4F			        .byte $4F               ; scanline 102: LMS FB2
+  3296 3C6C 00 50		        .word FB2
+  3297 3C6E 0F 0F 0F 0F 0F 0F +         :89 .byte $0F           ; 89 more lines (90 total from FB2)
+  3298 3CC7 41			        .byte $41               ; JVB
+  3299 3CC8 00 3C		        .word dlist
+  3300
+  3301 				; ----- custom step-cell glyphs (8 bytes each, MSB = leftmost pixel) ----------
+  3302 				; index 0 rest, 1 note, 2 tie, 3 drum.  blit via blit_glyph (scrptr -> entry).
+  3303 3CCA			seq_glyphs
+  3304 3CCA 00 00 00 18 18 00 +         .byte $00,$00,$00,$18,$18,$00,$00,$00   ; 0 REST  - small centred dot
+  3305 3CD2 00 7E 7E 7E 7E 7E +         .byte $00,$7E,$7E,$7E,$7E,$7E,$7E,$00   ; 1 NOTE  - filled 6x6 block (margins)
+  3306 3CDA 00 00 00 7E 7E 00 +         .byte $00,$00,$00,$7E,$7E,$00,$00,$00   ; 2 TIE   - centred horizontal bar
+  3307 3CE2 00 18 3C 7E 7E 3C +         .byte $00,$18,$3C,$7E,$7E,$3C,$18,$00   ; 3 DRUM  - filled diamond
+  3308
+  3309 				; ----- text labels (screen codes, $FF-terminated) ---------------------------
+  3310 3CEA 21 34 21 32 29 00 + txt_title  .byte "ATARI POKEY SYNTH",$FF
+  3311 3CFC 37 21 36 25 26 2F + txt_wave   .byte "WAVEFORM",$FF
+  3312 3D05 36 2F 2C 35 2D 25 + txt_vol    .byte "VOLUME",$FF
+  3313 3D0C 2F 23 34 21 36 25 + txt_oct    .byte "OCTAVE",$FF
+  3314 3D13 21 34 34 21 23 2B + txt_atk    .byte "ATTACK",$FF
+  3315 3D1A 24 25 23 21 39 FF	txt_dec    .byte "DECAY",$FF
+  3316 3D20 33 35 33 34 21 29 + txt_sus    .byte "SUSTAIN",$FF
+  3317 3D28 32 25 2C 25 21 33 + txt_rel    .byte "RELEASE",$FF
+  3318 3D30 23 2C 2F 23 2B FF	txt_clk    .byte "CLOCK",$FF
+  3319 3D36 2E 2F 34 25 FF	txt_note   .byte "NOTE",$FF
+  3320 3D3B 2E 2F 32 2D FF	txt_norm   .byte "NORM",$FF
+  3321 3D40 11 15 2B FF		txt_15k    .byte "15K",$FF
+  3322 3D44 2C 26 2F 00 32 21 + txt_lfor   .byte "LFO RATE",$FF
+  3323 3D4D 2C 26 2F 00 24 25 + txt_lfod   .byte "LFO DEPTH",$FF
+  3324 3D57 24 25 34 35 2E 25 + txt_det    .byte "DETUNE",$FF
+  3325 3D5E 21 32 30 25 27 27 + txt_arp    .byte "ARPEGGIO",$FF
+  3326 3D67 34 25 2D 30 2F FF	txt_tempo  .byte "TEMPO",$FF
+  3327 3D6D 21 32 30 00 2D 2F + txt_arpm   .byte "ARP MODE",$FF
+  3328 3D76 30 2F 32 34 21 FF	txt_porta  .byte "PORTA",$FF
+  3329 3D7C 24 32 35 2D FF	txt_drum   .byte "DRUM",$FF
+  3330 3D81 28 30 00 26 29 2C + txt_hpf    .byte "HP FILTER",$FF
+  3331 3D8B 30 32 25 33 25 34 + txt_preset .byte "PRESET",$FF
+  3332 3D92 24 32 35 2D 22 25 + txt_dbeat  .byte "DRUMBEAT",$FF
+  3333 3D9B 30 2C 21 39 FF	txt_play   .byte "PLAY",$FF
+  3334 3DA0 33 34 2F 30 FF	txt_stop   .byte "STOP",$FF
+  3335 3DA5 32 25 23 FF		txt_rec    .byte "REC",$FF
+  3336 3DA9 00 00 00 FF		txt_blk3   .byte "   ",$FF
+  3337
+  3338 				; context hint strings (drawn on the HINTSCAN row); hint_col centres each
+  3339 3DAD 34 21 22 1D 30 21 + hint_d0    .byte "TAB=PAGE  OPT=HOLD",$FF      ; default (18 chars)
+  3340 3DC0 33 34 21 32 34 1D + hint_d1    .byte "START=PLAY SEL=REC",$FF      ; sequencer page (18 chars)
+  3341 3DD3 32 25 34 1D 33 21 + hint_d2    .byte "RET=SAVE PRESET",$FF         ; PRESET selected (15 chars)
+  3342 3DE3 AD C0 D3		hint_lo    .byte <hint_d0,<hint_d1,<hint_d2
+  3343 3DE6 3D 3D 3D		hint_hi    .byte >hint_d0,>hint_d1,>hint_d2
+  3344 3DE9 0B 0B 0C		hint_col   .byte 11,11,12                      ; centre col per hint
+  3345
+  3346 				; PRESET slot names (5 cells, space-padded so they overwrite cleanly) + SAVED flash
+  3347 3DEC 33 21 36 25 24 FF	txt_saved  .byte "SAVED",$FF
+  3348 3DF2 29 2E 29 34 00 FF	pn_init    .byte "INIT ",$FF
+  3349 3DF8 30 21 24 00 00 FF	pn_pad     .byte "PAD  ",$FF
+  3350 3DFE 2C 25 21 24 00 FF	pn_lead    .byte "LEAD ",$FF
+  3351 3E04 21 32 30 00 00 FF	pn_arp     .byte "ARP  ",$FF
+  3352 3E0A F2 F8 FE 04		preset_name_lo .byte <pn_init,<pn_pad,<pn_lead,<pn_arp
+  3353 3E0E 3D 3D 3D 3E		preset_name_hi .byte >pn_init,>pn_pad,>pn_lead,>pn_arp
+  3354
+  3355 02E0-02E1> 00 20		        run main

@@ -1769,6 +1769,7 @@ blit_char
         clc
         adc #>ROMFONT
         sta scrptr+1
+blit_glyph                      ; alt entry: scrptr already -> an 8-byte glyph bitmap
         ldx #0
 bc_l
         txa
@@ -2218,6 +2219,9 @@ seq_draw
         lda #0
         sta seq_dirty
         ldx #0
+        lda #0                  ; custom step glyphs draw as-is (no inverse)
+        sta bc_inv
+        ldx #0
 sd_cell
         stx s_kc
         txa                     ; col = 4 + step*2
@@ -2227,33 +2231,36 @@ sd_cell
         sta bc_col
         lda #56
         sta bc_scan
-        lda #0                  ; default normal video (notes flip this for a block)
-        sta bc_inv
         ldx s_kc
+        ; map the step value -> custom-glyph index (0 rest,1 note,2 tie,3 drum)
         lda seq_notes,x
         cmp #$FF
-        bne sd_notrest
-        lda #$0E                ; '.' = rest
-        bne sd_putcell
-sd_notrest
+        bne sd_n1
+        lda #0                  ; rest -> dot
+        beq sd_putcell
+sd_n1
         cmp #$FE
-        bne sd_nottie
-        lda #$0D                ; '-' = tie (held note continues)
+        bne sd_n2
+        lda #2                  ; tie -> bar
         bne sd_putcell
-sd_nottie
+sd_n2
         cmp #$FD
-        bne sd_filled
-        lda #$0A                ; '*' = drum hit (distinct from a pitched note)
+        bne sd_note
+        lda #3                  ; drum -> diamond
         bne sd_putcell
-sd_filled
-        lda #$FF                ; note = SOLID block: inverse-video space ($00 EOR $FF).
-        sta bc_inv              ; (code $80 read garbage past the 128-glyph ROM font)
-        lda #$00
+sd_note
+        lda #1                  ; pitched note -> filled square
 sd_putcell
-        sta bc_code
-        jsr blit_char
-        lda #0                  ; restore normal video for the head/transport draws
-        sta bc_inv
+        asl                     ; index*8 -> offset into seq_glyphs (8 bytes each)
+        asl
+        asl
+        clc
+        adc #<seq_glyphs
+        sta scrptr
+        lda #0
+        adc #>seq_glyphs
+        sta scrptr+1
+        jsr blit_glyph          ; blit our custom 8x8 bitmap at bc_col/bc_scan
         ldx s_kc
         inx
         cpx #16
@@ -3290,6 +3297,14 @@ dlist
         :89 .byte $0F           ; 89 more lines (90 total from FB2)
         .byte $41               ; JVB
         .word dlist
+
+; ----- custom step-cell glyphs (8 bytes each, MSB = leftmost pixel) ----------
+; index 0 rest, 1 note, 2 tie, 3 drum.  blit via blit_glyph (scrptr -> entry).
+seq_glyphs
+        .byte $00,$00,$00,$18,$18,$00,$00,$00   ; 0 REST  - small centred dot
+        .byte $00,$7E,$7E,$7E,$7E,$7E,$7E,$00   ; 1 NOTE  - filled 6x6 block (margins)
+        .byte $00,$00,$00,$7E,$7E,$00,$00,$00   ; 2 TIE   - centred horizontal bar
+        .byte $00,$18,$3C,$7E,$7E,$3C,$18,$00   ; 3 DRUM  - filled diamond
 
 ; ----- text labels (screen codes, $FF-terminated) ---------------------------
 txt_title  .byte "ATARI POKEY SYNTH",$FF

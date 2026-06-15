@@ -365,9 +365,12 @@ def rest_releases_note_on_playback(s, rep):
 
 
 def grid_glyphs(s, rep):
-    """The step grid uses four distinct glyphs — '.'=rest, block=note, '-'=tie,
-    '*'=drum — so the drum lane is readable (a drum is NOT a plain note block)."""
+    """The step grid uses four distinct CUSTOM 8x8 glyphs (seq_glyphs table):
+    dot=rest, filled square=note, bar=tie, diamond=drum. Each cell must match its
+    bitmap, and all four must differ so the lane is readable."""
     rep.section("sequencer: step grid glyphs (rest / note / tie / drum)")
+    base = s.label_addr("seq_glyphs")       # 4 x 8-byte bitmaps, index 0..3
+    rest_g, note_g, tie_g, drum_g = (s.peek(base + i * 8, 8) for i in range(4))
     _clear_pattern(s)
     s.set("seq_notes", 5, 0)        # note
     s.set("seq_notes", 0xFE, 1)     # tie
@@ -379,13 +382,13 @@ def grid_glyphs(s, rep):
     tie = s.cell(_cell_col(1), SCAN_GRID)
     drum = s.cell(_cell_col(2), SCAN_GRID)
     rest = s.cell(_cell_col(3), SCAN_GRID)
-    rep.check("note step renders a solid block (inverse space)",
-              note == s.glyph(0x00, inv=True), "note")
-    rep.check("tie step renders '-' ($0D)", tie == s.glyph(0x0D), "tie")
-    rep.check("drum step renders '*' ($0A)", drum == s.glyph(0x0A), "drum")
-    rep.check("rest step renders '.' ($0E)", rest == s.glyph(0x0E), "rest")
-    rep.check("drum glyph is distinct from a note block", drum != note,
-              "drum and note look identical")
+    rep.check("note step renders the filled-square glyph", note == note_g, "note")
+    rep.check("tie step renders the bar glyph", tie == tie_g, "tie")
+    rep.check("drum step renders the diamond glyph", drum == drum_g, "drum")
+    rep.check("rest step renders the dot glyph", rest == rest_g, "rest")
+    rep.check("all four step glyphs are visually distinct",
+              len({tuple(note), tuple(tie), tuple(drum), tuple(rest)}) == 4,
+              f"note={note} tie={tie} drum={drum} rest={rest}")
 
 
 def head_marks_active_step(s, rep):
