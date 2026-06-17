@@ -22,8 +22,16 @@ REPO_SYNTH = os.path.abspath(os.path.join(HERE, "..", ".."))
 ALTIRRA = os.path.expanduser("~/AltirraSDL")
 SDK = os.path.join(ALTIRRA, "src/AltirraSDL/AltirraBridge/sdk/python")
 EMU = os.path.join(ALTIRRA, "build/linux-release/src/AltirraSDL/AltirraSDL")
-XEX = os.path.join(REPO_SYNTH, "synth.xex")
-LST = os.path.join(REPO_SYNTH, "synth.lst")
+ASM = os.path.join(REPO_SYNTH, "synth.asm")
+# Tests boot a DEDICATED test binary, never the shipping synth.xex. The shipping
+# build keeps the keyboard IRQ OFF (fixes real-hw bugs #2/#3), but AltirraSDL's
+# cooked-key bridge only delivers injected keys while the keyboard IRQ is enabled
+# (ATPokeyEmulator::CanPushKey tests mIRQST & mIRQEN & $40). So we assemble a
+# parallel binary with -d:EMU_KBD_IRQ=1 here and boot that. Code layout is byte-
+# identical to the shipping build except one immediate operand, but we emit a
+# matching listing too so label addresses are always in sync with the booted code.
+XEX = os.path.join(REPO_SYNTH, "synth_emu.xex")
+LST = os.path.join(REPO_SYNTH, "synth_emu.lst")
 SHOTS = os.path.join(REPO_SYNTH, "shots")
 AUDIO_DIR = os.path.join(SHOTS, "audio")
 
@@ -69,6 +77,26 @@ FB1, FB2 = 0x4000, 0x5000
 
 class HarnessError(RuntimeError):
     pass
+
+
+_test_xex_built = False
+
+
+def _build_test_xex(force=False):
+    """Assemble the test-only binary (XEX + matching listing) with the keyboard
+    IRQ enabled, so AltirraSDL's cooked-key bridge can type. Built once per run."""
+    global _test_xex_built
+    if _test_xex_built and not force:
+        return
+    r = subprocess.run(
+        ["mads", ASM, "-d:EMU_KBD_IRQ=1", f"-o:{XEX}", f"-l:{LST}"],
+        stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+    )
+    if r.returncode != 0:
+        raise HarnessError(
+            "failed to assemble the EMU_KBD_IRQ=1 test binary:\n"
+            + r.stdout.decode(errors="replace"))
+    _test_xex_built = True
 
 
 class Synth:
@@ -119,6 +147,7 @@ class Synth:
         self.a = AltirraBridge.from_token_file(token)
 
     def boot(self, settle=300):
+        _build_test_xex()
         self.a.boot(XEX)
         self.a.frame(settle)
         self._probe_capabilities()
