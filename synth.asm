@@ -22,12 +22,15 @@ SDLSTL  = $0230         ; OS display-list pointer (shadow)
 SDMCTL  = $022F         ; OS DMACTL shadow
 COLOR1  = $02C5         ; COLPF1 shadow (hi-res foreground luminance)
 COLOR2  = $02C6         ; COLPF2 shadow (background)
-COLOR4  = $02C8         ; COLBK shadow (border)
+COLOR4  = $02C8         ; COLBK shadow (border); OS VBI copies it to $D01A each frame
 
 CONSOL  = $D01F         ; console keys START/SELECT/OPTION (read, active low)
 KBCODE  = $D209         ; raw keyboard scan code
 SKSTAT  = $D20F         ; serial/keyboard status (read)
 SKCTL   = $D20F         ; serial/keyboard control (write)
+SKRES   = $D20A         ; write (any value) clears SKSTAT serial/keyboard status latches
+IRQEN   = $D20E         ; POKEY IRQ enable (write); shadow = POKMSK
+POKMSK  = $0010         ; OS shadow of IRQEN (the OS IRQ handler reads this)
 AUDF1   = $D200         ; channel-1 frequency divisor
 AUDC1   = $D201         ; channel-1 control (distortion | volume)
 AUDCTL  = $D208         ; POKEY global audio control
@@ -218,6 +221,8 @@ acchi       = $06D7     ; add_scaled16 product (high)
 scl_sgn     = $06D8     ; add_scaled16 saved signed offset
 dct_col     = $06D9     ; draw_clk_toggle: clock-name start column (from p_knobcx)
 dct_scan    = $06DA     ; draw_clk_toggle: clock-name scanline (from p_scan)
+nav_base    = $06DB     ; read_navkeys: KBCODE with the Shift/Ctrl bits masked off
+nav_shift   = $06DC     ; read_navkeys: 1 = a modifier (Shift) is held this frame
 
 NPARAM = 19             ; ...page2 16 HPF, 17 PRESET, 18 DRUMBEAT
 NSAVE  = 18             ; saved params per preset = all 19 except PRESET (skipped by index)
@@ -245,6 +250,14 @@ NSHORT   = 19           ; 12 plain (page 0 + DETUNE) + 7 Shift (the rest) = all 
 HL_STYLE = 1
 
 ; --- DEMO: DLI colour palette (0 = cool blue/green, 1 = warm orange/gold)
+; EMU_KBD_IRQ: 0 = shipping/real-hardware build (no POKEY IRQs — fixes bugs #2/#3).
+; 1 = test-only build that enables the keyboard IRQ so the headless AltirraSDL bridge
+; can inject cooked keys (its CanPushKey gate needs IRQEN bit6). Build the test binary
+; with `mads -d:EMU_KBD_IRQ=1 ...`. NEVER ship EMU_KBD_IRQ=1 — it dead-keys real hw.
+    .ifndef EMU_KBD_IRQ
+EMU_KBD_IRQ = 0
+    .endif
+
 PALETTE = 0
     .if PALETTE = 0
 TITLE_COL = $90         ; band A (title row): blue hue, near-black bg + bright text
@@ -264,8 +277,43 @@ main
         sta CRSINH
         lda #$FF
         sta NOCLIK
-        lda #$03
+        ; ---- known, launcher-independent POKEY state ----------------------
+        ; Don't inherit whatever a cartridge / flash-cart / DOS left in POKEY.
+        ; Silence all four channels and clear AUDCTL up front so there's no stray
+        ; tone or leftover join/clock config before the engine's first frame.
+        lda #0
+        sta AUDCTL              ; no joins, 64kHz base (update_sound re-sets per mode)
+        ldx #7
+clr_pokey
+        sta AUDF1,x             ; AUDF1/AUDC1 .. AUDF4/AUDC4 ($D200-$D207) = 0
+        dex
+        bpl clr_pokey
+        lda #$03                ; keyboard scan + debounce; serial OFF
         sta SKCTL
+        ; IRQ enables: NONE (verified on real hardware 2026-06-17). The synth POLLS
+        ; KBCODE/SKSTAT/CONSOL every frame; KBCODE is kept current by POKEY's keyboard
+        ; SCAN logic (SKCTL bit1, set above), independent of the keyboard IRQ. Turning
+        ; the keyboard IRQ OFF removes the OS keyboard ISR, whose VBI auto-repeat fired
+        ; the console-speaker key-click on a timer (real-hw bug #3 "sounds on a regular
+        ; interval") and whose debounce desynced with our direct KBCODE poll after a
+        ; few presses (real-hw bug #2 "keyboard stops after changing params"). Both
+        ; bugs are gone on real hardware with IRQEN=0. (Enabling the keyboard IRQ and
+        ; servicing it with our own minimal handler was tried and DEAD the keyboard on
+        ; real hardware — do NOT re-enable it.) IRQEN=0 also covers INHERITING the
+        ; launcher's serial/timer enables: in 16-BIT mode AUDCTL=$78 clocks ch1/ch3 at
+        ; 1.79MHz through POKEY's serial/timer logic, and a stray serial/timer IRQ
+        ; would fire faster than its handler returns and HARD-LOCK the machine.
+        ; NOTE: the headless AltirraSDL test bridge injects cooked keys through POKEY's
+        ; key queue, which only releases a key to KBCODE while the keyboard IRQ is
+        ; enabled (ATPokeyEmulator::CanPushKey tests mIRQST & mIRQEN & $40). So the
+        ; emulator key-injection tests need a build with the IRQ on; see EMU_KBD_IRQ.
+    .if EMU_KBD_IRQ
+        lda #$40                ; EMU TEST BUILD ONLY: keyboard IRQ on so AltirraSDL can
+    .else                       ; inject cooked keys. NEVER ship this — it dead-keys real hw.
+        lda #$00                ; shipping/real-hw: no POKEY IRQs (fixes bugs #2/#3)
+    .endif
+        sta POKMSK
+        sta IRQEN
 
         jsr gr8_init            ; set up GR.8 + clear
 
@@ -420,10 +468,22 @@ lp_clr
         bpl lp_clr
         lda #$FF
         sta held_voice
+        sta prev_held           ; drop the live-key edge too, so a note HELD across
+                                ; the clock change re-triggers in the new mode instead
+                                ; of staying silent until the key is released/repressed
         ldx vlimit              ; next note -> voice 0 (and keep last_voice valid
         dex                     ; for the new vlimit after a mode change)
         stx last_voice
 lp_same
+        ; Keep the keyboard scan healthy on real hardware. In 16-BIT mode AUDCTL=$78
+        ; clocks POKEY's serial logic, which latches stale serial-status bits and wedges
+        ; the keyboard debounce after a few frames — without this, 16-BIT mode stops
+        ; responding to the keyboard. Clear the status latches and re-assert the scan
+        ; config every frame: cheap, idempotent, and harmless (bit1 stays high, so the
+        ; live key is never dropped). REQUIRED for 16-BIT — verified on real hardware.
+        sta SKRES               ; (any write) clear stale serial/keyboard status latches
+        lda #$03
+        sta SKCTL               ; keyboard scan + debounce, serial off
         jsr read_keyboard
         jsr read_console
         jsr read_navkeys        ; arrows -> kbd_dir; Tab = page flip; Return = save
@@ -449,6 +509,10 @@ read_keyboard
         and #$04
         bne rk_none
         lda KBCODE
+        cmp #$40                ; bit6 (Ctrl = arrows) or bit7 (Shift = shortcuts) set
+        bcs rk_none             ; -> a nav/shortcut key, never a piano note. Without
+                                ; this, masking #$3F collapsed e.g. Shift+W ($AE) onto
+                                ; W's note ($2E) and blipped a note on every shortcut.
         and #$3F
         ldx #NUMKEYS-1
 rk_search
@@ -503,38 +567,60 @@ rc_nosel
         sta con_prev
         rts
 
-; Navigation keys (laptop play, no joystick needed). The Atari arrow keys are
-; Ctrl + the -/=/+/* keys; Ctrl sets KBCODE bit6 ($40), so they read UNMASKED as
-; $4E/$4F/$46/$47 (read_keyboard masks #$3F for the note matrix and ignores
-; these). Arrows set kbd_dir level bits -> update_input gives them the same
-; nav/adjust/auto-repeat as the joystick. Tab/Return are edge-triggered via nav_prev.
-;   Up=$4E Down=$4F Left=$46 Right=$47   Tab=$2C (page flip)   Return=$0C (save)
+; Navigation keys (laptop play, no joystick needed).
+;
+; HARDWARE NOTE (verified on a real Atari, 2026-06-16): KBCODE's modifier bits
+; and the arrow keys do NOT match the atari800/Altirra convention this code was
+; first written against:
+;   * Shift sets KBCODE bit6 ($40)  (the emulator used bit7 $80).
+;   * The arrow keys read BARE -- Up=$0E Down=$0F Left=$06 Right=$07 -- with NO
+;     modifier bit (the emulator delivered Ctrl+arrow as $4E/$4F/$46/$47).
+; So we mask KBCODE to #$3F (base code) and match arrows/Tab/Return/shortcuts on
+; the base, and treat ANY modifier bit (#$C0) as Shift. Masking the base makes
+; the arrows work whether they arrive bare ($06) or Ctrl-modified ($46), and the
+; #$C0 test catches Shift whether it lands on bit6 (hardware) or bit7 (emulator),
+; so the same binary is correct in both places. Shift is matched (not ignored)
+; because plain and Shift letter shortcuts share base codes (e.g. L and ^L).
+; Arrows set kbd_dir level bits -> update_input gives them the same nav/adjust/
+; auto-repeat as the joystick. Tab/Return are edge-triggered via nav_prev.
+;   base: Up=$0E Down=$0F Left=$06 Right=$07   Tab=$2C (page flip)  Return=$0C
 read_navkeys
         lda #0
         sta kbd_dir
         lda SKSTAT
         and #$04
-        bne rn_none             ; no key down
+        beq rn_haskey           ; (rn_none is out of beq range from here)
+        jmp rn_none
+rn_haskey
         lda KBCODE
-        cmp #$4E                ; UP    (Ctrl+MINUS)
+        and #$3F                ; base code (drop Shift/Ctrl modifier bits)
+        sta nav_base
+        lda KBCODE
+        and #$C0                ; any modifier bit set -> treat as Shift
+        beq rn_sh0
+        lda #1
+rn_sh0
+        sta nav_shift
+        lda nav_base
+        cmp #$0E                ; UP    ('-')
         bne rn_n1
         lda #$01
         sta kbd_dir
         jmp rn_seen
 rn_n1
-        cmp #$4F                ; DOWN  (Ctrl+EQUALS)
+        cmp #$0F                ; DOWN  ('=')
         bne rn_n2
         lda #$02
         sta kbd_dir
         jmp rn_seen
 rn_n2
-        cmp #$46                ; LEFT  (Ctrl+PLUS)
+        cmp #$06                ; LEFT  ('+')
         bne rn_n3
         lda #$04
         sta kbd_dir
         jmp rn_seen
 rn_n3
-        cmp #$47                ; RIGHT (Ctrl+ASTERISK)
+        cmp #$07                ; RIGHT ('*')
         bne rn_n4
         lda #$08
         sta kbd_dir
@@ -544,7 +630,9 @@ rn_n4
         bne rn_n5
         ldx nav_prev
         cpx #$2C
-        beq rn_seen
+        bne rn_tab_go           ; (rn_seen is out of beq range from here)
+        jmp rn_seen
+rn_tab_go
         jsr page_flip
         jmp rn_seen
 rn_n5
@@ -552,22 +640,30 @@ rn_n5
         bne rn_short
         ldx nav_prev
         cpx #$0C
-        beq rn_seen
+        bne rn_ret_go
+        jmp rn_seen
+rn_ret_go
         jsr nav_save_preset
         jmp rn_seen
 rn_short
-        ; letter shortcut: a free letter that's underlined in a param's label jumps
-        ; the selection straight to that param (A still holds raw KBCODE here). Only
-        ; the 6 params whose letter is UNIQUE have an entry (see shortcut_kc).
+        ; letter shortcut: a free letter underlined in a param's label jumps the
+        ; selection straight to that param. Match on the base code AND the Shift
+        ; flag (a plain letter and its Shift twin share a base code).
         ldx #NSHORT-1
 rn_short_l
+        lda shortcut_sh,x
+        cmp nav_shift
+        bne rn_short_nx
+        lda nav_base
         cmp shortcut_kc,x
         beq rn_short_hit
+rn_short_nx
         dex
         bpl rn_short_l
         jmp rn_seen             ; not a shortcut key
 rn_short_hit
-        cmp nav_prev            ; A = this key = shortcut_kc[x]; held -> no re-jump
+        lda KBCODE              ; held across frames -> no re-jump (edge detect)
+        cmp nav_prev
         beq rn_seen
         lda shortcut_param,x    ; jump (cur_param drives the page too)
         sta cur_param
@@ -1464,10 +1560,10 @@ us_jmp_hi
         .byte >us_attack, >us_decay, >us_sustain, >us_release
 
 wait_vbl
-        lda RTCLOK+2
+        ldx RTCLOK+2            ; spin until the OS VBI ticks the frame counter, so the
 wv_l
-        cmp RTCLOK+2
-        beq wv_l
+        cpx RTCLOK+2           ; frame's drawing starts at the top of the display
+        beq wv_l               ; (tear-free panel updates)
         rts
 
 ; add_scaled16: nlo:nhi += (signed A) * base8, as a signed 16-bit add. Used by the
@@ -3292,13 +3388,20 @@ p_inert16
         .byte 0,0,0,0,0,0
         .byte 0,1,1,0, 0,1,1
 ; shortcut key -> param jump (read_navkeys). Letter is a FREE key (not piano)
-; underlined in the label; KBCODEs are the bridge/hardware values. Shift+letter
-; entries have bit7 ($80) set (Shift sets KBCODE bit7).
+; underlined in the label. These are BASE KBCODEs (modifier bits masked off):
+; read_navkeys masks KBCODE to #$3F before matching, and uses the parallel
+; shortcut_sh flag to tell a plain letter from its Shift twin (some share a base
+; code, e.g. L and ^L both $00). The Shift entries used to carry bit7 ($80); the
+; modifier is now handled by shortcut_sh, so the matrix is hardware-agnostic.
 shortcut_kc
         .byte $10,$12,$00,$05,$3A,$3E,$3F,$23,$39,$3D
 ;             V   C   L   K   D   S   A   N   H   G              (plain)
-        .byte $AE,$88,$80,$A8,$BF,$8A,$AD,$BA,$B9
-;             ^W  ^O  ^L  ^R  ^A  ^P  ^T  ^D  ^H                (shift)
+        .byte $2E,$08,$00,$28,$3F,$0A,$2D,$3A,$39
+;             ^W  ^O  ^L  ^R  ^A  ^P  ^T  ^D  ^H                (shift, base codes)
+; 1 = this shortcut requires Shift (parallel to shortcut_kc / shortcut_param)
+shortcut_sh
+        .byte 0,0,0,0,0,0,0,0,0,0
+        .byte 1,1,1,1,1,1,1,1,1
 shortcut_param
         .byte 1,  3,  4,  6,  7,  8,  10, 12, 13, 14
 ;             VOL CLK LFR ATK DEC SUS ARP DET HPF GLI

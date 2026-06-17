@@ -99,9 +99,48 @@ def rapid_clock_switch(s, rep):
               f"rms={dsp.rms(clip):.4f}")
 
 
+def note_held_across_clock_change(s, rep):
+    """A note HELD while the CLOCK mode changes must keep sounding. The clock-change
+    handler clears all voices and releases held_voice; it must ALSO drop the live-key
+    edge (prev_held) so the still-held key re-triggers in the new mode instead of going
+    silent until the key is released and pressed again.
+
+    Regression for the user-reported "changing CLOCK a few times stopped it playing":
+    rapid_clock_switch missed this because it re-pressed a FRESH note after the storm,
+    which always re-triggers; the bug only bites a note held ACROSS the change."""
+    rep.section("stress: a held note survives a CLOCK-mode change")
+    s.set("clock15", 0); s.poke(0x0689, 0); s.set("wave", 1); s.set("volume", 13)
+    s.set("sus", 14); s.set("atk", 0); s.set("lfod", 0); s.set("detune", 0)
+    s.set("octave", 2); s.poke(GLIDE, 0); s.poke(0x0665, 0); s.poke(0x0668, 0)
+    with s.held_key(0):
+        hv = s.get("held")
+        rep.check("held note sounds before the clock change",
+                  hv != 0xFF and (s.chan(hv + 1)[1] & 0x0F) > 0,
+                  f"held={hv:#x}")
+        # NORMAL -> 15kHz with the key still down (engine detects clock15 != prev_clkm,
+        # resets voices) -> the held key must re-trigger, not go silent.
+        s.set("clock15", 1); s.frame(6)
+        hv = s.get("held")
+        rep.check("held note still sounds after CLOCK 0->1",
+                  hv != 0xFF and (s.chan(hv + 1)[1] & 0x0F) > 0,
+                  f"held={hv:#x} AUDC={s.chan(hv + 1)[1]:#x}" if hv != 0xFF else "voice released")
+        # ...and back again
+        s.set("clock15", 0); s.frame(6)
+        hv = s.get("held")
+        rep.check("held note still sounds after CLOCK 1->0",
+                  hv != 0xFF and (s.chan(hv + 1)[1] & 0x0F) > 0,
+                  f"held={hv:#x} AUDC={s.chan(hv + 1)[1]:#x}" if hv != 0xFF else "voice released")
+    s.set("clock15", 0); s.poke(0x0689, 0)
+
+
 def porta_plus_arp(s, rep):
-    """Two effects that both want voice 0 (portamento glide + arpeggiator):
-    they should coexist — the arp still cycles audible notes (no crash/stuck)."""
+    """Two effects that both want voice 0 (portamento glide + arpeggiator): they
+    should coexist — the arp keeps cycling its notes (no crash/stuck) and the output
+    stays audible. Cycling is checked at the REGISTER level: the arp rewrites voice 0's
+    target note (voice_note[0]) every step, which is deterministic. The acoustic
+    distinct-pitch detector was flaky here because the glide SMEARS the pitch between
+    targets, so intermediate notes fall below the 10%-of-frames threshold and the
+    count of distinct heard pitches jittered between 1 and 4."""
     rep.section("stress: portamento + arpeggiator together")
     s.set("clock15", 0); s.poke(0x0689, 0); s.set("wave", 1); s.set("volume", 13)
     s.set("sus", 12); s.set("lfod", 0); s.set("detune", 0); s.set("octave", 1)
@@ -110,11 +149,18 @@ def porta_plus_arp(s, rep):
     with s.frozen("read_keyboard"):
         s.set("note_idx", 0); s.set("lastv", 3)
         s.set("arp_step", 0); s.set("arp_timer", 1); s.set("arp", 6)
-        clip = s.capture("porta_arp", 90)
-        heard = dsp.distinct_pitches(clip)
+        # arp rate 6 -> a step every 10 frames; 80 frames = 8 steps over the
+        # root/+4/+7/+12 pattern, so voice 0's target note visits all 4 reliably.
+        targets = set()
+        for _ in range(80):
+            s.frame(1)
+            hv = s.get("held")
+            if hv != 0xFF:
+                targets.add(s.get("vnote", hv))
+        clip = s.capture("porta_arp", 24)
         rep.check("glide+arp stays audible and cycles notes",
-                  dsp.rms(clip) >= 4e-3 and len(heard) >= 2,
-                  f"rms={dsp.rms(clip):.4f} heard={sorted(heard)}")
+                  dsp.rms(clip) >= 4e-3 and len(targets) >= 2,
+                  f"rms={dsp.rms(clip):.4f} targets={sorted(targets)}")
         s.set("arp", 0); s.set("note_idx", 0xFF)
     s.poke(GLIDE, 0); s.frame(2)
 
@@ -343,6 +389,7 @@ SCENARIOS = [
     note_range_extremes,
     lfo_audf_overflow,
     rapid_clock_switch,
+    note_held_across_clock_change,
     porta_plus_arp,
     mega_combo,
     sequencer_edge_patterns,

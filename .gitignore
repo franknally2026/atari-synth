@@ -12,3 +12,7 @@ shots/*.log
 # python bytecode
 __pycache__/
 *.pyc
+
+# test-only binary built by the synthtest harness (EMU_KBD_IRQ=1)
+synth_emu.xex
+synth_emu.lst

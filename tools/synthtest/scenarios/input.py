@@ -103,6 +103,21 @@ def shift_letter_shortcuts(s, rep):
     s.poke(CUR, 11)
     got = _tap(s, CUR, lambda: s.key("A"))
     rep.check("plain 'A' jumps to ARPEGGIO (10), not ARP MODE", got == 10, f"cur_param={got}")
+    # a Shift shortcut must NOT also play a piano note. read_keyboard used to mask off
+    # the Shift bit, collapsing Shift+W ($AE) onto W's note key ($2E) and blipping a
+    # note on every shortcut. Hold Shift+W and confirm note_idx never leaves $FF.
+    s.poke(CUR, 1); s.drain()
+    fired = False
+    s.a.key("W", shift=True)
+    for _ in range(90):
+        s.frame(1)
+        if s.get("note_idx") != 0xFF:
+            fired = True
+        if s.peek(CUR) == 0:                 # shortcut landed (selection jumped)
+            break
+    s.frame(30)
+    rep.check("Shift+W jumps selection without blipping a note",
+              (not fired) and s.peek(CUR) == 0, f"note_fired={fired} cur={s.peek(CUR)}")
 
 
 def inert_strike_16bit(s, rep):

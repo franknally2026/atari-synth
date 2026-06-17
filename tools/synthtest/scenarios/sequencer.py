@@ -41,14 +41,37 @@ def _show_seq_page(s):
     s.poke(SEQ_DIRTY, 1); s.poke(PREV_SPOS, 0xFF); s.frame(4)
 
 
+def _start_press(s):
+    """Press+release the START switch and return only once read_console has
+    processed exactly one toggle. Console switches are LEVEL-held by the bridge and
+    read_console toggles seq_play only on the press EDGE (now & ~prev), so fixed
+    frame windows were flaky: bridge-queue jitter occasionally hid the edge (prev
+    still showed START down) and the toggle was missed. Deterministic recipe:
+      (a) release + settle so con_prev latches START=up (guarantees a clean edge),
+      (b) hold START and poll until seq_play flips (one edge, since prev=START after
+          frame 1 blocks further edges), then break immediately,
+      (c) release + settle so the NEXT press also sees a clean edge."""
+    before = s.get("seq_play")
+    s.consol(); s.frame(3)                      # (a) clean released baseline
+    s.consol(start=True)
+    flipped = False
+    for _ in range(30):                         # (b) hold until the edge toggles
+        s.frame(1)
+        if s.get("seq_play") != before:
+            flipped = True
+            break
+    s.consol(); s.frame(3)                      # (c) latch release for next press
+    return flipped, s.get("seq_play")
+
+
 def transport(s, rep):
     rep.section("sequencer: START transport toggles play")
     s.set("curparam", 0); s.frame(2)
     s.set("seq_play", 0)
-    s.consol(start=True); s.frame(3); s.consol(); s.frame(3)
-    rep.check("START -> play on", s.get("seq_play") == 1, s.get("seq_play"))
-    s.consol(start=True); s.frame(3); s.consol(); s.frame(3)
-    rep.check("START -> play off", s.get("seq_play") == 0, s.get("seq_play"))
+    on_ok, play = _start_press(s)
+    rep.check("START -> play on", on_ok and play == 1, play)
+    off_ok, play = _start_press(s)
+    rep.check("START -> play off", off_ok and play == 0, play)
 
 
 def multi_step_playback(s, rep):

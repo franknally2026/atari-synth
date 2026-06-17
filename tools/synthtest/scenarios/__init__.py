@@ -74,6 +74,7 @@ REGISTRY = (
     + [(stress.note_range_extremes, False),
        (stress.lfo_audf_overflow, False),
        (stress.rapid_clock_switch, True),
+       (stress.note_held_across_clock_change, False),
        (stress.porta_plus_arp, True),
        (stress.mega_combo, True),
        (stress.sequencer_edge_patterns, False),
